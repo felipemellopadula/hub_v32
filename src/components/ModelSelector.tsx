@@ -22,10 +22,9 @@ const models: Model[] = [
   { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', category: 'standard' },
   
   // Anthropic Models
-  { id: 'claude-opus-4-20250514', name: 'Claude 4 Opus', provider: 'Anthropic', category: 'premium' },
-  { id: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet', provider: 'Anthropic', category: 'premium' },
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'standard' },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'premium' },
   { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', category: 'fast' },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic', category: 'standard' },
   
   // xAI Models
   { id: 'grok-beta', name: 'Grok Beta', provider: 'xAI', category: 'standard' },
