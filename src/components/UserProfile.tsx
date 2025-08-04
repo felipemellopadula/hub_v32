@@ -15,7 +15,7 @@ export const UserProfile = ({
   tokens = 10000 
 }: UserProfileProps) => {
   return (
-    <Card className="p-4 bg-gradient-card border-border shadow-card">
+    <div className="p-3 bg-gradient-card">
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12 ring-2 ring-primary/20">
           <AvatarImage src={userImage} alt={userName} />
@@ -34,6 +34,6 @@ export const UserProfile = ({
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

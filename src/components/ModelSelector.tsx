@@ -54,7 +54,7 @@ const getCategoryColor = (category: Model['category']) => {
 export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorProps) => {
   return (
     <div className="w-full max-w-sm">
-      <Select onValueChange={onModelSelect} value={selectedModel}>
+      <Select onValueChange={onModelSelect} value={selectedModel} defaultValue="">
         <SelectTrigger className="w-full bg-card border-border">
           <SelectValue placeholder="Modelo de I.A" />
         </SelectTrigger>
