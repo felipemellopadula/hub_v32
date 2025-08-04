@@ -56,7 +56,7 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
     <div className="w-full max-w-sm">
       <Select onValueChange={onModelSelect} value={selectedModel}>
         <SelectTrigger className="w-full bg-card border-border">
-          <SelectValue placeholder="Selecione um modelo" />
+          <SelectValue placeholder="Modelo de I.A" />
         </SelectTrigger>
         <SelectContent className="bg-popover border-border max-h-60">
           {models.map((model) => (

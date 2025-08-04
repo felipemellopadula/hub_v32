@@ -96,9 +96,10 @@ const Chat = () => {
             <div className="h-6 w-px bg-border" />
             <h1 className="text-lg font-semibold text-foreground">AI Chat</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
             <ThemeToggle />
+            <UserProfile tokens={10000} />
           </div>
         </div>
       </div>
