@@ -25,6 +25,7 @@ const Chat = () => {
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isWebSearchMode, setIsWebSearchMode] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -109,21 +110,20 @@ const Chat = () => {
     }
   };
 
-  const handleWebSearch = async () => {
-    if (!inputValue.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite algo para buscar na web.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const toggleWebSearchMode = () => {
+    setIsWebSearchMode(prev => !prev);
+    toast({
+      title: isWebSearchMode ? "Modo busca web desativado" : "Modo busca web ativado",
+      description: isWebSearchMode ? "Agora as mensagens serão enviadas para a IA" : "Agora as mensagens serão buscadas na web",
+    });
+  };
 
+  const performWebSearch = async (query: string) => {
     try {
       setIsLoading(true);
       
       const response = await supabase.functions.invoke('web-search', {
-        body: { query: inputValue, numResults: 3 }
+        body: { query, numResults: 3 }
       });
 
       if (response.data?.results) {
@@ -133,12 +133,12 @@ const Chat = () => {
           )
           .join('\n\n');
         
-        const searchContent = `[Resultados da busca na web para "${inputValue}"]\n\n${searchResults}`;
+        const searchContent = `[Resultados da busca na web para "${query}"]\n\n${searchResults}`;
         
         // Add user message
         const userMessage: Message = {
           id: Date.now().toString(),
-          content: inputValue,
+          content: query,
           sender: 'user',
           timestamp: new Date(),
         };
@@ -153,7 +153,6 @@ const Chat = () => {
         };
 
         setMessages(prev => [...prev, userMessage, searchMessage]);
-        setInputValue('');
         
         toast({
           title: "Busca concluída",
@@ -183,16 +182,24 @@ const Chat = () => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
+    const currentInput = inputValue;
+    setInputValue('');
+    setAttachedFiles([]);
+
+    // If web search mode is active, perform web search instead
+    if (isWebSearchMode) {
+      await performWebSearch(currentInput);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: currentInput,
       sender: 'user',
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
-    setAttachedFiles([]);
     setIsLoading(true);
 
     try {
@@ -203,7 +210,7 @@ const Chat = () => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cWdubnFsdGVtZnB6ZHh3eWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODc3NjIsImV4cCI6MjA2OTQ2Mzc2Mn0.X0jHc8AkyZNZbi3kg5Qh6ngg7aAbijFXchM6bYsAnlE'}`,
         },
         body: JSON.stringify({
-          message: inputValue,
+          message: currentInput,
           model: selectedModel,
         }),
       });
@@ -333,7 +340,7 @@ const Chat = () => {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Digite sua mensagem..."
+                  placeholder={isWebSearchMode ? "Digite para buscar na web..." : "Digite sua mensagem..."}
                   disabled={isLoading}
                   className="w-full pl-4 pr-32 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
@@ -368,9 +375,8 @@ const Chat = () => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={handleWebSearch}
-                    disabled={isLoading || !inputValue.trim()}
-                    className="h-8 w-8 p-0 hover:bg-muted"
+                    onClick={toggleWebSearchMode}
+                    className={`h-8 w-8 p-0 hover:bg-muted ${isWebSearchMode ? 'bg-primary text-primary-foreground' : ''}`}
                   >
                     <Globe className="h-4 w-4" />
                   </Button>
