@@ -14,7 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          subscription_type:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          tokens_remaining: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          phone?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          tokens_remaining?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          tokens_remaining?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      token_usage: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_content: string | null
+          model_name: string
+          tokens_used: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_content?: string | null
+          model_name: string
+          tokens_used: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_content?: string | null
+          model_name?: string
+          tokens_used?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +99,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_type: "free" | "paid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +226,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_type: ["free", "paid"],
+    },
   },
 } as const
