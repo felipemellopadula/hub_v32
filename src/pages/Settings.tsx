@@ -157,7 +157,7 @@ const SettingsPage = () => {
             <MessageCircle className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
           </div>
-          <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
+          <Button variant="outline" onClick={() => (window.history.length > 2 ? navigate(-1) : navigate("/"))}>Voltar</Button>
         </div>
       </header>
 
