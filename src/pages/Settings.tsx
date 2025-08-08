@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Save, Camera } from "lucide-react";
+import ModelUsageChart from "@/components/settings/ModelUsageChart";
+import SettingsStats from "@/components/settings/SettingsStats";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -208,26 +210,14 @@ const SettingsPage = () => {
           </Card>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Plano</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-foreground">{planLabel}</p>
-                <p className="text-sm text-muted-foreground">Em breve: planos adicionais</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Tokens do mês</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-foreground">Disponíveis: <span className="font-semibold">{profile.tokens_remaining.toLocaleString()}</span></p>
-                <p className="text-foreground">Ciclo atual: {formatDate(cycleStart)} — {formatDate(cycleEnd)}</p>
-                <p className="text-muted-foreground text-sm">Renova em {formatDate(nextReset)} (1.000.000 por ciclo, não acumulam)</p>
-              </CardContent>
-            </Card>
+            <SettingsStats
+              planLabel={planLabel}
+              tokensRemaining={profile.tokens_remaining}
+              cycleStart={cycleStart}
+              cycleEnd={cycleEnd}
+              nextReset={nextReset}
+            />
+            <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />
           </div>
         </section>
       </main>
