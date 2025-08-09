@@ -30,6 +30,7 @@ const Index = () => {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [annual, setAnnual] = useState(true);
+  const [isLight, setIsLight] = useState<boolean>(() => document.documentElement.classList.contains('light'));
 
   const handlePrimaryCta = () => {
     if (user) navigate("/chat");
@@ -38,7 +39,7 @@ const Index = () => {
 
   useEffect(() => {
     // Basic SEO for the landing page
-    document.title = "Synapse AI Hub – Modelos de IA, Recursos e Planos";
+    document.title = "Synergy AI Hub – Modelos de IA, Recursos e Planos";
 
     const setMeta = (name: string, content: string) => {
       let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -62,6 +63,13 @@ const Index = () => {
       document.head.appendChild(link);
     }
     link.setAttribute("href", window.location.href);
+
+    // Track theme changes to swap logos
+    const apply = () => setIsLight(document.documentElement.classList.contains('light'));
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, []);
 
   if (loading) {
@@ -77,183 +85,13 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border sticky top-0 z-30 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-primary" aria-hidden />
-            <span className="text-lg md:text-xl font-bold tracking-tight">Synapse AI</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#modelos" className="hover:text-foreground transition-colors">Soluções</a>
-            <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
-            <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            {user ? (
-              <Button onClick={() => navigate("/chat")} className="hidden sm:inline-flex">
-                Ir para Chat
-              </Button>
+          <a href="/" className="flex items-center gap-2" aria-label="Synergy AI">
+            {isLight ? (
+              <img src="/lovable-uploads/d3026126-a31a-4979-b9d5-265db8e3f148.png" alt="Synergy AI logo" className="h-8 w-auto" />
             ) : (
-              <Button onClick={() => setShowAuthModal(true)}>Login</Button>
+              <img src="/lovable-uploads/75b65017-8e97-493c-85a8-fe1b0f60ce9f.png" alt="Synergy AI logo" className="h-8 w-auto" />
             )}
-          </div>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <main className="flex-1">
-        <section className="container mx-auto px-4 pt-14 pb-16 md:pt-20 md:pb-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-              <Stars className="h-3.5 w-3.5 text-primary" />
-              Inovação em Inteligência Artificial
-            </div>
-            <h1 className="mt-6 text-4xl md:text-6xl font-extrabold leading-tight">
-              Acesso <span className="text-primary">aos melhores</span> modelos de Inteligência
-              Artificial <span className="text-primary">do mundo</span>
-            </h1>
-            <p className="mt-4 md:mt-6 text-lg md:text-xl text-muted-foreground">
-              Nosso hub de IA combina os melhores modelos de inteligência artificial para
-              potencializar seus projetos de forma simples e eficiente.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="lg" onClick={handlePrimaryCta} className="px-8">
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Começar Agora
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="px-8"
-                onClick={() => document.getElementById("modelos")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                Ver Modelos
-              </Button>
-            </div>
-            <p className="mt-8 text-xs text-muted-foreground">Empresas que confiam em nosso hub</p>
-            <div className="mt-3 grid grid-cols-3 gap-6 max-w-md mx-auto text-sm text-muted-foreground">
-              <div className="flex items-center justify-center gap-2"><ThumbsUp className="h-4 w-4" /> Marca Um</div>
-              <div className="flex items-center justify-center gap-2"><Activity className="h-4 w-4" /> Marca Dois</div>
-              <div className="flex items-center justify-center gap-2"><Users className="h-4 w-4" /> Marca Três</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Principais Modelos */}
-        <section id="modelos" className="container mx-auto px-4 py-14 md:py-20">
-          <div className="mx-auto max-w-3xl text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold">Principais Modelos de IA</h2>
-            <p className="mt-3 text-muted-foreground">
-              Trabalhamos com as inteligências artificiais mais avançadas do mercado para
-              oferecer soluções inovadoras.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: BrainCircuit,
-                title: "ChatGPT",
-                desc:
-                  "Modelo avançado de linguagem natural para gerar textos, responder perguntas e auxiliar em tarefas de escrita e análise.",
-              },
-              {
-                icon: Sparkles,
-                title: "Claude",
-                desc:
-                  "Assistente de IA focado em respostas detalhadas com segurança e precisão para uso profissional.",
-              },
-              { icon: Gem, title: "Gemini", desc: "Modelo multimodal do Google para texto, imagens e código." },
-              {
-                icon: Layers,
-                title: "Llama",
-                desc: "Modelo de código aberto para criar aplicações de IA personalizadas com alto desempenho.",
-              },
-            ].map((m) => (
-              <Card key={m.title} className="bg-card border-border">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <m.icon className="h-7 w-7 text-primary" />
-                    <CardTitle>{m.title}</CardTitle>
-                  </div>
-                  <CardDescription className="pt-2">{m.desc}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Ferramentas Exclusivas */}
-        <section className="container mx-auto px-4 py-14 md:py-20">
-          <div className="mx-auto max-w-3xl text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold">Ferramentas Exclusivas que Transformam seu Trabalho</h2>
-            <p className="mt-3 text-muted-foreground">
-              Desenvolvemos um conjunto de ferramentas poderosas para maximizar seu potencial criativo.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: Sparkles, title: "Sinapse Core", desc: "IA proprietária que seleciona automaticamente o melhor modelo para cada tarefa." },
-              { icon: FileText, title: "Análise de Documentos", desc: "Interprete, resuma e avalie PDFs e arquivos com facilidade incomparável." },
-              { icon: Layers, title: "Contextos", desc: "Crie contextos detalhados para melhorar a qualidade das respostas." },
-              { icon: Zap, title: "Flows", desc: "Mentor especialista para brainstorm, propostas e até programação." },
-              { icon: FolderKanban, title: "Organize Chats", desc: "Categorize e gerencie conversas por projetos ou equipes." },
-              { icon: LineChart, title: "Análise de Dados", desc: "Transforme planilhas em insights e gráficos automaticamente." },
-            ].map((f) => (
-              <Card key={f.title} className="bg-card border-border">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <f.icon className="h-6 w-6 text-primary" />
-                    <CardTitle>{f.title}</CardTitle>
-                  </div>
-                  <CardDescription className="pt-2">{f.desc}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Recursos Poderosos */}
-        <section className="container mx-auto px-4 py-14 md:py-20">
-          <div className="mx-auto max-w-3xl text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold">Recursos Poderosos</h2>
-            <p className="mt-3 text-muted-foreground">
-              Tudo o que você precisa para construir, implantar e escalar aplicações com IA.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: BrainCircuit, title: "Modelos de IA Avançados", desc: "Texto, imagem e áudio com uma API simples." },
-              { icon: Zap, title: "Velocidade Extrema", desc: "Infra otimizada para respostas rápidas." },
-              { icon: ShieldCheck, title: "Segurança Empresarial", desc: "Criptografia e segurança nível corporativo." },
-              { icon: LineChart, title: "Análises Detalhadas", desc: "Acompanhe uso, desempenho e custos." },
-              { icon: Globe, title: "Disponibilidade Global", desc: "Baixa latência em qualquer lugar do mundo." },
-              { icon: Server, title: "Infraestrutura Escalável", desc: "Escala automática para qualquer carga." },
-            ].map((r) => (
-              <Card key={r.title} className="bg-card border-border">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <r.icon className="h-6 w-6 text-primary" />
-                    <CardTitle>{r.title}</CardTitle>
-                  </div>
-                  <CardDescription className="pt-2">{r.desc}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Planos */}
-        <section id="planos" className="container mx-auto px-4 py-14 md:py-20">
-          <div className="mx-auto max-w-3xl text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold">Simples, Transparente e Prático</h2>
-            <p className="mt-3 text-muted-foreground">
-              Escolha o plano que melhor se adapta às suas necessidades. Inclui 14 dias grátis.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-3 text-sm">
-              <span className={!annual ? "text-foreground" : "text-muted-foreground"}>Mensal</span>
-              <Switch checked={annual} onCheckedChange={setAnnual} aria-label="Alternar ciclo" />
-              <span className={annual ? "text-foreground" : "text-muted-foreground"}>Anual (Economize 20%)</span>
-            </div>
-          </div>
+          </a>
 
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Starter */}
@@ -274,7 +112,7 @@ const Index = () => {
                   <li>Análise básica</li>
                 </ul>
                 <Button variant="outline" className="mt-6" onClick={() => setShowAuthModal(true)}>
-                  Começar teste gratuito
+                  Começar agora
                 </Button>
               </CardHeader>
             </Card>
