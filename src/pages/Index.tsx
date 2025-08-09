@@ -118,19 +118,21 @@ const Index = () => {
           <div className="container mx-auto px-4 py-16 md:py-24">
             <div className="grid gap-10 md:grid-cols-2 md:items-center">
               <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-card text-xs text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Inovação em Inteligência Artificial
+                </div>
                 <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
-                  Synergy AI Hub – Modelos de IA poderosos para todos
+                  Acesso aos melhores modelos de Inteligência Artificial do mundo
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-prose">
-                  Centralize acesso a modelos como GPT, Claude e Gemini com recursos profissionais,
-                  preços simples e um dashboard intuitivo.
+                  Nosso hub de IA combina os melhores modelos de inteligência artificial para potencializar seus projetos de forma simples e eficiente.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button onClick={handlePrimaryCta} className="shadow-glow">
-                    Experimentar agora
+                    Começar Agora
                   </Button>
                   <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                    Ver Dashboard
+                    Ver Modelos
                   </Button>
                 </div>
                 <ul className="text-sm text-muted-foreground grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4">
@@ -163,34 +165,102 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Soluções / Modelos */}
-        <section id="modelos" className="border-b border-border">
+        {/* Principais Modelos de IA */}
+        <section id="modelos" className="border-b border-border bg-background">
           <div className="container mx-auto px-4 py-16">
-            <header className="mb-10 max-w-2xl">
-              <h2 className="text-2xl md:text-3xl font-bold">Soluções prontas para uso</h2>
+            <header className="mb-10 max-w-2xl mx-auto text-center">
+              <h2 className="text-2xl md:text-3xl font-bold">Principais Modelos de IA</h2>
               <p className="text-muted-foreground mt-2">
-                Conecte-se aos principais modelos e recursos sem complicação.
+                Trabalhamos com as inteligências artificiais mais avançadas do mercado para oferecer soluções inovadoras.
               </p>
             </header>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {/* ChatGPT */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary"/> Chat Unificado</CardTitle>
-                  <CardDescription>Converse com múltiplos modelos no mesmo lugar.</CardDescription>
+                  <div className="flex items-center justify-center h-12">
+                    <img src="/images/logos/chatgpt.svg" alt="Logo ChatGPT" loading="lazy" className="h-10 w-auto" />
+                  </div>
+                  <CardTitle className="text-center">ChatGPT</CardTitle>
+                  <CardDescription className="text-center">
+                    Modelo avançado de linguagem da OpenAI para geração de texto, respostas e análise.
+                  </CardDescription>
                 </CardHeader>
               </Card>
+              {/* Claude */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/> Ferramentas de Produtividade</CardTitle>
-                  <CardDescription>Resumos, geração de conteúdo, análise de dados e mais.</CardDescription>
+                  <div className="flex items-center justify-center h-12">
+                    <img src="/images/logos/claude.svg" alt="Logo Claude" loading="lazy" className="h-10 w-auto" />
+                  </div>
+                  <CardTitle className="text-center">Claude</CardTitle>
+                  <CardDescription className="text-center">
+                    Assistente da Anthropic com foco em segurança, precisão e respostas detalhadas.
+                  </CardDescription>
                 </CardHeader>
               </Card>
+              {/* Gemini */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5 text-primary"/> Métricas e Uso</CardTitle>
-                  <CardDescription>Monitore consumo de tokens e desempenho em tempo real.</CardDescription>
+                  <div className="flex items-center justify-center h-12">
+                    <img src="/images/logos/gemini.svg" alt="Logo Google Gemini" loading="lazy" className="h-10 w-auto" />
+                  </div>
+                  <CardTitle className="text-center">Gemini</CardTitle>
+                  <CardDescription className="text-center">
+                    Modelo multimodal do Google para texto, imagem e código com alto desempenho.
+                  </CardDescription>
                 </CardHeader>
               </Card>
+              {/* Llama */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <div className="flex items-center justify-center h-12">
+                    <img src="/images/logos/meta.svg" alt="Logo Meta (Llama)" loading="lazy" className="h-8 w-auto" />
+                  </div>
+                  <CardTitle className="text-center">Llama</CardTitle>
+                  <CardDescription className="text-center">
+                    Modelo open-source da Meta para criar aplicações de IA personalizadas.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Ferramentas Exclusivas */}
+        <section id="ferramentas" className="border-b border-border">
+          <div className="container mx-auto px-4 py-16">
+            <header className="mb-10 max-w-2xl mx-auto text-center">
+              <h2 className="text-2xl md:text-3xl font-bold">Ferramentas Exclusivas que Transformam seu Trabalho</h2>
+              <p className="text-muted-foreground mt-2">
+                Desenvolvemos um conjunto de ferramentas poderosas para maximizar seu potencial criativo.
+              </p>
+            </header>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><BrainCircuit className="h-5 w-5 text-primary"/> Sinapse Core</CardTitle><CardDescription>Nossa IA proprietária seleciona automaticamente o modelo mais indicado para cada tarefa.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/> Análise de Documentos</CardTitle><CardDescription>Interprete, resuma e avalie informações de PDFs e arquivos Office com facilidade.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Layers className="h-5 w-5 text-primary"/> Contextos</CardTitle><CardDescription>Crie contextos que ajudam o chat a responder melhor, elevando a qualidade das respostas.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Flows</CardTitle><CardDescription>Mentores especializados para aprendizado, brainstorming e produtividade.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><FolderKanban className="h-5 w-5 text-primary"/> Organize Chats em Pastas</CardTitle><CardDescription>Mantenha conversas organizadas por projetos e equipes.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5 text-primary"/> Análise de Dados</CardTitle><CardDescription>Transforme dados em insights visuais com gráficos automáticos.</CardDescription></CardHeader></Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Recursos Poderosos */}
+        <section id="recursos" className="border-b border-border bg-gradient-subtle">
+          <div className="container mx-auto px-4 py-16">
+            <header className="mb-10 max-w-2xl mx-auto text-center">
+              <h2 className="text-2xl md:text-3xl font-bold">Recursos Poderosos</h2>
+              <p className="text-muted-foreground mt-2">Tudo o que você precisa para construir, implantar e escalar aplicações com IA.</p>
+            </header>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><BrainCircuit className="h-5 w-5 text-primary"/> Modelos de IA Avançados</CardTitle><CardDescription>Acesse IA de última geração para texto, imagem e áudio.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary"/> Velocidade Extrema</CardTitle><CardDescription>Infra otimizada para respostas rápidas, mesmo em alto tráfego.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary"/> Segurança Empresarial</CardTitle><CardDescription>Criptografia e medidas de segurança de nível bancário.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/> Análises Detalhadas</CardTitle><CardDescription>Acompanhe uso, desempenho e custos com painéis.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary"/> Disponibilidade Global</CardTitle><CardDescription>Baixa latência em qualquer lugar do mundo.</CardDescription></CardHeader></Card>
+              <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Server className="h-5 w-5 text-primary"/> Infraestrutura Escalável</CardTitle><CardDescription>Escala automática do protótipo à produção.</CardDescription></CardHeader></Card>
             </div>
           </div>
         </section>
@@ -200,7 +270,7 @@ const Index = () => {
           <div className="container mx-auto px-4 py-16">
             <div className="flex items-center justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold">Planos simples e transparentes</h2>
+                <h2 className="text-2xl md:text-3xl font-bold">Simples, Transparente e Prático</h2>
                 <p className="text-muted-foreground">Escolha o plano ideal. Cancele quando quiser.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -255,7 +325,7 @@ const Index = () => {
                     <li>Análises avançadas</li>
                   </ul>
                   <Button className="mt-6" onClick={() => setShowAuthModal(true)}>
-                    Começar teste gratuito
+                    Começar agora
                   </Button>
                 </CardHeader>
               </Card>
