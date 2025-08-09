@@ -78,7 +78,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Synergy AI</h1>
+            <h1 className="text-2xl font-bold text-foreground">AI Platform</h1>
           </div>
           <div className="flex items-center gap-4">
             <UserProfile />
@@ -98,7 +98,7 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-foreground mb-4">
-            Bem-vindo ao <span className="text-primary">AI Platform</span>
+            Bem-vindo ao <span className="text-primary">Synergy AI</span>
           </h2>
           <p className="text-xl text-muted-foreground">
             Escolha uma das funcionalidades abaixo para começar
