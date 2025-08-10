@@ -24,8 +24,11 @@ const getApiKey = (model: string): string | null => {
   if (model.includes('grok')) {
     return Deno.env.get('XAI_API_KEY');
   }
-  if (model.includes('deepseek') || model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
+  if (model.includes('deepseek')) {
     return Deno.env.get('DEEPSEEK_API_KEY');
+  }
+  if (model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
+    return Deno.env.get('APILLM_API_KEY');
   }
   return null;
 };
@@ -249,6 +252,41 @@ const callDeepSeek = async (message: string, model: string): Promise<string> => 
   return data.choices[0].message.content;
 };
 
+const callAPILLM = async (message: string, model: string): Promise<string> => {
+  const apiKey = Deno.env.get('APILLM_API_KEY');
+  
+  const response = await fetch('https://api.apillm.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'Você é um assistente útil em português. Sempre responda em português.'
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`APILLM API error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -275,8 +313,10 @@ serve(async (req) => {
       response = await callGoogleAI(message, model);
     } else if (model.includes('grok')) {
       response = await callXAI(message, model);
-    } else if (model.includes('deepseek') || model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
+    } else if (model.includes('deepseek')) {
       response = await callDeepSeek(message, model);
+    } else if (model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
+      response = await callAPILLM(message, model);
     } else {
       // Default to OpenAI for llama and others
       response = await callOpenAI(message, 'gpt-4.1-2025-04-14');

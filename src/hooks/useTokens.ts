@@ -15,6 +15,7 @@ const MODEL_COSTS = {
   // DeepSeek Models
   'deepseek-chat-v3': 8000,
   'deepseek-reasoner': 12000,
+  // APILLM Models
   'llama-4-scout-17b': 6000,
   'mixtral-8x7b-instruct': 5000,
   'qwen-2.5-72b-chat': 7000,

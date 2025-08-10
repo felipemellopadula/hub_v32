@@ -29,9 +29,11 @@ const models: Model[] = [
   // DeepSeek Models
   { id: 'deepseek-chat-v3', name: 'DeepSeek Chat V3', provider: 'DeepSeek', category: 'premium' },
   { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', provider: 'DeepSeek', category: 'premium' },
-  { id: 'llama-4-scout-17b', name: 'LLaMA 4 Scout 17B', provider: 'DeepSeek', category: 'standard' },
-  { id: 'mixtral-8x7b-instruct', name: 'Mixtral 8x7b Instruct', provider: 'DeepSeek', category: 'standard' },
-  { id: 'qwen-2.5-72b-chat', name: 'Qwen 2.5 72B Chat', provider: 'DeepSeek', category: 'standard' },
+  
+  // APILLM Models
+  { id: 'llama-4-scout-17b', name: 'LLaMA 4 Scout 17B', provider: 'APILLM', category: 'standard' },
+  { id: 'mixtral-8x7b-instruct', name: 'Mixtral 8x7b Instruct', provider: 'APILLM', category: 'standard' },
+  { id: 'qwen-2.5-72b-chat', name: 'Qwen 2.5 72B Chat', provider: 'APILLM', category: 'standard' },
   
   // xAI Models
   { id: 'grok-beta', name: 'Grok Beta', provider: 'xAI', category: 'standard' },
