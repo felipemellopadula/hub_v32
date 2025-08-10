@@ -27,7 +27,7 @@ const getApiKey = (model: string): string | null => {
   if (model.includes('deepseek')) {
     return Deno.env.get('DEEPSEEK_API_KEY');
   }
-  if (model.includes('llama-3.1') || model.includes('mixtral') || model.includes('qwen')) {
+  if (model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
     return Deno.env.get('APILLM_API_KEY');
   }
   return null;
@@ -315,7 +315,7 @@ serve(async (req) => {
       response = await callXAI(message, model);
     } else if (model.includes('deepseek')) {
       response = await callDeepSeek(message, model);
-    } else if (model.includes('llama-3.1') || model.includes('mixtral') || model.includes('qwen')) {
+    } else if (model.includes('llama-4') || model.includes('mixtral') || model.includes('qwen')) {
       response = await callAPILLM(message, model);
     } else {
       // Default to OpenAI for llama and others
