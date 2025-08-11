@@ -9,6 +9,11 @@ const corsHeaders = {
 interface ChatRequest {
   message: string;
   model: string;
+  files?: Array<{
+    name: string;
+    type: string;
+    data: string; // base64
+  }>;
 }
 
 const getApiKey = (model: string): string | null => {
@@ -65,7 +70,7 @@ const performWebSearch = async (query: string): Promise<string | null> => {
   }
 }
 
-const callOpenAI = async (message: string, model: string): Promise<string> => {
+const callOpenAI = async (message: string, model: string, files?: Array<{name: string; type: string; data: string}>): Promise<string> => {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   
   // Verificar se precisa de busca na web
@@ -119,6 +124,55 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
   // Add reasoning support for o3 models
   const hasReasoning = model.includes('o3');
   
+  // Prepare messages with file support
+  const messages = [
+    {
+      role: 'system',
+      content: 'Você é um assistente útil em português. Se receber informações da web, use-as para dar uma resposta mais completa e atual. Sempre responda em português. Se receber arquivos, analise-os completamente e forneça informações detalhadas sobre seu conteúdo.'
+    }
+  ];
+
+  // Handle files for vision models
+  if (files && files.length > 0) {
+    const userMessage: any = {
+      role: 'user',
+      content: []
+    };
+    
+    // Add text content
+    if (finalMessage.trim()) {
+      userMessage.content.push({
+        type: 'text',
+        text: finalMessage
+      });
+    }
+    
+    // Add files
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        userMessage.content.push({
+          type: 'image_url',
+          image_url: {
+            url: file.data
+          }
+        });
+      } else if (file.type.includes('pdf') || file.type.includes('word') || file.type.includes('document')) {
+        // For PDF/Word files, we'll need to extract text first
+        userMessage.content.push({
+          type: 'text',
+          text: `[Arquivo anexado: ${file.name}]\nNota: Análise de documentos PDF/Word ainda não implementada. Por favor, converta para imagem ou texto.`
+        });
+      }
+    }
+    
+    messages.push(userMessage);
+  } else {
+    messages.push({
+      role: 'user',
+      content: finalMessage
+    });
+  }
+  
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -127,16 +181,7 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
     },
     body: JSON.stringify({
       model,
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um assistente útil em português. Se receber informações da web, use-as para dar uma resposta mais completa e atual. Sempre responda em português.'
-        },
-        {
-          role: 'user',
-          content: finalMessage
-        }
-      ],
+      messages,
       max_completion_tokens: maxTokens,
       // Add reasoning options for o3 models
       ...(hasReasoning ? { 
@@ -160,12 +205,47 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
   return reasoning ? JSON.stringify({ content, reasoning }) : content;
 };
 
-const callAnthropic = async (message: string, model: string): Promise<string> => {
+const callAnthropic = async (message: string, model: string, files?: Array<{name: string; type: string; data: string}>): Promise<string> => {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   
   // Claude models have 200k context window and can output up to 8192 tokens max
   const maxTokens = 8192;
   
+  // Prepare content with file support
+  let content: any = message;
+  
+  if (files && files.length > 0) {
+    content = [];
+    
+    // Add text content
+    if (message.trim()) {
+      content.push({
+        type: 'text',
+        text: message
+      });
+    }
+    
+    // Add files
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        const base64Data = file.data.split(',')[1]; // Remove data:image/...;base64, prefix
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: file.type,
+            data: base64Data
+          }
+        });
+      } else if (file.type.includes('pdf') || file.type.includes('word') || file.type.includes('document')) {
+        content.push({
+          type: 'text',
+          text: `[Arquivo anexado: ${file.name}]\nNota: Análise de documentos PDF/Word ainda não implementada diretamente. Por favor, converta para imagem ou texto.`
+        });
+      }
+    }
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -176,7 +256,7 @@ const callAnthropic = async (message: string, model: string): Promise<string> =>
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
-      messages: [{ role: 'user', content: message }],
+      messages: [{ role: 'user', content }],
     }),
   });
 
@@ -190,12 +270,39 @@ const callAnthropic = async (message: string, model: string): Promise<string> =>
   return data.content[0].text;
 };
 
-const callGoogleAI = async (message: string, model: string): Promise<string> => {
+const callGoogleAI = async (message: string, model: string, files?: Array<{name: string; type: string; data: string}>): Promise<string> => {
   const apiKey = Deno.env.get('GOOGLE_API_KEY');
   
   // Gemini models have up to 2M context window and up to 8192 output tokens
   const maxOutputTokens = 8192;
   
+  // Prepare parts with file support
+  const parts: any[] = [];
+  
+  // Add text content
+  if (message.trim()) {
+    parts.push({ text: message });
+  }
+  
+  // Add files
+  if (files && files.length > 0) {
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        const base64Data = file.data.split(',')[1]; // Remove data:image/...;base64, prefix
+        parts.push({
+          inlineData: {
+            mimeType: file.type,
+            data: base64Data
+          }
+        });
+      } else if (file.type.includes('pdf') || file.type.includes('word') || file.type.includes('document')) {
+        parts.push({
+          text: `[Arquivo anexado: ${file.name}]\nNota: Análise de documentos PDF/Word ainda não implementada diretamente. Por favor, converta para imagem ou texto.`
+        });
+      }
+    }
+  }
+
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: {
@@ -203,7 +310,7 @@ const callGoogleAI = async (message: string, model: string): Promise<string> => 
     },
     body: JSON.stringify({
       contents: [{
-        parts: [{ text: message }]
+        parts
       }],
       generationConfig: {
         maxOutputTokens: maxOutputTokens,
@@ -378,7 +485,7 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
 
-    const { message, model }: ChatRequest = await req.json();
+    const { message, model, files }: ChatRequest = await req.json();
     console.log('Received message:', message?.substring(0, 100) + '...');
     console.log('Received model:', model);
 
@@ -394,13 +501,13 @@ serve(async (req) => {
     // Route to appropriate API based on model
     if (model.includes('gpt-5') || model.includes('o3')) {
       console.log('Routing to OpenAI');
-      response = await callOpenAI(message, model);
+      response = await callOpenAI(message, model, files);
     } else if (model.includes('claude')) {
       console.log('Routing to Anthropic');
-      response = await callAnthropic(message, model);
+      response = await callAnthropic(message, model, files);
     } else if (model.includes('gemini')) {
       console.log('Routing to Google AI');
-      response = await callGoogleAI(message, model);
+      response = await callGoogleAI(message, model, files);
     } else if (model.includes('grok')) {
       console.log('Routing to XAI');
       response = await callXAI(message, model);
@@ -413,7 +520,7 @@ serve(async (req) => {
     } else {
       console.log('Using default OpenAI model for:', model);
       // Default to OpenAI with a valid model
-      response = await callOpenAI(message, 'gpt-5-mini');
+      response = await callOpenAI(message, 'gpt-5-mini', files);
     }
 
     console.log('Response generated successfully, length:', response?.length || 0);

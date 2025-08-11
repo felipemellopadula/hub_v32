@@ -19,7 +19,17 @@ interface Message {
   model?: string;
   reasoning?: string;
   isStreaming?: boolean;
+  files?: { name: string; type: string }[];
 }
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
 
 interface ChatConversation {
   id: string;
@@ -88,15 +98,44 @@ const Chat = () => {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setAttachedFiles(prev => [...prev, ...files]);
-   
-    // Show files in input
-    const fileNames = files.map(f => f.name).join(', ');
-    setInputValue(prev => prev + (prev ? ' ' : '') + `[Arquivos: ${fileNames}]`);
+    
+    // Validate file types and sizes
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/') || 
+                         file.type.includes('pdf') || 
+                         file.type.includes('word') || 
+                         file.type.includes('document') ||
+                         file.name.endsWith('.doc') ||
+                         file.name.endsWith('.docx');
+      
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      
+      if (!isValidType) {
+        toast({
+          title: "Tipo de arquivo não suportado",
+          description: `O arquivo ${file.name} não é suportado. Use imagens, PDF, Word ou documentos.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      if (!isValidSize) {
+        toast({
+          title: "Arquivo muito grande",
+          description: `O arquivo ${file.name} é muito grande. Limite de 10MB.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      return true;
+    });
+    
+    setAttachedFiles(prev => [...prev, ...validFiles]);
    
     toast({
       title: "Arquivos anexados",
-      description: `${files.length} arquivo(s) anexado(s)`,
+      description: `${validFiles.length} arquivo(s) anexado(s)`,
     });
   };
 
@@ -329,8 +368,10 @@ const Chat = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
+    
     const currentInput = inputValue;
+    const currentFiles = [...attachedFiles];
     setInputValue('');
     setAttachedFiles([]);
     // If web search mode is active, perform web search instead
@@ -343,11 +384,21 @@ const Chat = () => {
     if (!canProceed) {
       return;
     }
+    // Convert files to base64
+    const fileData = await Promise.all(
+      currentFiles.map(async (file) => ({
+        name: file.name,
+        type: file.type,
+        data: await fileToBase64(file),
+      }))
+    );
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: currentInput,
       sender: 'user',
       timestamp: new Date(),
+      files: currentFiles.length > 0 ? currentFiles.map(f => ({ name: f.name, type: f.type })) : undefined,
     };
     const base = messages;
     const messagesAfterUser = [...base, userMessage];
@@ -359,6 +410,7 @@ const Chat = () => {
         body: {
           message: currentInput,
           model: selectedModel,
+          files: fileData.length > 0 ? fileData : undefined,
         },
       });
       
@@ -545,43 +597,52 @@ const Chat = () => {
                           : 'bg-muted'
                       }`}
                     >
-                      <div className="space-y-2">
-                        {message.reasoning && message.sender === 'bot' && (
-                          <div className="border-b border-border pb-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setExpandedReasoning(prev => ({
-                                ...prev,
-                                [message.id]: !prev[message.id]
-                              }))}
-                              className="h-auto p-1 text-xs opacity-70 hover:opacity-100"
-                            >
-                              {expandedReasoning[message.id] ? (
-                                <>
-                                  <ChevronUp className="h-3 w-3 mr-1" />
-                                  Ocultar raciocínio
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="h-3 w-3 mr-1" />
-                                  Mostrar raciocínio
-                                </>
-                              )}
-                            </Button>
-                            {expandedReasoning[message.id] && (
-                              <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap">
-                                {message.reasoning}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <p className="text-sm whitespace-pre-wrap">
-                          {message.content}
-                          {message.isStreaming && (
-                            <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />
-                          )}
-                        </p>
+                       <div className="space-y-2">
+                         {message.files && message.sender === 'user' && (
+                           <div className="mb-2 flex flex-wrap gap-2">
+                             {message.files.map((file, idx) => (
+                               <div key={idx} className="bg-background/50 px-3 py-1 rounded-full text-xs">
+                                 📎 {file.name}
+                               </div>
+                             ))}
+                           </div>
+                         )}
+                         {message.reasoning && message.sender === 'bot' && (
+                           <div className="border-b border-border pb-2">
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => setExpandedReasoning(prev => ({
+                                 ...prev,
+                                 [message.id]: !prev[message.id]
+                               }))}
+                               className="h-auto p-1 text-xs opacity-70 hover:opacity-100"
+                             >
+                               {expandedReasoning[message.id] ? (
+                                 <>
+                                   <ChevronUp className="h-3 w-3 mr-1" />
+                                   Ocultar raciocínio
+                                 </>
+                               ) : (
+                                 <>
+                                   <ChevronDown className="h-3 w-3 mr-1" />
+                                   Mostrar raciocínio
+                                 </>
+                               )}
+                             </Button>
+                             {expandedReasoning[message.id] && (
+                               <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap">
+                                 {message.reasoning}
+                               </div>
+                             )}
+                           </div>
+                         )}
+                         <p className="text-sm whitespace-pre-wrap">
+                           {message.content}
+                           {message.isStreaming && (
+                             <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />
+                           )}
+                         </p>
                         {message.model && message.sender === 'bot' && (
                           <p className="text-xs opacity-70 mt-1">
                             {getModelDisplayName(message.model)} • {getTokenCost(message.model).toLocaleString()} tokens
@@ -666,10 +727,25 @@ const Chat = () => {
                     </Button>
                   </div>
                 </div>
-                <Button type="submit" disabled={isLoading || !inputValue.trim()} size="lg">
+                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg">
                   Enviar
                 </Button>
               </form>
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} className="bg-muted px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                      📎 {file.name}
+                      <button
+                        onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-red-500 hover:text-red-700 ml-1"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
