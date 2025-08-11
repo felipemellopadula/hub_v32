@@ -846,7 +846,7 @@ const Chat = () => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Anexe arquivos de até 25 mb
+                          Anexe arquivos de até 25mb
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
