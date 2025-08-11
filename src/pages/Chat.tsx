@@ -341,59 +341,69 @@ const Chat = () => {
 
   const toggleWebSearchMode = () => {
     setIsWebSearchMode(prev => !prev);
-    toast({
-      title: isWebSearchMode ? "Modo busca web desativado" : "Modo busca web ativado",
-      description: isWebSearchMode ? "Agora as mensagens serão enviadas para a IA" : "Agora as mensagens serão buscadas na web",
-    });
   };
 
   const performWebSearch = async (query: string) => {
     try {
       setIsLoading(true);
-     
-      const response = await supabase.functions.invoke('web-search', {
-        body: { query, numResults: 3 }
-      });
-      let searchContent = 'Sem resultados.';
-      if (response.data?.results) {
-        const searchResults = response.data.results
-          .map((result: any) =>
-            `${result.title}: ${result.content}`
-          )
-          .join('\n\n');
-       
-        searchContent = `[Resultados da busca na web para "${query}"]\n\n${searchResults}`;
-      }
-     
+
+      // Add user message and a loading status message to the chat immediately
+      const base = messages;
+      const baseTime = Date.now();
       const userMessage: Message = {
-        id: Date.now().toString(),
+        id: baseTime.toString(),
         content: query,
         sender: 'user',
         timestamp: new Date(),
       };
+      const loadingId = (baseTime + 1).toString();
+      const loadingMessage: Message = {
+        id: loadingId,
+        content: 'Buscando na web',
+        sender: 'bot',
+        timestamp: new Date(),
+        model: 'Busca Web',
+      };
+      setMessages([...base, userMessage, loadingMessage]);
+
+      // Perform web search
+      const response = await supabase.functions.invoke('web-search', {
+        body: { query, numResults: 3 }
+      });
+
+      let searchContent = 'Sem resultados.';
+      if (response.data?.results) {
+        const searchResults = response.data.results
+          .map((result: any) => `${result.title}: ${result.content}`)
+          .join('\n\n');
+        searchContent = `[Resultados da busca na web para "${query}"]\n\n${searchResults}`;
+      }
+
+      // Replace the loading message with the actual results
       const searchMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: loadingId,
         content: searchContent,
         sender: 'bot',
         timestamp: new Date(),
         model: 'Busca Web',
       };
-      const base = messages;
-      const finalMessages = [...base, userMessage, searchMessage];
+
+      const withLoading = [...base, userMessage, loadingMessage];
+      const finalMessages = withLoading.map(m => (m.id === loadingId ? searchMessage : m));
       setMessages(finalMessages);
       await upsertConversation(finalMessages);
-     
+
       toast({
-        title: "Busca concluída",
-        description: response.data?.results ? "Resultados da busca na web encontrados" : "Nenhum resultado encontrado.",
-        variant: response.data?.results ? undefined : "destructive",
+        title: 'Busca concluída',
+        description: response.data?.results ? 'Resultados da busca na web encontrados' : 'Nenhum resultado encontrado.',
+        variant: response.data?.results ? undefined : 'destructive',
       });
     } catch (error) {
       console.error('Web search error:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível realizar a busca na web.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível realizar a busca na web.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
