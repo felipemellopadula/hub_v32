@@ -59,15 +59,15 @@ const getCategoryColor = (category: Model['category']) => {
 
 const getProviderIcon = (provider: string) => {
   const iconMap: Record<string, string> = {
-    'OpenAI': '/images/logos/openai.svg',
-    'Anthropic': '/images/logos/anthropic.svg', 
-    'Google': '/images/logos/google.svg',
-    'DeepSeek': '/images/logos/deepseek.svg',
-    'xAI': '/images/logos/xai.svg',
-    'Meta': '/images/logos/meta.svg',
-    'APILLM': '/images/logos/apillm.svg',
+    'OpenAI': '/logos/openai.svg',
+    'Anthropic': '/logos/anthropic.svg', 
+    'Google': '/logos/google.svg',
+    'DeepSeek': '/logos/deepseek.svg',
+    'xAI': '/logos/xai.svg',
+    'Meta': '/logos/meta.svg',
+    'APILLM': '/logos/apillm.svg',
   };
-  return iconMap[provider] || '/images/logos/openai.svg';
+  return iconMap[provider] || '/logos/openai.svg';
 };
 
 export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorProps) => {
