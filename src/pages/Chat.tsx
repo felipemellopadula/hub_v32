@@ -832,15 +832,24 @@ const Chat = () => {
                       multiple
                       accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-8 w-8 p-0 hover:bg-muted"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-8 w-8 p-0 hover:bg-muted"
+                          >
+                            <Paperclip className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Anexe arquivos de até 25 mb
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -859,15 +868,24 @@ const Chat = () => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleWebSearchMode}
-                      className={`h-8 w-8 p-0 hover:bg-muted ${isWebSearchMode ? 'bg-primary text-primary-foreground' : ''}`}
-                    >
-                      <Globe className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={toggleWebSearchMode}
+                            className={`h-8 w-8 p-0 hover:bg-muted ${isWebSearchMode ? 'bg-primary text-primary-foreground' : ''}`}
+                          >
+                            <Globe className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Buscar na web
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
                 <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg">
