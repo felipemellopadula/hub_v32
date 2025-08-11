@@ -16,7 +16,7 @@ interface Model {
 
 const modelsByProvider = {
   'Synergy': [
-    { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'standard' as const },
+    { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'fast' as const },
   ],
   'OpenAI': [
     { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI', category: 'premium' as const },
