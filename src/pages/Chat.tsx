@@ -503,6 +503,50 @@ const Chat = () => {
     }
   };
 
+  const handleModelSelect = async (newModel: string) => {
+    if (newModel === selectedModel) return;
+
+    // Persist the current conversation if it has content
+    try {
+      if (messages.length > 0) {
+        await upsertConversation(messages);
+      }
+    } catch (e) {
+      console.error('Erro ao salvar conversa atual antes de trocar o modelo:', e);
+    }
+
+    // Reset UI state and start fresh
+    setSelectedModel(newModel);
+    setInputValue('');
+    setAttachedFiles([]);
+    setProcessedPdfs(new Map());
+    setExpandedReasoning({});
+    setIsWebSearchMode(false);
+
+    // Create and persist a brand-new empty conversation
+    setCurrentConversationId(null);
+    try {
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .insert({
+          user_id: user.id,
+          title: 'Nova conversa',
+          messages: [],
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar nova conversa ao trocar de modelo:', error);
+      } else if (data) {
+        setCurrentConversationId(data.id);
+        setConversations((prev) => [data as any, ...prev]);
+      }
+    } catch (err) {
+      console.error('Erro inesperado ao criar nova conversa:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -547,7 +591,7 @@ const Chat = () => {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+            <ModelSelector onModelSelect={handleModelSelect} selectedModel={selectedModel} />
             <ThemeToggle />
             <UserProfile />
           </div>
