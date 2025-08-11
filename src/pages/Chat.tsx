@@ -131,12 +131,22 @@ const Chat = () => {
           const result = await PdfProcessor.processPdf(file);
           
           if (result.success) {
-            // Store processed PDF content silently
             setProcessedPdfs(prev => new Map(prev).set(file.name, result.content || ''));
+          } else {
+            toast({
+              title: "Erro ao processar PDF",
+              description: result.error || `Não foi possível processar o arquivo ${file.name}.`,
+              variant: "destructive",
+            });
           }
           
         } catch (error) {
           console.error('Erro ao processar PDF:', error);
+          toast({
+            title: "Erro ao processar PDF",
+            description: `Não foi possível processar o arquivo ${file.name}.`,
+            variant: "destructive",
+          });
         }
       } else {
       }
