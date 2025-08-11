@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModelSelector } from "./ModelSelector";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PdfProcessor } from "@/utils/PdfProcessor";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -25,6 +27,41 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error('Apenas arquivos PDF são suportados');
+      return;
+    }
+
+    setIsProcessingPdf(true);
+    
+    try {
+      const result = await PdfProcessor.processPdf(file);
+      
+      if (result.success) {
+        const pdfMessage = `[Arquivo: ${file.name}]\n\n${result.content}`;
+        setInputValue(pdfMessage);
+        toast.success(`PDF processado com sucesso! ${result.pageCount} páginas lidas.`);
+      } else {
+        toast.error(result.error || 'Erro ao processar PDF');
+      }
+    } catch (error) {
+      console.error('Erro ao processar PDF:', error);
+      toast.error('Erro interno ao processar PDF');
+    } finally {
+      setIsProcessingPdf(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !selectedModel) return;
@@ -233,21 +270,46 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
 
         <div className="p-4 border-t border-border">
           <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessingPdf || isLoading}
+              className="shrink-0"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={selectedModel ? "Digite sua mensagem..." : "Selecione um modelo primeiro"}
-              disabled={!selectedModel}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder={
+                isProcessingPdf
+                  ? "Processando PDF..."
+                  : selectedModel
+                  ? "Digite sua mensagem ou anexe um PDF..."
+                  : "Selecione um modelo primeiro"
+              }
+              disabled={!selectedModel || isProcessingPdf}
+              onKeyPress={(e) => e.key === 'Enter' && !isProcessingPdf && handleSendMessage()}
               className="flex-1 bg-background border-border"
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || !selectedModel || isLoading}
+              disabled={!inputValue.trim() || !selectedModel || isLoading || isProcessingPdf}
               className="bg-primary hover:bg-primary-glow text-primary-foreground"
             >
               <Send className="h-4 w-4" />
             </Button>
+          </div>
+          <div className="text-xs text-muted-foreground mt-2">
+            {PdfProcessor.getMaxFileInfo()}
           </div>
         </div>
       </Card>
