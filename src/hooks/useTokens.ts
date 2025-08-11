@@ -5,8 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 
 // Model token costs
 const MODEL_COSTS = {
-  'claude-3-5-sonnet-20241022': 10000,
-  'claude-3-opus-20240229': 10000,
+  // Claude 4 models (Anthropic)
+  'claude-opus-4-1-20250805': 15000,
+  'claude-sonnet-4-20250514': 10000,
   'grok-beta': 10000,
   'gpt-5': 12000,
   'gpt-5-mini': 3000,
@@ -122,8 +123,8 @@ export const useTokens = () => {
       'gpt-5': 'GPT-5',
       'gpt-5-mini': 'GPT-5 Mini',
       'gpt-5-nano': 'GPT-5 Nano',
-      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-      'claude-3-opus-20240229': 'Claude 3 Opus',
+      'claude-opus-4-1-20250805': 'Claude Opus 4.1',
+      'claude-sonnet-4-20250514': 'Claude Sonnet 4',
       'grok-beta': 'Grok',
       'claude-3-haiku-20240307': 'Claude 3 Haiku',
       // DeepSeek Models

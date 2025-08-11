@@ -20,10 +20,9 @@ const models: Model[] = [
   { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', category: 'fast' },
   { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI', category: 'fast' },
   
-  // Anthropic Models
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'premium' },
-  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', category: 'fast' },
-  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic', category: 'standard' },
+  // Anthropic Models - Claude 4 generation
+  { id: 'claude-opus-4-1-20250805', name: 'Claude Opus 4.1', provider: 'Anthropic', category: 'premium' },
+  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'Anthropic', category: 'premium' },
   
   // DeepSeek Models
   { id: 'deepseek-chat', name: 'DeepSeek Chat V3', provider: 'DeepSeek', category: 'premium' },
