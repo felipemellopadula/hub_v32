@@ -119,12 +119,12 @@ export const useTokens = () => {
 
   const getModelDisplayName = useCallback((modelName: string): string => {
     const displayNames: Record<string, string> = {
-      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-      'claude-3-opus-20240229': 'Claude 3 Opus',
-      'grok-beta': 'Grok',
       'gpt-4o': 'GPT-4o',
       'gpt-4o-mini': 'GPT-4o Mini',
       'gpt-4-turbo': 'GPT-4 Turbo',
+      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+      'claude-3-opus-20240229': 'Claude 3 Opus',
+      'grok-beta': 'Grok',
       'claude-3-haiku-20240307': 'Claude 3 Haiku',
       // DeepSeek Models
       'deepseek-chat': 'DeepSeek Chat V3',

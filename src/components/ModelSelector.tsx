@@ -16,10 +16,9 @@ interface Model {
 
 const models: Model[] = [
   // OpenAI Models
-  { id: 'gpt-4.1-2025-04-14', name: 'GPT-4.1', provider: 'OpenAI', category: 'premium' },
-  { id: 'o3-2025-04-16', name: 'o3 (Reasoning)', provider: 'OpenAI', category: 'premium' },
-  { id: 'o4-mini-2025-04-16', name: 'o4 Mini', provider: 'OpenAI', category: 'fast' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', category: 'standard' },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', category: 'premium' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', category: 'fast' },
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', category: 'standard' },
   
   // Anthropic Models
   { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'premium' },

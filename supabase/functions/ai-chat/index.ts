@@ -264,8 +264,18 @@ const callAPILLM = async (message: string, model: string): Promise<string> => {
     throw new Error('APILLM API key not found');
   }
   
+  // Map model names to the correct APILLM names from documentation
+  let apiModel = model;
+  if (model.includes('Llama-4-Maverick')) {
+    apiModel = 'llama4-maverick';
+  } else if (model.includes('Llama-4-Scout')) {
+    apiModel = 'llama4-scout';
+  }
+  
+  console.log('Mapped model name:', apiModel);
+  
   const requestBody = {
-    model,
+    model: apiModel,
     messages: [
       {
         role: 'system',
@@ -283,7 +293,7 @@ const callAPILLM = async (message: string, model: string): Promise<string> => {
   console.log('Request body:', JSON.stringify(requestBody, null, 2));
   
   try {
-    // Based on the Meta Llama API documentation, try the correct endpoint
+    // Use the correct endpoint from the official documentation
     const response = await fetch('https://api.llama-api.com/chat/completions', {
       method: 'POST',
       headers: {
