@@ -71,7 +71,7 @@ const performWebSearch = async (query: string): Promise<string | null> => {
   }
 }
 
-const callOpenAI = async (message: string, model: string, files?: Array<{name: string; type: string; data: string; pdfContent?: string}>): Promise<ReadableStream> => {
+const callOpenAI = async (message: string, model: string, files?: Array<{name: string; type: string; data: string; pdfContent?: string}>): Promise<string> => {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   
   console.log('=== OPENAI DEBUG ===');
@@ -201,9 +201,7 @@ const callOpenAI = async (message: string, model: string, files?: Array<{name: s
       model,
       messages,
       max_tokens: maxTokens,
-      stream: true, // Enable streaming
-      // Remove o4 specific parameters for now as they may cause API errors
-      // Remove temperature for newer models to avoid API errors
+      stream: false,
       ...(model.includes('gpt-5') || model.includes('o4') ? {} : { temperature: 0.7 }),
     }),
   });
@@ -217,8 +215,10 @@ const callOpenAI = async (message: string, model: string, files?: Array<{name: s
     throw new Error(`OpenAI API error: ${error}`);
   }
 
+  const data = await response.json();
   console.log('OpenAI response received successfully');
-  return response.body!;
+  const content = data?.choices?.[0]?.message?.content ?? '';
+  return content;
 };
 
 const callAnthropic = async (message: string, model: string, files?: Array<{name: string; type: string; data: string; pdfContent?: string}>): Promise<string> => {
@@ -660,16 +660,9 @@ serve(async (req) => {
     // Route to appropriate API based on model
     if (actualModel.includes('gpt-') || actualModel.includes('o4')) {
       console.log('Routing to OpenAI with model:', actualModel);
-      const stream = await callOpenAI(message, actualModel, files);
-      
-      // Return streaming response for OpenAI models
-      return new Response(stream, {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
-        },
+      const text = await callOpenAI(message, actualModel, files);
+      return new Response(JSON.stringify({ response: text }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else if (model.includes('claude')) {
       console.log('Routing to Anthropic');
@@ -688,15 +681,9 @@ serve(async (req) => {
       response = await callAPILLM(message, model, files);
     } else {
       console.log('Using default OpenAI model for:', model);
-      // Default to OpenAI with streaming for GPT models
-      const stream = await callOpenAI(message, 'gpt-4.1-mini', files);
-      return new Response(stream, {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
-        },
+      const text = await callOpenAI(message, 'gpt-4.1-mini', files);
+      return new Response(JSON.stringify({ response: text }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
