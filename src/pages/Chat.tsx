@@ -1,4 +1,4 @@
-import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
@@ -17,6 +17,8 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   model?: string;
+  reasoning?: string;
+  isStreaming?: boolean;
 }
 
 interface ChatConversation {
@@ -46,6 +48,7 @@ const Chat = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -165,6 +168,7 @@ const Chat = () => {
     sender: m.sender,
     timestamp: m.timestamp.toISOString(),
     model: m.model,
+    reasoning: m.reasoning,
   }));
 
   const fromSerializable = (msgs: any[]): Message[] =>
@@ -174,6 +178,7 @@ const Chat = () => {
       sender: m.sender,
       timestamp: new Date(m.timestamp),
       model: m.model,
+      reasoning: m.reasoning,
     }));
 
   const deriveTitle = (msgs: Message[]) => {
@@ -348,28 +353,128 @@ const Chat = () => {
     const messagesAfterUser = [...base, userMessage];
     setMessages(messagesAfterUser);
     setIsLoading(true);
+
+    // Create streaming bot message
+    const streamingBotMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: '',
+      sender: 'bot',
+      timestamp: new Date(),
+      model: selectedModel,
+      isStreaming: true,
+    };
+    
+    const messagesWithStreaming = [...messagesAfterUser, streamingBotMessage];
+    setMessages(messagesWithStreaming);
+
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-chat', {
-        body: {
+      const response = await fetch(`https://hcrbnxybgklhqujbfdpx.supabase.co/functions/v1/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           message: currentInput,
           model: selectedModel,
-        },
+          stream: true,
+        }),
       });
-      if (fnError) {
-        throw fnError;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = fnData as any;
-     
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response || 'Desculpe, não consegui processar sua mensagem.',
-        sender: 'bot',
-        timestamp: new Date(),
-        model: selectedModel,
-      };
-      const finalMessages = [...messagesAfterUser, botMessage];
-      setMessages(finalMessages);
-      await upsertConversation(finalMessages);
+
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('text/plain')) {
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedContent = '';
+        let reasoning = '';
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const jsonStr = line.slice(6);
+                if (jsonStr === '[DONE]') continue;
+                
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  const delta = parsed.choices?.[0]?.delta;
+                  
+                  if (delta?.content) {
+                    accumulatedContent += delta.content;
+                    
+                    // Update streaming message
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === streamingBotMessage.id 
+                        ? { ...msg, content: accumulatedContent }
+                        : msg
+                    ));
+                  }
+
+                  if (delta?.reasoning) {
+                    reasoning += delta.reasoning;
+                  }
+                } catch (parseError) {
+                  console.log('Parse error for chunk:', jsonStr);
+                }
+              }
+            }
+          }
+        }
+
+        // Final message with complete content
+        const finalBotMessage: Message = {
+          ...streamingBotMessage,
+          content: accumulatedContent || 'Desculpe, não consegui processar sua mensagem.',
+          reasoning: reasoning || undefined,
+          isStreaming: false,
+        };
+
+        const finalMessages = [...messagesAfterUser, finalBotMessage];
+        setMessages(finalMessages);
+        await upsertConversation(finalMessages);
+
+      } else {
+        // Handle non-streaming response (fallback)
+        const data = await response.json();
+        let content = '';
+        let reasoning = '';
+
+        if (typeof data.response === 'string') {
+          try {
+            const parsed = JSON.parse(data.response);
+            content = parsed.content || data.response;
+            reasoning = parsed.reasoning || '';
+          } catch {
+            content = data.response;
+          }
+        } else {
+          content = data.response || 'Desculpe, não consegui processar sua mensagem.';
+        }
+
+        const finalBotMessage: Message = {
+          ...streamingBotMessage,
+          content,
+          reasoning: reasoning || undefined,
+          isStreaming: false,
+        };
+
+        const finalMessages = [...messagesAfterUser, finalBotMessage];
+        setMessages(finalMessages);
+        await upsertConversation(finalMessages);
+      }
+
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -377,7 +482,9 @@ const Chat = () => {
         description: "Não foi possível enviar a mensagem. Tente novamente.",
         variant: "destructive",
       });
-      // Persist at least the user question
+      
+      // Remove streaming message and persist at least the user question
+      setMessages(messagesAfterUser);
       await upsertConversation(messagesAfterUser);
     } finally {
       setIsLoading(false);
@@ -512,17 +619,56 @@ const Chat = () => {
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    <div
+                     <div
                       className={`max-w-[80%] rounded-lg px-4 py-2 ${
                         message.sender === 'user'
                           ? 'bg-primary text-primary-foreground ml-auto'
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      {message.model && message.sender === 'bot' && (
-                        <p className="text-xs opacity-70 mt-1">{getModelDisplayName(message.model)} • {getTokenCost(message.model).toLocaleString()} tokens</p>
-                      )}
+                      <div className="space-y-2">
+                        {message.reasoning && message.sender === 'bot' && (
+                          <div className="border-b border-border pb-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setExpandedReasoning(prev => ({
+                                ...prev,
+                                [message.id]: !prev[message.id]
+                              }))}
+                              className="h-auto p-1 text-xs opacity-70 hover:opacity-100"
+                            >
+                              {expandedReasoning[message.id] ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3 mr-1" />
+                                  Ocultar raciocínio
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3 w-3 mr-1" />
+                                  Mostrar raciocínio
+                                </>
+                              )}
+                            </Button>
+                            {expandedReasoning[message.id] && (
+                              <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap">
+                                {message.reasoning}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap">
+                          {message.content}
+                          {message.isStreaming && (
+                            <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />
+                          )}
+                        </p>
+                        {message.model && message.sender === 'bot' && (
+                          <p className="text-xs opacity-70 mt-1">
+                            {getModelDisplayName(message.model)} • {getTokenCost(message.model).toLocaleString()} tokens
+                          </p>
+                        )}
+                      </div>
                     </div>
                     {message.sender === 'user' && (
                       <Avatar className="h-8 w-8 shrink-0">

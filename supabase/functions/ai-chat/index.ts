@@ -9,6 +9,7 @@ const corsHeaders = {
 interface ChatRequest {
   message: string;
   model: string;
+  stream?: boolean;
 }
 
 const getApiKey = (model: string): string | null => {
@@ -65,7 +66,7 @@ const performWebSearch = async (query: string): Promise<string | null> => {
   }
 }
 
-const callOpenAI = async (message: string, model: string): Promise<string> => {
+const callOpenAI = async (message: string, model: string, stream: boolean = false): Promise<string | ReadableStream> => {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   
   // Verificar se precisa de busca na web
@@ -115,6 +116,9 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
   } else if (model.includes('gpt-5-nano')) {
     maxTokens = 32768; // GPT-5 Nano max output
   }
+
+  // Add reasoning support for o3 models
+  const hasReasoning = model.includes('o3');
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -135,6 +139,12 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
         }
       ],
       max_completion_tokens: maxTokens,
+      stream,
+      // Add reasoning options for o3 models
+      ...(hasReasoning ? { 
+        reasoning_effort: 'medium',
+        include_reasoning: true 
+      } : {}),
       // Remove temperature for GPT-5 models as they only support default (1)
       ...(model.includes('gpt-5') ? {} : { temperature: 0.7 }),
     }),
@@ -145,8 +155,15 @@ const callOpenAI = async (message: string, model: string): Promise<string> => {
     throw new Error(`OpenAI API error: ${error}`);
   }
 
+  if (stream) {
+    return response.body;
+  }
+
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+  const reasoning = hasReasoning ? data.choices[0].message.reasoning : null;
+  
+  return reasoning ? JSON.stringify({ content, reasoning }) : content;
 };
 
 const callAnthropic = async (message: string, model: string): Promise<string> => {
@@ -367,9 +384,10 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
 
-    const { message, model }: ChatRequest = await req.json();
+    const { message, model, stream = true }: ChatRequest = await req.json();
     console.log('Received message:', message?.substring(0, 100) + '...');
     console.log('Received model:', model);
+    console.log('Stream requested:', stream);
 
     if (!message || !model) {
       console.error('Missing required fields - message:', !!message, 'model:', !!model);
@@ -378,38 +396,72 @@ serve(async (req) => {
 
     console.log(`Processing chat request for model: ${model}`);
 
-    let response: string;
-
     // Route to appropriate API based on model
-    if (model.includes('gpt-5')) {
+    if (model.includes('gpt-5') || model.includes('o3')) {
       console.log('Routing to OpenAI');
-      response = await callOpenAI(message, model);
+      const response = await callOpenAI(message, model, stream);
+      
+      if (stream && response instanceof ReadableStream) {
+        return new Response(response, {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Transfer-Encoding': 'chunked'
+          },
+        });
+      } else {
+        return new Response(JSON.stringify({ response }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     } else if (model.includes('claude')) {
       console.log('Routing to Anthropic');
-      response = await callAnthropic(message, model);
+      const response = await callAnthropic(message, model);
+      return new Response(JSON.stringify({ response }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else if (model.includes('gemini')) {
       console.log('Routing to Google AI');
-      response = await callGoogleAI(message, model);
+      const response = await callGoogleAI(message, model);
+      return new Response(JSON.stringify({ response }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else if (model.includes('grok')) {
       console.log('Routing to XAI');
-      response = await callXAI(message, model);
+      const response = await callXAI(message, model);
+      return new Response(JSON.stringify({ response }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else if (model.includes('deepseek')) {
       console.log('Routing to DeepSeek');
-      response = await callDeepSeek(message, model);
+      const response = await callDeepSeek(message, model);
+      return new Response(JSON.stringify({ response }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else if (model.includes('Llama-4')) {
       console.log('Routing to APILLM');
-      response = await callAPILLM(message, model);
+      const response = await callAPILLM(message, model);
+      return new Response(JSON.stringify({ response }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else {
       console.log('Using default OpenAI model for:', model);
-      // Default to OpenAI with a valid model
-      response = await callOpenAI(message, 'gpt-5-mini');
+      const response = await callOpenAI(message, 'gpt-5-mini', stream);
+      
+      if (stream && response instanceof ReadableStream) {
+        return new Response(response, {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Transfer-Encoding': 'chunked'
+          },
+        });
+      } else {
+        return new Response(JSON.stringify({ response }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
-
-    console.log('Response generated successfully, length:', response?.length || 0);
-
-    return new Response(JSON.stringify({ response }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Error in ai-chat function:', error);
