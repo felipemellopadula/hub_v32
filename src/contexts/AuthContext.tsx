@@ -22,7 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string, phone?: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
-  signInWithFacebook: () => Promise<{ error: any }>;
+  
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
   refreshProfile: () => Promise<void>;
@@ -236,16 +236,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { error };
   };
 
-  const signInWithFacebook = async () => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: redirectUrl,
-      }
-    });
-    return { error };
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -274,7 +264,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signInWithGoogle,
-    signInWithFacebook,
+    
     signOut,
     updateProfile,
     refreshProfile,

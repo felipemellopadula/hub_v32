@@ -16,7 +16,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { signIn, signUp, signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -210,37 +210,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
   
-  const handleFacebookSignIn = async () => {
-    setLoading(true);
-
-    try {
-      const { error } = await signInWithFacebook();
-
-      if (error) {
-        toast({
-          title: "Erro no login",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Redirecionando...",
-        description: "Você será redirecionado para fazer login com Facebook.",
-      });
-
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -282,18 +251,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 />
               </svg>
               {loading ? "Redirecionando..." : "Entrar com Google"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleFacebookSignIn}
-              disabled={loading}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.19 8.44 9.98v-7.05H7.9v-2.93h2.4V9.41c0-2.37 1.41-3.69 3.57-3.69 1.03 0 2.1.18 2.1.18v2.31h-1.18c-1.16 0-1.52.72-1.52 1.46v1.75h2.59l-.41 2.93h-2.18v7.05c4.78-.79 8.44-4.96 8.44-9.98z"></path>
-              </svg>
-              {loading ? "Redirecionando..." : "Entrar com Facebook"}
             </Button>
 
             <div className="relative">
@@ -397,18 +354,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 />
               </svg>
               {loading ? "Redirecionando..." : "Cadastrar com Google"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleFacebookSignIn}
-              disabled={loading}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.19 8.44 9.98v-7.05H7.9v-2.93h2.4V9.41c0-2.37 1.41-3.69 3.57-3.69 1.03 0 2.1.18 2.1.18v2.31h-1.18c-1.16 0-1.52.72-1.52 1.46v1.75h2.59l-.41 2.93h-2.18v7.05c4.78-.79 8.44-4.96 8.44-9.98z"></path>
-              </svg>
-              {loading ? "Redirecionando..." : "Cadastrar com Facebook"}
             </Button>
 
             <div className="relative">
