@@ -202,11 +202,7 @@ const callOpenAI = async (message: string, model: string, files?: Array<{name: s
       messages,
       max_tokens: maxTokens,
       stream: true, // Enable streaming
-      // Add reasoning options for o4 models  
-      ...(model.includes('o4') ? {
-        reasoning_effort: 'medium',
-        include_reasoning: true 
-      } : {}),
+      // Remove o4 specific parameters for now as they may cause API errors
       // Remove temperature for newer models to avoid API errors
       ...(model.includes('gpt-5') || model.includes('o4') ? {} : { temperature: 0.7 }),
     }),
