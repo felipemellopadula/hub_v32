@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTokens } from "@/hooks/useTokens";
 import { supabase } from "@/integrations/supabase/client";
 import { PdfProcessor } from "@/utils/PdfProcessor";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Message {
   id: string;
@@ -58,6 +59,7 @@ const Chat = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimeoutRef = useRef<number | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
@@ -181,6 +183,17 @@ const Chat = () => {
       };
       mediaRecorder.start();
       setIsRecording(true);
+
+      // Enforce max 30s recording
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+      recordingTimeoutRef.current = window.setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+        }
+      }, 30000);
      
       toast({
         title: "Gravando",
@@ -196,6 +209,10 @@ const Chat = () => {
   };
 
   const stopRecording = () => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -212,10 +229,7 @@ const Chat = () => {
       });
       if (response.data?.text) {
         setInputValue(prev => prev + (prev ? ' ' : '') + response.data.text);
-        toast({
-          title: "Transcrição concluída",
-          description: "Áudio convertido para texto",
-        });
+
       }
     } catch (error) {
       toast({
@@ -827,15 +841,24 @@ const Chat = () => {
                     >
                       <Paperclip className="h-4 w-4" />
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={isRecording ? stopRecording : startRecording}
-                      className={`h-8 w-8 p-0 hover:bg-muted ${isRecording ? 'text-red-500' : ''}`}
-                    >
-                      <Mic className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`h-8 w-8 p-0 hover:bg-muted ${isRecording ? 'text-red-500' : ''}`}
+                          >
+                            <Mic className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Grave uma mensagem de até 30 s.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button
                       type="button"
                       variant="ghost"
