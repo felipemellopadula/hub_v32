@@ -55,8 +55,18 @@ export const useTokens = () => {
     return true;
   }, [user, profile, getTokenCost, toast]);
 
-  const consumeTokens = useCallback(async (modelName: string, message: string): Promise<boolean> => {
+  const consumeTokens = useCallback(async (modelName: string | undefined, message: string): Promise<boolean> => {
     if (!user || !profile) return false;
+    
+    // If no model selected, show error
+    if (!modelName) {
+      toast({
+        title: "Modelo não selecionado",
+        description: "Por favor, selecione um modelo de IA antes de enviar uma mensagem.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     setChecking(true);
     
