@@ -462,10 +462,11 @@ const Chat = () => {
     setIsLoading(true);
 
     try {
+      const internalModel = selectedModel === 'synergy-ia' ? 'o4-mini' : selectedModel;
       const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-chat', {
         body: {
           message: currentInput,
-          model: selectedModel,
+          model: internalModel,
           files: fileData.length > 0 ? fileData : undefined,
         },
       });

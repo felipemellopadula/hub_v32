@@ -16,7 +16,7 @@ interface Model {
 
 const modelsByProvider = {
   'Synergy': [
-    { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'premium' as const },
+    { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'standard' as const },
   ],
   'OpenAI': [
     { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI', category: 'premium' as const },
@@ -104,16 +104,18 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 rounded-md bg-muted/50 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
-                        <img
-                          src={getProviderIcon(model.provider)}
-                          alt={`${model.provider} logo`}
-                          className="w-4 h-4 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
+                      {model.id !== 'synergy-ia' && (
+                        <div className="w-6 h-6 rounded-md bg-muted/50 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <img
+                            src={getProviderIcon(model.provider)}
+                            alt={`${model.provider} logo`}
+                            className="w-4 h-4 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                       <div className="flex flex-col items-start min-w-0">
                         {model.id === 'synergy-ia' ? (
                           <span className="text-sm truncate font-bold flex items-center">
