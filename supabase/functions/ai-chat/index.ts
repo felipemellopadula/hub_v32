@@ -324,9 +324,16 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== AI-CHAT FUNCTION START ===');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+
     const { message, model }: ChatRequest = await req.json();
+    console.log('Received message:', message?.substring(0, 100) + '...');
+    console.log('Received model:', model);
 
     if (!message || !model) {
+      console.error('Missing required fields - message:', !!message, 'model:', !!model);
       throw new Error('Message and model are required');
     }
 
@@ -336,21 +343,30 @@ serve(async (req) => {
 
     // Route to appropriate API based on model
     if (model.includes('gpt') || model.includes('o3') || model.includes('o4')) {
+      console.log('Routing to OpenAI');
       response = await callOpenAI(message, model);
     } else if (model.includes('claude')) {
+      console.log('Routing to Anthropic');
       response = await callAnthropic(message, model);
     } else if (model.includes('gemini')) {
+      console.log('Routing to Google AI');
       response = await callGoogleAI(message, model);
     } else if (model.includes('grok')) {
+      console.log('Routing to XAI');
       response = await callXAI(message, model);
     } else if (model.includes('deepseek')) {
+      console.log('Routing to DeepSeek');
       response = await callDeepSeek(message, model);
     } else if (model.includes('Llama-4')) {
+      console.log('Routing to APILLM');
       response = await callAPILLM(message, model);
     } else {
-      // Default to OpenAI for llama and others
-      response = await callOpenAI(message, 'gpt-4.1-2025-04-14');
+      console.log('Using default OpenAI model for:', model);
+      // Default to OpenAI with a valid model
+      response = await callOpenAI(message, 'gpt-4o-mini');
     }
+
+    console.log('Response generated successfully, length:', response?.length || 0);
 
     return new Response(JSON.stringify({ response }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -358,6 +374,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in ai-chat function:', error);
+    console.error('Error stack:', error.stack);
     
     return new Response(JSON.stringify({ 
       error: error.message || 'Internal server error' 
