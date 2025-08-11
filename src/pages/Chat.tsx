@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTokens } from "@/hooks/useTokens";
 import { supabase } from "@/integrations/supabase/client";
+import { PdfProcessor } from "@/utils/PdfProcessor";
 
 interface Message {
   id: string;
@@ -96,11 +97,11 @@ const Chat = () => {
     return null;
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
-    // Validate file types and sizes
-    const validFiles = files.filter(file => {
+    for (const file of files) {
+      // Validate file types and sizes
       const isValidType = file.type.startsWith('image/') || 
                          file.type.includes('pdf') || 
                          file.type.includes('word') || 
@@ -108,7 +109,7 @@ const Chat = () => {
                          file.name.endsWith('.doc') ||
                          file.name.endsWith('.docx');
       
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      const isValidSize = file.size <= 50 * 1024 * 1024; // 50MB limit for PDFs
       
       if (!isValidType) {
         toast({
@@ -116,27 +117,63 @@ const Chat = () => {
           description: `O arquivo ${file.name} não é suportado. Use imagens, PDF, Word ou documentos.`,
           variant: "destructive",
         });
-        return false;
+        continue;
       }
       
       if (!isValidSize) {
         toast({
           title: "Arquivo muito grande",
-          description: `O arquivo ${file.name} é muito grande. Limite de 10MB.`,
+          description: `O arquivo ${file.name} é muito grande. Limite de 50MB para PDFs.`,
           variant: "destructive",
         });
-        return false;
+        continue;
       }
-      
-      return true;
-    });
-    
-    setAttachedFiles(prev => [...prev, ...validFiles]);
-   
-    toast({
-      title: "Arquivos anexados",
-      description: `${validFiles.length} arquivo(s) anexado(s)`,
-    });
+
+      // Process PDF files
+      if (file.type === 'application/pdf') {
+        toast({
+          title: "Processando PDF",
+          description: `Extraindo texto do arquivo ${file.name}...`,
+        });
+        
+        try {
+          const result = await PdfProcessor.processPdf(file);
+          
+          if (!result.success) {
+            toast({
+              title: "Erro ao processar PDF",
+              description: result.error || "Não foi possível processar o PDF",
+              variant: "destructive",
+            });
+            continue;
+          }
+          
+          // Add the PDF content to the input
+          const pdfContent = `[PDF: ${file.name}]\n${result.content}`;
+          setInputValue(prev => prev + (prev ? '\n\n' : '') + pdfContent);
+          
+          toast({
+            title: "PDF processado",
+            description: `Texto extraído de ${file.name} (${result.pageCount} páginas)`,
+          });
+          
+        } catch (error) {
+          console.error('Erro ao processar PDF:', error);
+          toast({
+            title: "Erro ao processar PDF",
+            description: "Erro interno ao processar o PDF",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // For non-PDF files, add to attached files
+        setAttachedFiles(prev => [...prev, file]);
+        toast({
+          title: "Arquivo anexado",
+          description: `${file.name} foi anexado`,
+        });
+      }
+    }
   };
 
   const startRecording = async () => {
