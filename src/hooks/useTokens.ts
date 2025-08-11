@@ -8,9 +8,9 @@ const MODEL_COSTS = {
   'claude-3-5-sonnet-20241022': 10000,
   'claude-3-opus-20240229': 10000,
   'grok-beta': 10000,
-  'gpt-4o': 10000,
-  'gpt-4o-mini': 2000,
-  'gpt-4-turbo': 10000,
+  'gpt-5': 12000,
+  'gpt-5-mini': 3000,
+  'gpt-5-nano': 1000,
   'claude-3-haiku-20240307': 2000,
   // DeepSeek Models
   'deepseek-chat': 8000,
@@ -119,9 +119,9 @@ export const useTokens = () => {
 
   const getModelDisplayName = useCallback((modelName: string): string => {
     const displayNames: Record<string, string> = {
-      'gpt-4o': 'GPT-4o',
-      'gpt-4o-mini': 'GPT-4o Mini',
-      'gpt-4-turbo': 'GPT-4 Turbo',
+      'gpt-5': 'GPT-5',
+      'gpt-5-mini': 'GPT-5 Mini',
+      'gpt-5-nano': 'GPT-5 Nano',
       'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
       'claude-3-opus-20240229': 'Claude 3 Opus',
       'grok-beta': 'Grok',

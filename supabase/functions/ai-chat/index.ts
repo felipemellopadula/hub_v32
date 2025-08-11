@@ -12,7 +12,7 @@ interface ChatRequest {
 }
 
 const getApiKey = (model: string): string | null => {
-  if (model.includes('gpt') || model.includes('o3') || model.includes('o4')) {
+  if (model.includes('gpt-5')) {
     return Deno.env.get('OPENAI_API_KEY');
   }
   if (model.includes('claude')) {
@@ -352,7 +352,7 @@ serve(async (req) => {
     let response: string;
 
     // Route to appropriate API based on model
-    if (model.includes('gpt') || model.includes('o3') || model.includes('o4')) {
+    if (model.includes('gpt-5')) {
       console.log('Routing to OpenAI');
       response = await callOpenAI(message, model);
     } else if (model.includes('claude')) {
@@ -373,7 +373,7 @@ serve(async (req) => {
     } else {
       console.log('Using default OpenAI model for:', model);
       // Default to OpenAI with a valid model
-      response = await callOpenAI(message, 'gpt-4o-mini');
+      response = await callOpenAI(message, 'gpt-5-mini');
     }
 
     console.log('Response generated successfully, length:', response?.length || 0);
