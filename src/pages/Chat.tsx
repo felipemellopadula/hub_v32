@@ -390,7 +390,7 @@ const Chat = () => {
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <h1 className="text-lg font-semibold text-foreground">AI Chat</h1>
+            <h1 className="text-lg font-semibold text-foreground">Synergy Chat</h1>
             <Button variant="outline" size="sm" className="ml-2" onClick={createNewConversation}>
               <Plus className="h-4 w-4 mr-1" /> Novo chat
             </Button>
