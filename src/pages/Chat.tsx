@@ -1,4 +1,4 @@
-import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
@@ -782,7 +782,26 @@ const Chat = () => {
                             {getModelDisplayName(message.model)} • {getTokenCost(message.model).toLocaleString()} tokens
                           </p>
                         )}
-                      </div>
+                        {message.sender === 'bot' && (
+                          <div className="mt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(message.content);
+                                toast({
+                                  title: "Copiado",
+                                  description: "Resposta copiada para a área de transferência.",
+                                });
+                              }}
+                              className="h-7 px-2 text-xs"
+                            >
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copiar
+                            </Button>
+                          </div>
+                        )}
+                       </div>
                     </div>
                     {message.sender === 'user' && (
                       <Avatar className="h-8 w-8 shrink-0">
