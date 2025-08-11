@@ -114,20 +114,10 @@ const Chat = () => {
       const isValidSize = file.size <= 50 * 1024 * 1024; // 50MB limit for PDFs
       
       if (!isValidType) {
-        toast({
-          title: "Tipo de arquivo não suportado",
-          description: `O arquivo ${file.name} não é suportado. Use imagens, PDF, Word ou documentos.`,
-          variant: "destructive",
-        });
         continue;
       }
       
       if (!isValidSize) {
-        toast({
-          title: "Arquivo muito grande",
-          description: `O arquivo ${file.name} é muito grande. Limite de 50MB para PDFs.`,
-          variant: "destructive",
-        });
         continue;
       }
 
@@ -136,49 +126,19 @@ const Chat = () => {
 
       // Process PDF files in background
       if (file.type === 'application/pdf') {
-        toast({
-          title: "Processando PDF",
-          description: `Extraindo texto do arquivo ${file.name}...`,
-        });
         
         try {
           const result = await PdfProcessor.processPdf(file);
           
-          if (!result.success) {
-            toast({
-              title: "Erro ao processar PDF",
-              description: result.error || "Não foi possível processar o PDF",
-              variant: "destructive",
-            });
-            // Remove file from attached files if processing failed
-            setAttachedFiles(prev => prev.filter(f => f !== file));
-            continue;
+          if (result.success) {
+            // Store processed PDF content silently
+            setProcessedPdfs(prev => new Map(prev).set(file.name, result.content || ''));
           }
-          
-          // Store processed PDF content
-          setProcessedPdfs(prev => new Map(prev).set(file.name, result.content || ''));
-          
-          toast({
-            title: "PDF processado",
-            description: `Texto extraído de ${file.name} (${result.pageCount} páginas)`,
-          });
           
         } catch (error) {
           console.error('Erro ao processar PDF:', error);
-          toast({
-            title: "Erro ao processar PDF",
-            description: "Erro interno ao processar o PDF",
-            variant: "destructive",
-          });
-          // Remove file from attached files if processing failed
-          setAttachedFiles(prev => prev.filter(f => f !== file));
         }
       } else {
-        // For non-PDF files, just show success
-        toast({
-          title: "Arquivo anexado",
-          description: `${file.name} foi anexado`,
-        });
       }
     }
     
