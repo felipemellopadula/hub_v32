@@ -77,8 +77,17 @@ const Dashboard = () => {
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Synergy AI</h1>
+            <h1 className="sr-only">Synergy AI</h1>
+            <img
+              src="/lovable-uploads/c26d1b3b-b8c2-4bbf-9902-d76ebe9534f5.png"
+              alt="Synergy AI logo escuro"
+              className="logo-dark-theme h-8 w-auto"
+            />
+            <img
+              src="/lovable-uploads/95128e47-ede1-4ceb-a2f2-4d0c2ed4eb80.png"
+              alt="Synergy AI logo branco"
+              className="logo-light-theme h-8 w-auto"
+            />
           </div>
           <div className="flex items-center gap-4">
             <UserProfile />

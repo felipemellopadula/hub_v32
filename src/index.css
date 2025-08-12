@@ -176,3 +176,11 @@
     }
   }
 }
+
+@layer components {
+  /* Logo theme handling */
+  .logo-light-theme { @apply inline-block; }
+  .logo-dark-theme { @apply hidden; }
+  .light .logo-light-theme { @apply hidden; }
+  .light .logo-dark-theme { @apply inline-block; }
+}
