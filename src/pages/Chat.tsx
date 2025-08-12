@@ -716,15 +716,15 @@ const Chat = () => {
       <div className="flex-1 flex min-h-0">
         {/* Conversations Sidebar */}
         <aside className="w-72 border-r border-border bg-background hidden md:flex md:flex-col min-h-0">
-          <div className="p-3">
-            <input
-              placeholder="Pesquisar conversas..."
-              className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-              onChange={() => {}}
-            />
-          </div>
-          <div className="px-3 pb-2 text-xs text-muted-foreground">Favoritos</div>
           <ScrollArea className="flex-1 pr-2">
+            <div className="p-3">
+              <input
+                placeholder="Pesquisar conversas..."
+                className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+                onChange={() => {}}
+              />
+            </div>
+            <div className="px-3 pb-2 text-xs text-muted-foreground">Favoritos</div>
             {conversations.filter(c => c.is_favorite).length === 0 && (
               <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum favorito</div>
             )}
@@ -744,7 +744,7 @@ const Chat = () => {
                     <Star className="h-4 w-4 text-yellow-500 absolute inset-0 opacity-0 group-hover:opacity-100" fill="currentColor" strokeWidth={0} />
                   </button>
                   <button 
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale" 
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded" 
                     onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
                   >
                     <Trash2 className="h-4 w-4 transition-colors group-hover:text-red-500" />
@@ -769,7 +769,7 @@ const Chat = () => {
                     <Star className="h-4 w-4 absolute inset-0 opacity-0 group-hover:opacity-100 text-yellow-500" fill="currentColor" strokeWidth={0} />
                   </button>
                   <button 
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale" 
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded" 
                     onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
                   >
                     <Trash2 className="h-4 w-4 transition-colors group-hover:text-red-500" />
