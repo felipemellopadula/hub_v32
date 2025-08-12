@@ -108,15 +108,19 @@ serve(async (req) => {
       let { r: res, j: json } = await makeRequest(tasks[1].model);
       console.log("[runware-video] start -> response:", res.status, json);
 
-      // Retry fallback only for invalidModel on Seedance Lite -> try '@1'
-      if ((!res.ok || json.errors) && typeof tasks[1].model === 'string' && tasks[1].model.includes('bytedance:seedance@1-lite')) {
+      // Retry fallback automático para modelos bytedance que falham
+      if ((!res.ok || json.errors) && typeof tasks[1].model === 'string' && tasks[1].model.includes('bytedance')) {
         const errCode = json?.errors?.[0]?.code || '';
         const errMsg = json?.errors?.[0]?.message || '';
-        if (errCode === 'invalidModel' || errMsg.toLowerCase().includes('invalid value for \"model\"')) {
-          const fallback = 'bytedance:seedance@1';
-          console.warn('[runware-video] retrying with fallback model', fallback);
-          ({ r: res, j: json } = await makeRequest(fallback));
-          console.log('[runware-video] start -> retry response:', res.status, json);
+        if (errCode === 'invalidModel' || errMsg.toLowerCase().includes('invalid')) {
+          // Tenta algumas variantes conhecidas do Seedance
+          const fallbacks = ['bytedance:seedance@1', 'bytedance:1@1', 'klingai:5@3'];
+          for (const fallback of fallbacks) {
+            console.warn('[runware-video] trying fallback model:', fallback);
+            ({ r: res, j: json } = await makeRequest(fallback));
+            console.log('[runware-video] fallback response:', res.status, json);
+            if (res.ok && !json.errors) break;
+          }
         }
       }
 
