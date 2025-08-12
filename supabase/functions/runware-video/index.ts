@@ -49,16 +49,14 @@ serve(async (req) => {
 
       const ALLOWED_MODELS = new Set([
         "google:veo-3@fast",
-        "minimax:hailuo@2",
+        "minimax:1@1",
         "klingai:5@3",
       ]);
       const normalizeModel = (input?: string): string => {
         if (typeof input === "string" && ALLOWED_MODELS.has(input)) return input;
-        if (input?.startsWith("bytedance:seedance")) return "klingai:5@3"; // Seedance indisponível para vídeo: usar fallback confiável
         if (input?.startsWith("google:veo-3")) return "google:veo-3@fast";
-        if (input?.startsWith("minimax")) return "minimax:hailuo@2";
-        if (input?.startsWith("klingai")) return "klingai:5@3";
-        return "klingai:5@3";
+        // Fallback seguro
+        return "minimax:1@1";
       };
 
       if (!positivePrompt || !width || !height) {
