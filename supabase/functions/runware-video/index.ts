@@ -67,7 +67,7 @@ serve(async (req) => {
           taskUUID,
           model: resolvedModel,
           positivePrompt,
-          duration,
+          duration: duration === 6 ? 5 : (duration === 8 ? 10 : duration), // Ajusta durações inválidas
           width,
           height,
           fps: 24,
@@ -108,18 +108,29 @@ serve(async (req) => {
       let { r: res, j: json } = await makeRequest(tasks[1].model);
       console.log("[runware-video] start -> response:", res.status, json);
 
-      // Retry fallback automático para modelos bytedance que falham
-      if ((!res.ok || json.errors) && typeof tasks[1].model === 'string' && tasks[1].model.includes('bytedance')) {
+      // Retry fallback automático para modelos que falham
+      if ((!res.ok || json.errors)) {
         const errCode = json?.errors?.[0]?.code || '';
         const errMsg = json?.errors?.[0]?.message || '';
-        if (errCode === 'invalidModel' || errMsg.toLowerCase().includes('invalid')) {
-          // Tenta algumas variantes conhecidas do Seedance
-          const fallbacks = ['bytedance:seedance@1', 'bytedance:1@1', 'klingai:5@3'];
+        if (errCode === 'invalidModel' || errCode === 'invalidDuration' || errMsg.toLowerCase().includes('invalid')) {
+          // Tenta fallbacks conhecidos com durações válidas
+          const fallbacks = ['klingai:5@3', 'minimax:hailuo@2', 'google:veo-3@fast'];
           for (const fallback of fallbacks) {
             console.warn('[runware-video] trying fallback model:', fallback);
-            ({ r: res, j: json } = await makeRequest(fallback));
-            console.log('[runware-video] fallback response:', res.status, json);
-            if (res.ok && !json.errors) break;
+            // Ajusta duração baseada no modelo
+            const adjustedTasks = JSON.parse(JSON.stringify(tasks));
+            adjustedTasks[1].model = fallback;
+            if (fallback.includes('klingai')) {
+              adjustedTasks[1].duration = duration <= 7 ? 5 : 10;
+            }
+            const r2 = await fetch(API_URL, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(adjustedTasks)
+            });
+            const j2 = await r2.json().catch(() => ({}));
+            console.log('[runware-video] fallback response:', r2.status, j2);
+            if (r2.ok && !j2.errors) {
+              res = r2; json = j2; break;
+            }
           }
         }
       }
