@@ -263,9 +263,6 @@ const VideoPage = () => {
                 {isSubmitting ? <RotateCcw className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Gerar Vídeo
               </Button>
-              {taskUUID && !videoUrl && (
-                <p className="text-sm text-muted-foreground">Processando... tarefa {taskUUID}</p>
-              )}
             </CardContent>
           </Card>
           <Card>
@@ -280,6 +277,13 @@ const VideoPage = () => {
                     <a href={videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm text-primary underline">
                       <Link2 className="h-4 w-4 mr-1" /> Abrir em nova aba
                     </a>
+                  </div>
+                </div>
+              ) : taskUUID ? (
+                <div className="h-full min-h-[300px] grid place-items-center text-center text-muted-foreground">
+                  <div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p>Processando</p>
                   </div>
                 </div>
               ) : (
