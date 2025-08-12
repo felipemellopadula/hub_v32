@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload } from "lucide-react";
+import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Maximize } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const RESOLUTIONS = [
@@ -19,6 +19,8 @@ const RESOLUTIONS = [
 const DURATIONS = [5];
 
 const FORMATS = ["mp4", "webm", "mov"];
+
+const MAX_VIDEOS = 12;
 
 const VideoPage = () => {
   const navigate = useNavigate();
@@ -37,6 +39,24 @@ const VideoPage = () => {
   const savedOnceRef = useRef<boolean>(false);
   const [uploadingStart, setUploadingStart] = useState(false);
   const [uploadingEnd, setUploadingEnd] = useState(false);
+  const [savedVideos, setSavedVideos] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('savedVideos');
+    if (stored) {
+      setSavedVideos(JSON.parse(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (videoUrl) {
+      setSavedVideos(prev => {
+        const newVideos = [...prev, videoUrl].slice(-MAX_VIDEOS);
+        localStorage.setItem('savedVideos', JSON.stringify(newVideos));
+        return newVideos;
+      });
+    }
+  }, [videoUrl]);
 
   useEffect(() => {
     document.title = "Gerar Vídeo com IA | Synergy AI";
@@ -143,65 +163,37 @@ const VideoPage = () => {
     if (pollRef.current) window.clearTimeout(pollRef.current);
   }, []);
 
-  useEffect(() => {
-    if (videoUrl && !savedOnceRef.current) {
-      savedOnceRef.current = true;
-      handleSaveLocal(true);
-    }
-  }, [videoUrl]);
-
-  const handleDownload = async () => {
-    if (!videoUrl) return;
+  const handleDownload = async (url: string) => {
     const a = document.createElement('a');
-    a.href = videoUrl;
+    a.href = url;
     a.download = 'synergy-video.mp4';
     document.body.appendChild(a);
     a.click();
     a.remove();
   };
 
-  const handleSaveLocal = async (auto = false) => {
-    if (!videoUrl) return;
-    try {
-      const resp = await fetch(videoUrl);
-      const blob = await resp.blob();
-      const fileName = `video-ia-${new Date().toISOString().replace(/[:.]/g, '-')}.${outputFormat}`;
-      const anyWindow = window as any;
-      if (anyWindow.showSaveFilePicker && !auto) {
-        const handle = await anyWindow.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{ description: `${outputFormat.toUpperCase()} Video`, accept: { [`video/${outputFormat}`]: [`.${outputFormat}`] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      }
-      if (!auto) {
-        toast({ title: 'Salvo localmente', description: 'O vídeo foi salvo no seu dispositivo.' });
-      }
-    } catch (e) {
-      toast({ title: 'Erro ao salvar', description: 'Tente novamente.', variant: 'destructive' });
+  const handleShare = async (url: string) => {
+    if ((navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: 'Meu vídeo gerado com IA', url });
+      } catch { }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copiado', description: 'URL do vídeo copiada para a área de transferência.' });
     }
   };
 
-  const handleShare = async () => {
-    if (!videoUrl) return;
-    if ((navigator as any).share) {
-      try {
-        await (navigator as any).share({ title: 'Meu vídeo gerado com IA', url: videoUrl });
-      } catch { }
+  const togglePlay = (video: HTMLVideoElement) => {
+    if (video.paused) {
+      video.play();
     } else {
-      await navigator.clipboard.writeText(videoUrl);
-      toast({ title: 'Link copiado', description: 'URL do vídeo copiada para a área de transferência.' });
+      video.pause();
+    }
+  };
+
+  const goFullscreen = (video: HTMLVideoElement) => {
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
     }
   };
 
@@ -320,9 +312,8 @@ const VideoPage = () => {
                 <div className="space-y-4">
                   <video controls className="w-full rounded-md border border-border" src={videoUrl} />
                   <div className="flex gap-3 flex-wrap">
-                    <Button onClick={handleDownload}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
-                    <Button variant="secondary" onClick={() => handleSaveLocal(false)}>Salvar localmente</Button>
-                    <Button variant="outline" onClick={handleShare}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
+                    <Button onClick={() => handleDownload(videoUrl)}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
+                    <Button variant="outline" onClick={() => handleShare(videoUrl)}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
                     <Button variant="outline" asChild>
                       <a href={videoUrl} target="_blank" rel="noreferrer">
                         <Link2 className="h-4 w-4 mr-2" /> Abrir em nova aba
@@ -347,6 +338,54 @@ const VideoPage = () => {
               )}
             </CardContent>
           </Card>
+        </div>
+        <div className="mt-8 max-w-6xl mx-auto">
+          <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {savedVideos.map((url, index) => (
+              <div key={index} className="relative aspect-video border border-border rounded-md overflow-hidden">
+                <video
+                  src={url}
+                  className="w-full h-full object-cover"
+                  loop
+                  muted
+                  ref={(el) => {
+                    if (el) el.pause();
+                  }}
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button variant="ghost" size="icon" className="bg-background/50" onClick={() => handleDownload(url)}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="absolute bottom-2 left-2 flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/50"
+                    onClick={(e) => {
+                      const video = e.currentTarget.parentElement?.parentElement?.querySelector('video');
+                      if (video) togglePlay(video);
+                    }}
+                  >
+                    <Play className="h-4 w-4 hidden play-icon" />
+                    <Pause className="h-4 w-4 pause-icon" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/50"
+                    onClick={(e) => {
+                      const video = e.currentTarget.parentElement?.parentElement?.querySelector('video');
+                      if (video) goFullscreen(video);
+                    }}
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
     </div>
