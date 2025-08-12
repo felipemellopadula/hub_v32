@@ -81,6 +81,7 @@ serve(async (req) => {
           duration,
           width,
           height,
+          fps: 24,
           numberResults,
           outputType: "URL",
           outputFormat,

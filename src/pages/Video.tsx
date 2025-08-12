@@ -14,7 +14,7 @@ const MODEL_MAP: Record<string, string> = {
   "google-veo-3-fast": "google:veo-3@fast",
   // Seedance indisponível como modelo de vídeo -> usar fallback estável
   "seedance-1-lite": "klingai:5@3",
-  "minimax-hailuo-02": "minimax:hailuo@2",
+  "minimax-hailuo-02": "minimax:1@1",
   "klingai-2-1-pro": "klingai:5@3",
 };
 
