@@ -1,9 +1,3 @@
-Claro! Para corrigir o espaçamento, adicionei uma classe de margem (mt-2, que significa margin-top: 0.5rem) ao componente Textarea que fica logo abaixo do Label. Isso cria um pequeno espaço vertical entre os dois elementos.
-
-Aqui está o código completo com o ajuste para você copiar e colar no seu projeto.
-
-JavaScript
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
