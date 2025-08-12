@@ -615,7 +615,8 @@ const Chat = () => {
             <ThemeToggle />
             <UserProfile />
           </div>
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Abrir menu">
@@ -658,7 +659,7 @@ const Chat = () => {
                             <span className="truncate text-sm">{c.title}</span>
                             <span className="flex items-center gap-2">
                               <button
-                                className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
+                                className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
                                 onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                               >
                                 <Star className="h-4 w-4 text-yellow-500 transition-opacity group-hover:opacity-0" />
@@ -684,7 +685,7 @@ const Chat = () => {
                             <span className="truncate text-sm">{c.title}</span>
                             <span className="flex items-center gap-2">
                               <button
-                                className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
+                                className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
                                 onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                               >
                                 <Star className={`h-4 w-4 transition-opacity group-hover:opacity-0 ${c.is_favorite ? 'text-yellow-500' : ''}`} />
@@ -723,7 +724,7 @@ const Chat = () => {
             />
           </div>
           <div className="px-3 pb-2 text-xs text-muted-foreground">Favoritos</div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 pr-2">
             {conversations.filter(c => c.is_favorite).length === 0 && (
               <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum favorito</div>
             )}
@@ -736,7 +737,7 @@ const Chat = () => {
                 <span className="truncate text-sm">{c.title}</span>
                 <span className="flex items-center gap-2">
                   <button
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
                     onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                   >
                     <Star className="h-4 w-4 text-yellow-500 transition-opacity group-hover:opacity-0" />
@@ -761,7 +762,7 @@ const Chat = () => {
                 <span className="truncate text-sm">{c.title}</span>
                 <span className="flex items-center gap-2">
                   <button
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
                     onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                   >
                     <Star className={`h-4 w-4 transition-opacity group-hover:opacity-0 ${c.is_favorite ? 'text-yellow-500' : ''}`} />
