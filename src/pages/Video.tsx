@@ -155,6 +155,7 @@ const VideoPage = () => {
         includeCost: true,
         providerSettings: { bytedance: { cameraFixed } },
         deliveryMethod: "async",
+        taskType: "videoInference",
         frameStartUrl: frameStartUrl || undefined,
         frameEndUrl: frameEndUrl || undefined,
       };
