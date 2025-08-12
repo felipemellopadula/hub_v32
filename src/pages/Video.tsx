@@ -241,17 +241,47 @@ const VideoPage = () => {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
-  
-  const handleShare = async (url: string) => {
-    if ((navigator as any).share) {
+
+  const handleShare = async (url: string, promptText: string) => {
+    const videoFileName = `${promptText.substring(0, 20).replace(/\s/g, '_') || 'video'}.mp4`;
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('A resposta da rede não foi OK');
+      
+      const blob = await response.blob();
+      const file = new File([blob], videoFileName, { type: blob.type });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Vídeo Gerado por IA',
+          text: promptText,
+        });
+        toast({ title: "Vídeo partilhado!", variant: "default" });
+      } else {
+        throw new Error('Não é possível partilhar arquivos neste navegador.');
+      }
+    } catch (error) {
+      console.error("Erro ao partilhar ficheiro, recorrendo a partilha de link:", error);
       try {
-        await (navigator as any).share({ title: 'Meu vídeo gerado com IA', url });
-      } catch { }
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast({ title: 'Link copiado', description: 'URL do vídeo copiada para a área de transferência.' });
+        await navigator.share({
+            title: 'Vídeo Gerado por IA',
+            text: promptText,
+            url: url,
+        });
+      } catch (e) {
+        console.error("Erro ao partilhar link, recorrendo a copiar para a área de transferência:", e);
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Link Copiado",
+          description: "Não foi possível partilhar. O link foi copiado para a área de transferência.",
+          variant: "default",
+        });
+      }
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -393,7 +423,7 @@ const VideoPage = () => {
                   <video controls autoPlay className="w-full rounded-md border border-border aspect-video" src={videoUrl} key={videoUrl} />
                   <div className="flex gap-3 flex-wrap">
                     <Button onClick={() => handleDownload(videoUrl)}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
-                    <Button variant="outline" onClick={() => handleShare(videoUrl)}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
+                    <Button variant="outline" onClick={() => handleShare(videoUrl, prompt)}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
                     <Button variant="outline" asChild>
                       <a href={videoUrl} target="_blank" rel="noreferrer">
                         <Link2 className="h-4 w-4 mr-2" /> Abrir em nova aba
