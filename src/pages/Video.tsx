@@ -151,7 +151,7 @@ const VideoPage = () => {
       if (anyWindow.showSaveFilePicker && !auto) {
         const handle = await anyWindow.showSaveFilePicker({
           suggestedName: fileName,
-          types: [{ description: `${outputFormat.toUpperCase()} Video`, accept: { `video/${outputFormat}`: [`.${outputFormat}`] } }],
+          types: [{ description: `${outputFormat.toUpperCase()} Video`, accept: { [`video/${outputFormat}`]: [`.${outputFormat}`] } }],
         });
         const writable = await handle.createWritable();
         await writable.write(blob);
