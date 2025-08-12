@@ -223,15 +223,27 @@ const VideoPage = () => {
     if (pollRef.current) window.clearTimeout(pollRef.current);
   }, []);
 
-  const handleDownload = (url: string) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `synergy-video-${Date.now()}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
+  const handleDownload = async (url: string) => {
+    try {
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!res.ok) throw new Error('Falha ao baixar o vídeo');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
 
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `synergy-video-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      // Fallback: abre em nova aba caso o servidor bloqueie CORS
+      toast({ title: 'Não foi possível baixar automaticamente', description: 'Abrindo em nova aba. Use “Salvar como...” para baixar.' });
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
   const handleShare = async (url: string) => {
     if ((navigator as any).share) {
       try {
