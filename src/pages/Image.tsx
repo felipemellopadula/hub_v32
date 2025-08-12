@@ -1,14 +1,3 @@
-Ok, entendido. A ideia é simplificar o botão de anexo de arquivo para que ele mostre apenas o texto "Escolha o arquivo", sem exibir o nome do arquivo selecionado.
-
-Isso é feito com um truque comum em CSS/HTML: escondemos o input de arquivo padrão (que é difícil de estilizar) e usamos uma Label com a aparência de um botão para ativá-lo.
-
-Fiz essa alteração no seu código.
-
-Código Completo com Botão de Arquivo Simplificado
-Copie e cole este código. A única mudança está no JSX, na parte do painel de controle onde fica o botão de anexo.
-
-TypeScript
-
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
