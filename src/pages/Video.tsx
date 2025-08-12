@@ -22,6 +22,72 @@ const FORMATS = ["mp4", "webm", "mov"];
 
 const MAX_VIDEOS = 12;
 
+const SavedVideo = ({ url }: { url: string }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'synergy-video.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const goFullscreen = () => {
+    if (videoRef.current && videoRef.current.requestFullscreen) {
+      videoRef.current.requestFullscreen();
+    }
+  };
+
+  return (
+    <div className="relative aspect-video border border-border rounded-md overflow-hidden">
+      <video
+        ref={videoRef}
+        src={url}
+        className="w-full h-full object-cover"
+        loop
+        muted
+      />
+      <div className="absolute top-2 right-2 flex gap-2">
+        <Button variant="ghost" size="icon" className="bg-background/50" onClick={handleDownload}>
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="absolute bottom-2 left-2 flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="bg-background/50"
+          onClick={togglePlay}
+        >
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="bg-background/50"
+          onClick={goFullscreen}
+        >
+          <Maximize className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const VideoPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -163,15 +229,6 @@ const VideoPage = () => {
     if (pollRef.current) window.clearTimeout(pollRef.current);
   }, []);
 
-  const handleDownload = async (url: string) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'synergy-video.mp4';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-
   const handleShare = async (url: string) => {
     if ((navigator as any).share) {
       try {
@@ -180,20 +237,6 @@ const VideoPage = () => {
     } else {
       await navigator.clipboard.writeText(url);
       toast({ title: 'Link copiado', description: 'URL do vídeo copiada para a área de transferência.' });
-    }
-  };
-
-  const togglePlay = (video: HTMLVideoElement) => {
-    if (video.paused) {
-      video.play();
-    } else {
-      video.pause();
-    }
-  };
-
-  const goFullscreen = (video: HTMLVideoElement) => {
-    if (video.requestFullscreen) {
-      video.requestFullscreen();
     }
   };
 
@@ -343,47 +386,7 @@ const VideoPage = () => {
           <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {savedVideos.map((url, index) => (
-              <div key={index} className="relative aspect-video border border-border rounded-md overflow-hidden">
-                <video
-                  src={url}
-                  className="w-full h-full object-cover"
-                  loop
-                  muted
-                  ref={(el) => {
-                    if (el) el.pause();
-                  }}
-                />
-                <div className="absolute top-2 right-2 flex gap-2">
-                  <Button variant="ghost" size="icon" className="bg-background/50" onClick={() => handleDownload(url)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="absolute bottom-2 left-2 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-background/50"
-                    onClick={(e) => {
-                      const video = e.currentTarget.parentElement?.parentElement?.querySelector('video');
-                      if (video) togglePlay(video);
-                    }}
-                  >
-                    <Play className="h-4 w-4 hidden play-icon" />
-                    <Pause className="h-4 w-4 pause-icon" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-background/50"
-                    onClick={(e) => {
-                      const video = e.currentTarget.parentElement?.parentElement?.querySelector('video');
-                      if (video) goFullscreen(video);
-                    }}
-                  >
-                    <Maximize className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <SavedVideo key={index} url={url} />
             ))}
           </div>
         </div>
