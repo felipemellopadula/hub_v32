@@ -1,3 +1,4 @@
+```tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ const SIZES = [
 ];
 
 const MODELS = [
-  { id: "GPT_IMAGE_1", label: "GPT Image 1 (Runware)" },
+  { id: "openai:1@1", label: "GPT Image 1 (Runware)" },
 ];
 
 const QUALITIES = [
@@ -104,48 +105,46 @@ const ImagePage = () => {
         const reader = new FileReader();
         reader.readAsDataURL(selectedFile);
         await new Promise((resolve) => (reader.onload = resolve));
-        inputImageBase64 = (reader.result as string).split(',')[1]; // Remove data: prefix
+        inputImageBase64 = (reader.result as string).split(',')[1];
       }
 
-      const body: any = {
-        taskType: selectedFile ? "imageVariation" : "imageInference", // Assume "imageVariation" for image input
+      const taskUUID = crypto.randomUUID();
+      const outputQuality = quality === "high" ? 100 : quality === "medium" ? 85 : 50;
+
+      const body = {
+        taskType: selectedFile ? "imageVariation" : "imageInference",
         model: model,
         positivePrompt: prompt,
         height: sizeInfo.h,
         width: sizeInfo.w,
         numberResults: 1,
-        outputType: ["dataURI"],
+        outputType: ["dataURI", "URL"],
         outputFormat: "PNG",
         includeCost: true,
-        outputQuality: quality === "high" ? 100 : quality === "medium" ? 85 : 50,
+        outputQuality,
         providerSettings: { openai: { quality } },
+        taskUUID,
       };
 
       if (inputImageBase64) {
-        body.inputImage = inputImageBase64; // Assume param name
+        body.image = inputImageBase64;
       }
 
       const { data, error } = await supabase.functions.invoke('generate-image', { body });
       if (error) throw error;
-      const b64 = (data as any)?.image as string | undefined;
-      if (!b64) throw new Error('Falha ao gerar a imagem');
-      const format = ((data as any)?.format as string | undefined)?.toLowerCase();
-      let mime = 'image/png';
-      if (format === 'webp') mime = 'image/webp';
-      else if (format === 'jpeg' || format === 'jpg') mime = 'image/jpeg';
-      else if (format === 'png') mime = 'image/png';
-      else if (!format && typeof (data as any)?.url === 'string') {
-        const u = (data as any).url as string;
-        if (u.endsWith('.webp')) mime = 'image/webp';
-        else if (u.endsWith('.jpg') || u.endsWith('.jpeg')) mime = 'image/jpeg';
-      }
-      const dataUrl = `data:${mime};base64,${b64}`;
+
+      const imageDataURI = data.imageDataURI as string;
+      if (!imageDataURI) throw new Error('Falha ao gerar a imagem');
+
+      const [mimePart, b64] = imageDataURI.split(';base64,');
+      const mime = mimePart.replace('data:', '');
+
       const img: GeneratedImage = {
         id: `${Date.now()}`,
         prompt,
         originalPrompt: prompt,
         detailedPrompt: prompt,
-        url: dataUrl,
+        url: imageDataURI,
         timestamp: new Date().toISOString(),
         quality,
         width: sizeInfo.w,
@@ -154,10 +153,10 @@ const ImagePage = () => {
       };
       setImages(prev => [img, ...prev].slice(0, MAX_IMAGES));
       toast({ title: 'Imagem gerada', description: 'Sua imagem está pronta!' });
-      setSelectedFile(null); // Reset file after generation
+      setSelectedFile(null);
     } catch (e: any) {
       console.error(e);
-      toast({ title: 'Erro ao gerar', description: e?.message || 'Tente novamente.', variant: 'destructive' });
+      toast({ title: 'Erro ao gerar', description: e?.message || 'Tente novamente.', variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -306,3 +305,4 @@ const ImagePage = () => {
 };
 
 export default ImagePage;
+```
