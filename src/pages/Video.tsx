@@ -12,9 +12,11 @@ import { Download, Link2, Share2, VideoIcon, RotateCcw } from "lucide-react";
 
 const MODEL_MAP: Record<string, string> = {
   "google-veo-3-fast": "google:veo-3@fast",
-  "seedance-1-lite": "bytedance:seedance@1-lite",
+  // Correção: remover sufixo inválido "-lite" para AIR id válido
+  "seedance-1-lite": "bytedance:seedance@1",
   "minimax-hailuo-02": "minimax:hailuo@2",
-  "klingai-2-1-pro": "klingai:5@3",
+  // Ajuste para um identificador plausível
+  "klingai-2-1-pro": "klingai:2@1",
 };
 
 const RESOLUTIONS = [
@@ -31,7 +33,7 @@ const VideoPage = () => {
   const { toast } = useToast();
 
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<string>("klingai-2-1-pro");
+  const [model, setModel] = useState<string>("seedance-1-lite");
   const [resolution, setResolution] = useState<string>("1080p");
   const [duration, setDuration] = useState<number>(6);
   const [frameStartUrl, setFrameStartUrl] = useState("");
@@ -41,6 +43,7 @@ const VideoPage = () => {
   const [taskUUID, setTaskUUID] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
+  const savedOnceRef = useRef<boolean>(false);
 
   // SEO
   useEffect(() => {
@@ -141,6 +144,14 @@ const VideoPage = () => {
     if (pollRef.current) window.clearTimeout(pollRef.current);
   }, []);
 
+  // Auto-salvar localmente uma vez quando o vídeo estiver pronto
+  useEffect(() => {
+    if (videoUrl && !savedOnceRef.current) {
+      savedOnceRef.current = true;
+      handleSaveLocal(true);
+    }
+  }, [videoUrl]);
+
   const handleDownload = async () => {
     if (!videoUrl) return;
     const a = document.createElement('a');
@@ -149,6 +160,40 @@ const VideoPage = () => {
     document.body.appendChild(a);
     a.click();
     a.remove();
+  };
+
+  const handleSaveLocal = async (auto = false) => {
+    if (!videoUrl) return;
+    try {
+      const resp = await fetch(videoUrl);
+      const blob = await resp.blob();
+      const fileName = `video-ia-${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
+      const anyWindow = window as any;
+      if (anyWindow.showSaveFilePicker && !auto) {
+        const handle = await anyWindow.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{ description: 'MP4 Video', accept: { 'video/mp4': ['.mp4'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+      if (!auto) {
+        toast({ title: 'Salvo localmente', description: 'O vídeo foi salvo no seu dispositivo.' });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Erro ao salvar', description: 'Tente novamente.', variant: 'destructive' });
+    }
   };
 
   const handleShare = async () => {
@@ -254,6 +299,7 @@ const VideoPage = () => {
                   <video controls className="w-full rounded-md border border-border" src={videoUrl} />
                   <div className="flex gap-3">
                     <Button onClick={handleDownload}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
+                    <Button variant="secondary" onClick={() => handleSaveLocal(false)}>Salvar localmente</Button>
                     <Button variant="outline" onClick={handleShare}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
                     <a href={videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm text-primary underline">
                       <Link2 className="h-4 w-4 mr-1" /> Abrir em nova aba

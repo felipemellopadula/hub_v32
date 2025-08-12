@@ -35,6 +35,7 @@ serve(async (req) => {
     if (action === "start") {
       const {
         modelId,
+        model,
         positivePrompt,
         width,
         height,
@@ -45,7 +46,22 @@ serve(async (req) => {
         outputFormat = "MP4",
       } = body;
 
-      if (!modelId || !positivePrompt || !width || !height) {
+      const ALLOWED_MODELS = new Set([
+        "bytedance:seedance@1",
+        "google:veo-3@fast",
+        "minimax:hailuo@2",
+        "klingai:2@1",
+      ]);
+      const normalizeModel = (input?: string): string => {
+        if (typeof input === "string" && ALLOWED_MODELS.has(input)) return input;
+        if (input?.startsWith("bytedance:seedance")) return "bytedance:seedance@1";
+        if (input?.startsWith("google:veo-3")) return "google:veo-3@fast";
+        if (input?.startsWith("minimax:hailuo")) return "minimax:hailuo@2";
+        if (input?.startsWith("klingai")) return "klingai:2@1";
+        return "bytedance:seedance@1";
+      };
+
+      if (!positivePrompt || !width || !height) {
         return new Response(JSON.stringify({ error: "Missing required fields" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
@@ -62,7 +78,7 @@ serve(async (req) => {
         {
           taskType: "videoInference",
           taskUUID,
-          model: modelId,
+          model: normalizeModel(modelId || model),
           positivePrompt,
           duration,
           width,
