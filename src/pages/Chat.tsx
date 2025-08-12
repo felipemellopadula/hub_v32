@@ -642,17 +642,17 @@ const Chat = () => {
                 <span className="truncate text-sm">{c.title}</span>
                 <span className="flex items-center gap-2">
                   <button
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
                     onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                   >
                     <Star className="h-4 w-4 text-yellow-500 transition-opacity group-hover:opacity-0" />
                     <Star className="h-4 w-4 text-yellow-500 absolute inset-0 opacity-0 group-hover:opacity-100" fill="currentColor" strokeWidth={0} />
                   </button>
                   <button 
-                    className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded" 
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale" 
                     onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 transition-colors group-hover:text-red-500" />
                   </button>
                 </span>
               </button>
@@ -667,17 +667,17 @@ const Chat = () => {
                 <span className="truncate text-sm">{c.title}</span>
                 <span className="flex items-center gap-2">
                   <button
-                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded"
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale"
                     onClick={(e) => { e.stopPropagation(); toggleFavoriteConversation(c); }}
                   >
                     <Star className={`h-4 w-4 transition-opacity group-hover:opacity-0 ${c.is_favorite ? 'text-yellow-500' : ''}`} />
                     <Star className="h-4 w-4 absolute inset-0 opacity-0 group-hover:opacity-100 text-yellow-500" fill="currentColor" strokeWidth={0} />
                   </button>
                   <button 
-                    className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded" 
+                    className="group relative h-6 w-6 flex items-center justify-center hover:bg-muted rounded hover-scale" 
                     onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 transition-colors group-hover:text-red-500" />
                   </button>
                 </span>
               </button>
