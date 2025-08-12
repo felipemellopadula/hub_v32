@@ -206,7 +206,7 @@ const VideoPage = () => {
             <CardContent className="space-y-6 pt-6">
               <div>
                 <Label htmlFor="prompt">Descrição (prompt)</Label>
-                <Textarea id="prompt" className="mt-2" placeholder="Descreva a cena, movimentos de câmera, estilo..." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+                <Textarea id="prompt" placeholder="Descreva a cena, movimentos de câmera, estilo..." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
