@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Link2, Share2, VideoIcon, RotateCcw } from "lucide-react";
+import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const RESOLUTIONS = [
@@ -35,6 +35,8 @@ const VideoPage = () => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const savedOnceRef = useRef<boolean>(false);
+  const [uploadingStart, setUploadingStart] = useState(false);
+  const [uploadingEnd, setUploadingEnd] = useState(false);
 
   useEffect(() => {
     document.title = "Gerar Vídeo com IA | Synergy AI";
@@ -57,6 +59,23 @@ const VideoPage = () => {
 
   const res = useMemo(() => RESOLUTIONS.find(r => r.id === resolution)!, [resolution]);
   const modelId = "bytedance:1@1";
+
+  const uploadImage = async (file: File, isStart: boolean) => {
+    const setter = isStart ? setUploadingStart : setUploadingEnd;
+    const urlSetter = isStart ? setFrameStartUrl : setFrameEndUrl;
+    setter(true);
+    try {
+      const { data, error } = await supabase.storage.from('images').upload(`${Date.now()}-${file.name}`, file);
+      if (error) throw error;
+      const { data: publicData } = supabase.storage.from('images').getPublicUrl(data.path);
+      urlSetter(publicData.publicUrl);
+      toast({ title: 'Upload concluído', description: 'Imagem carregada com sucesso.' });
+    } catch (e) {
+      toast({ title: 'Erro no upload', description: 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setter(false);
+    }
+  };
 
   const startGeneration = async () => {
     setIsSubmitting(true);
@@ -252,11 +271,41 @@ const VideoPage = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Frame Inicial (opcional)</Label>
+                  <div className="border border-border rounded-md p-2 text-center cursor-pointer hover:bg-accent/10">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="start-upload"
+                      onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], true)}
+                    />
+                    <Label htmlFor="start-upload" className="cursor-pointer flex flex-col items-center">
+                      <Upload className="h-6 w-6 mb-1" />
+                      Drag Or Upload Image
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">Or paste UUID/Base64/URI/URL here</p>
                   <Input placeholder="URL da imagem" value={frameStartUrl} onChange={(e) => setFrameStartUrl(e.target.value)} />
+                  {uploadingStart && <p className="text-sm text-muted-foreground">Uploading...</p>}
                 </div>
                 <div>
                   <Label>Frame Final (opcional)</Label>
+                  <div className="border border-border rounded-md p-2 text-center cursor-pointer hover:bg-accent/10">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="end-upload"
+                      onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], false)}
+                    />
+                    <Label htmlFor="end-upload" className="cursor-pointer flex flex-col items-center">
+                      <Upload className="h-6 w-6 mb-1" />
+                      Drag Or Upload Image
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">Or paste UUID/Base64/URI/URL here</p>
                   <Input placeholder="URL da imagem" value={frameEndUrl} onChange={(e) => setFrameEndUrl(e.target.value)} />
+                  {uploadingEnd && <p className="text-sm text-muted-foreground">Uploading...</p>}
                 </div>
               </div>
               <Button className="w-full" onClick={startGeneration} disabled={isSubmitting || !prompt}>
@@ -270,13 +319,15 @@ const VideoPage = () => {
               {videoUrl ? (
                 <div className="space-y-4">
                   <video controls className="w-full rounded-md border border-border" src={videoUrl} />
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 flex-wrap">
                     <Button onClick={handleDownload}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
                     <Button variant="secondary" onClick={() => handleSaveLocal(false)}>Salvar localmente</Button>
                     <Button variant="outline" onClick={handleShare}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
-                    <a href={videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm text-primary underline">
-                      <Link2 className="h-4 w-4 mr-1" /> Abrir em nova aba
-                    </a>
+                    <Button variant="outline" asChild>
+                      <a href={videoUrl} target="_blank" rel="noreferrer">
+                        <Link2 className="h-4 w-4 mr-2" /> Abrir em nova aba
+                      </a>
+                    </Button>
                   </div>
                 </div>
               ) : taskUUID ? (
