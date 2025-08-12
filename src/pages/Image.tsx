@@ -1,3 +1,12 @@
+Entendido! Agora o painel de controle do usuário vai se estender por quase toda a largura da página, eliminando aquele espaço à direita, enquanto a área de imagem e o histórico abaixo mantêm a excelente disposição que já tinham.
+
+Para isso, retirei o painel de controle do grid inferior e o coloquei em sua própria seção, acima de tudo. Isso permite que ele tenha uma largura independente do conteúdo abaixo.
+
+Aqui está o código final ajustado.
+
+Código Completo com Painel de Controle Largo
+TypeScript
+
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -157,22 +166,18 @@ const ImagePage = () => {
         </div>
       </header>
 
-      {/* --- ESTRUTURA PRINCIPAL DO LAYOUT --- */}
       <main className="container mx-auto px-4 py-8">
-        {/* Usamos um grid único para alinhar todos os elementos da página */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-          {/* Coluna da Esquerda: Contém o painel de controle e a imagem principal */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            {/* 1. Painel de Controle */}
+        
+        {/* Seção do Painel de Controle - Ocupa a largura total do container */}
+        <section className="max-w-7xl mx-auto mb-6">
             <Card>
               <CardContent className="pt-6 space-y-4">
-                <div className="grid lg:grid-cols-12 gap-4 items-end">
-                  <div className="lg:col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div className="md:col-span-7">
                     <Label htmlFor="prompt">Descreva o que você quer ver</Label>
                     <Textarea id="prompt" placeholder="Ex: retrato fotorealista de um astronauta..." value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} />
                   </div>
-                  <div className="lg:col-span-2">
+                  <div className="md:col-span-1">
                     <Label>Modelo</Label>
                     <Select value={model} onValueChange={setModel}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -183,7 +188,7 @@ const ImagePage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="lg:col-span-2">
+                  <div className="md:col-span-2">
                     <Label>Qualidade/Tamanho</Label>
                     <Select value={quality} onValueChange={setQuality}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -194,7 +199,7 @@ const ImagePage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="lg:col-span-2">
+                  <div className="md:col-span-2">
                     <Label htmlFor="file-upload">Anexar Imagem</Label>
                     <Input id="file-upload" type="file" accept="image/*" onChange={handleFileChange} />
                   </div>
@@ -204,13 +209,14 @@ const ImagePage = () => {
                       {isGenerating ? 'Gerando...' : 'Gerar Imagem'}
                     </Button>
                 </div>
-                <p className="text-xs text-muted-foreground pt-2">
-                  As imagens são geradas usando a API Runware. Anexar uma imagem a usará como base para a geração (variação).
-                </p>
               </CardContent>
             </Card>
+        </section>
 
-            {/* 2. Imagem Principal ou Loading */}
+        {/* Seção de Conteúdo da Imagem - Grid para imagem principal e histórico */}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Coluna da Esquerda: Imagem Principal ou Loading */}
+          <div className="lg:col-span-3">
             <Card className="w-full h-full min-h-[512px] flex items-center justify-center">
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-4 text-muted-foreground">
@@ -251,8 +257,8 @@ const ImagePage = () => {
             </Card>
           </div>
 
-          {/* Coluna da Direita: Histórico. O `lg:row-span-2` faz com que ocupe a altura dos 2 cards da esquerda */}
-          <div className="lg:col-span-2 lg:row-span-2">
+          {/* Coluna da Direita: Histórico */}
+          <div className="lg:col-span-2">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {images.slice(1).map((img) => (
                 <Dialog key={img.id}>
@@ -276,7 +282,6 @@ const ImagePage = () => {
               ))}
             </div>
           </div>
-
         </div>
       </main>
     </div>
