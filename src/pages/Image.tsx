@@ -12,6 +12,7 @@ import { Download, Image as ImageIcon, Share2, ZoomIn } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { downloadImage, shareImage, GeneratedImage } from "@/utils/imageUtils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { saveImageBlob, loadImageBlobUrl, pruneImages } from "@/utils/imageStore";
 
 // Configurações de modelo e qualidade permanecem as mesmas
 const QUALITY_SETTINGS = [
@@ -46,19 +47,43 @@ const ImagePage = () => {
   }, []);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setImages(JSON.parse(raw) as GeneratedImage[]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as any[];
+          // Support legacy format (with url) and new meta-only format
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const first = parsed[0] as any;
+            if (first && typeof first.url === 'string' && first.url.startsWith('data:image')) {
+              // Legacy data URLs – still load but do not rewrite here
+              setImages(parsed as GeneratedImage[]);
+            } else {
+              const rebuilt: GeneratedImage[] = [];
+              for (const meta of parsed) {
+                const url = await loadImageBlobUrl(meta.id);
+                if (!url) continue;
+                rebuilt.push({ ...(meta as Omit<GeneratedImage, 'url'>), url } as GeneratedImage);
+              }
+              if (!cancelled) setImages(rebuilt.slice(0, MAX_IMAGES));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Falha ao carregar imagens salvas", err);
       }
-    } catch (err) {
-      console.warn("Falha ao carregar imagens salvas", err);
-    }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(images.slice(0, MAX_IMAGES)));
+      const meta = images.slice(0, MAX_IMAGES).map(({ url, ...rest }) => rest);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(meta));
+      // Clean up blobs not referenced anymore
+      const keepIds = meta.map((m: any) => m.id);
+      pruneImages(keepIds).catch((e) => console.warn('Falha ao podar imagens do IndexedDB', e));
     } catch (err) {
       console.warn("Falha ao salvar imagens no localStorage:", err);
       if (!storageErrorShown.current) {
@@ -118,11 +143,15 @@ const ImagePage = () => {
       const imageDataURI = base64 ? `data:image/${format};base64,${base64}` : undefined;
       if (!imageDataURI) throw new Error('A API não retornou uma imagem. Verifique o log da função Supabase.');
 
+      const blob = await saveImageBlob(taskUUID, imageDataURI);
+      const objectUrl = URL.createObjectURL(blob);
+
       const img: GeneratedImage = {
         id: taskUUID,
         prompt,
         originalPrompt: prompt,
-        url: imageDataURI,
+        detailedPrompt: prompt,
+        url: objectUrl,
         timestamp: new Date().toISOString(),
         quality: quality,
         width: selectedQualityInfo.width,
