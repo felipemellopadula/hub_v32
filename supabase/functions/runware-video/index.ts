@@ -89,20 +89,36 @@ serve(async (req) => {
         tasks[1].frameImages = frameImages;
       }
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tasks),
-      });
+      const makeRequest = async (modelAir: string) => {
+        const t = JSON.parse(JSON.stringify(tasks));
+        t[1].model = modelAir;
+        const r = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(t),
+        });
+        const j = await r.json().catch(async (e) => {
+          const text = await r.text().catch(() => "<no body>");
+          console.error("[runware-video] start -> JSON parse error:", e, text);
+          throw new Error("Invalid JSON from Runware (start)");
+        });
+        return { r, j };
+      };
 
-      const json = await res.json().catch(async (e) => {
-        const text = await res.text().catch(() => "<no body>");
-        console.error("[runware-video] start -> JSON parse error:", e, text);
-        throw new Error("Invalid JSON from Runware (start)");
-      });
-
+      let { r: res, j: json } = await makeRequest(tasks[1].model);
       console.log("[runware-video] start -> response:", res.status, json);
 
+      // Retry fallback only for invalidModel on Seedance Lite -> try '@1'
+      if ((!res.ok || json.errors) && typeof tasks[1].model === 'string' && tasks[1].model.includes('bytedance:seedance@1-lite')) {
+        const errCode = json?.errors?.[0]?.code || '';
+        const errMsg = json?.errors?.[0]?.message || '';
+        if (errCode === 'invalidModel' || errMsg.toLowerCase().includes('invalid value for \"model\"')) {
+          const fallback = 'bytedance:seedance@1';
+          console.warn('[runware-video] retrying with fallback model', fallback);
+          ({ r: res, j: json } = await makeRequest(fallback));
+          console.log('[runware-video] start -> retry response:', res.status, json);
+        }
+      }
 
       if (!res.ok || json.errors) {
         const message = json.errors?.[0]?.message || json.error || `Runware error (${res.status})`;
@@ -112,7 +128,6 @@ serve(async (req) => {
           status: 500,
         });
       }
-
 
       return new Response(JSON.stringify({ taskUUID, ack: json.data?.[0] || null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
