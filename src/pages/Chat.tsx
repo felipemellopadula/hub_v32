@@ -921,7 +921,7 @@ const Chat = () => {
             <div className="max-w-4xl mx-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 {/* Desktop version */}
-                <div className="hidden md:flex flex-1 relative">
+                <div className="hidden xl:flex flex-1 relative">
                   <input
                     type="text"
                     value={inputValue}
@@ -995,12 +995,12 @@ const Chat = () => {
                     </TooltipProvider>
                   </div>
                 </div>
-                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg" className="hidden lg:inline-flex">
+                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg" className="hidden xl:inline-flex">
                   Enviar
                 </Button>
 
                 {/* Mobile/iPad version - New layout */}
-                <div className="flex lg:hidden w-full gap-2">
+                <div className="flex xl:hidden w-full gap-2">
                   {/* Plus button with attachments menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
