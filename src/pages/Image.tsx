@@ -1,24 +1,3 @@
-Desculpe pela falha anterior na estilização dos botões. Analisando a imagem que você enviou, percebi que os botões deveriam estar posicionados dentro da área da imagem principal, sobre um fundo semi-transparente.
-
-Para corrigir isso, fiz as seguintes alterações no código:
-
-Posicionamento Absoluto: Adicionei position: absolute ao div que envolve os botões, para que possamos posicioná-los relativamente ao Card da imagem principal.
-
-Posicionamento Inferior: Usei bottom-0, left-0, e right-0 para fixar os botões na parte inferior.
-
-Fundo Semi-transparente: Mantive o bg-gradient-to-t from-black/80 to-transparent para criar o efeito visual desejado sobre a imagem.
-
-Remoção do bg-background/80 nos Botões: Retirei essa classe dos botões individuais para que herdem o fundo semi-transparente do container pai.
-
-Alinhamento dos Botões: Mantive o flex items-center justify-between gap-2 para organizar os botões horizontalmente.
-
-Com essas modificações, os botões agora devem se sobrepor à imagem principal na parte inferior, com o estilo correto.
-
-Código Completo e Corrigido (ImagePage.tsx)
-Cole este código no seu arquivo ImagePage.tsx para aplicar as correções no layout dos botões.
-
-TypeScript
-
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
