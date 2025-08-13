@@ -1,15 +1,3 @@
-Peço desculpas pelo erro no código anterior. A análise do layout estava correta, mas durante a formatação da resposta, alguns caracteres inválidos (como _ e espaços extras) foram inseridos no código, causando o erro de sintaxe que você viu.
-
-O erro "Unexpected token div" geralmente acontece quando há um erro de sintaxe antes da linha apontada, deixando o compilador em um estado confuso.
-
-Correção
-Eu revisei o código completamente e removi todos os caracteres e formatações incorretas. A lógica de adicionar overflow-hidden para corrigir o scroll da barra lateral foi mantida.
-
-Abaixo está a versão 100% corrigida e limpa do seu componente Chat.tsx. Por favor, substitua todo o conteúdo do arquivo por este código.
-
-Código Completo e Corrigido
-JavaScript
-
 import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
