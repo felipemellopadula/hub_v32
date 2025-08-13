@@ -920,87 +920,8 @@ const Chat = () => {
           <div className="border-t border-border bg-background p-4">
             <div className="max-w-4xl mx-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2">
-                {/* Desktop version */}
-                <div className="hidden xl:flex flex-1 relative">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={isWebSearchMode ? "Digite para buscar na web..." : "Digite sua mensagem..."}
-                    disabled={isLoading}
-                    className="w-full pl-4 pr-32 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      multiple
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
-                    />
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="h-8 w-8 p-0 hover:bg-muted"
-                          >
-                            <Paperclip className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Anexe arquivos de até 25mb
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`h-8 w-8 p-0 hover:bg-muted ${isRecording ? 'text-red-500' : ''}`}
-                          >
-                            <Mic className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Grave uma mensagem de até 30s
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={toggleWebSearchMode}
-                            className={`h-8 w-8 p-0 hover:bg-muted ${isWebSearchMode ? 'bg-primary text-primary-foreground' : ''}`}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Buscar na web
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg" className="hidden xl:inline-flex">
-                  Enviar
-                </Button>
-
-                {/* Mobile/iPad version - New layout */}
-                <div className="flex xl:hidden w-full gap-2">
+                {/* Unified layout for all devices - Mobile/iPad/Desktop */}
+                <div className="flex w-full gap-2">
                   {/* Plus button with attachments menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
