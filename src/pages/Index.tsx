@@ -32,7 +32,7 @@ const Index = () => {
   const [annual, setAnnual] = useState(true);
   const [isLight, setIsLight] = useState<boolean>(() => document.documentElement.classList.contains('light'));
   const handlePrimaryCta = () => {
-    if (user) navigate("/chat");
+    if (user) navigate("/dashboard");
     else setShowAuthModal(true);
   };
   const scrollToSection = (sectionId: string) => {
@@ -98,8 +98,8 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <ThemeToggle />
               {user ? (
-                <Button onClick={() => navigate("/chat")} className="hidden sm:inline-flex">
-                  Ir para Chat
+                <Button onClick={() => navigate("/dashboard")} className="hidden sm:inline-flex">
+                  Dashboard
                 </Button>
               ) : (
                 <Button onClick={() => setShowAuthModal(true)}>Login</Button>
