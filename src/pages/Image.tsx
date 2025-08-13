@@ -10,8 +10,57 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, Image as ImageIcon, Share2, ZoomIn } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { downloadImage, shareImage, GeneratedImage } from "@/utils/imageUtils";
+import { downloadImage, shareImage } from "@/utils/imageUtils"; // Removi GeneratedImage daqui, pois vamos definir localmente
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+
+// --- ALTERAÇÃO 1: TIPO DE IMAGEM ATUALIZADO ---
+// Adicionamos um campo para a miniatura (thumbnail)
+export interface GeneratedImage {
+  id: string;
+  prompt: string;
+  originalPrompt: string;
+  url: string; // URL da imagem em alta resolução (temporária) ou do thumbnail (carregada do storage)
+  thumbnailUrl: string; // URL do thumbnail em Base64 para ser salvo
+  timestamp: string;
+  quality: string;
+  width: number;
+  height: number;
+  model: string;
+}
+
+// --- ALTERAÇÃO 2: FUNÇÃO PARA CRIAR THUMBNAILS ---
+const THUMBNAIL_SIZE = 256; // Tamanho do thumbnail em pixels
+
+const createThumbnail = (imageDataURI: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = THUMBNAIL_SIZE;
+      canvas.height = THUMBNAIL_SIZE;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return reject(new Error('Não foi possível obter o contexto do canvas'));
+      }
+      // Mantém a proporção da imagem ao desenhar no thumbnail
+      const hRatio = canvas.width / img.width;
+      const vRatio = canvas.height / img.height;
+      const ratio = Math.max(hRatio, vRatio);
+      const centerShift_x = (canvas.width - img.width * ratio) / 2;
+      const centerShift_y = (canvas.height - img.height * ratio) / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, img.width, img.height, centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
+      
+      // Usa JPEG para maior compressão e menor tamanho de arquivo
+      resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+    };
+    img.onerror = (err) => {
+      reject(err);
+    };
+    img.src = imageDataURI;
+  });
+};
+
 
 const QUALITY_SETTINGS = [
   { id: "standard", label: "Padrão (1024x1024)", width: 1024, height: 1024, steps: 15 },
@@ -20,11 +69,8 @@ const QUALITY_SETTINGS = [
   { id: "fast", label: "Rápido (512x512)", width: 512, height: 512, steps: 10 },
 ];
 
-// IDs oficiais e corretos para os modelos da Runware
 const MODELS = [
-  { id: "openai:1@1", label: "Gpt-Image 1" },
-  { id: "bytedance:3@1", label: "Seedream 3.0" },
-  { id: "runware:108@1", label: "Qwen-Image" },
+  { id: "openai:1@1", label: "GPT Image 1" },
 ];
 
 const MAX_IMAGES = 10;
@@ -47,20 +93,37 @@ const ImagePage = () => {
     document.title = "Gerar Imagens com IA | Synergy AI";
   }, []);
 
+  // --- ALTERAÇÃO 3: LÓGICA DE CARREGAMENTO ATUALIZADA ---
+  // Carrega as imagens do localStorage ao iniciar
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        setImages(JSON.parse(raw) as GeneratedImage[]);
+        const loadedImages = (JSON.parse(raw) as GeneratedImage[]).map(img => ({
+          ...img,
+          // Garante que a URL principal seja a do thumbnail ao carregar
+          url: img.thumbnailUrl 
+        }));
+        setImages(loadedImages);
       }
     } catch (err) {
       console.warn("Falha ao carregar imagens salvas", err);
     }
   }, []);
 
+  // --- ALTERAÇÃO 4: LÓGICA DE SALVAMENTO OTIMIZADA ---
+  // Salva as imagens no localStorage de forma otimizada
   useEffect(() => {
+    if (images.length === 0) return; // Não salva se não houver imagens
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(images.slice(0, MAX_IMAGES)));
+      // Cria uma versão "leve" dos dados para salvar, sem a URL da imagem original
+      const savableImages = images.map(img => {
+        const { url, ...rest } = img; // Remove a 'url' original que pode ser a de alta resolução
+        return { ...rest, thumbnailUrl: img.thumbnailUrl }; // Garante que apenas o thumbnail seja salvo
+      });
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savableImages.slice(0, MAX_IMAGES)));
     } catch (err) {
       console.warn("Falha ao salvar imagens no localStorage:", err);
       if (!storageErrorShown.current) {
@@ -120,11 +183,15 @@ const ImagePage = () => {
       const imageDataURI = base64 ? `data:image/${format};base64,${base64}` : undefined;
       if (!imageDataURI) throw new Error('A API não retornou uma imagem. Verifique o log da função Supabase.');
 
+      // --- ALTERAÇÃO 5: GERAR E USAR O THUMBNAIL ---
+      const thumbnailUrl = await createThumbnail(imageDataURI);
+
       const img: GeneratedImage = {
         id: taskUUID,
         prompt,
         originalPrompt: prompt,
-        url: imageDataURI,
+        url: imageDataURI, // A URL de alta resolução para exibição imediata
+        thumbnailUrl: thumbnailUrl, // O thumbnail para armazenamento
         timestamp: new Date().toISOString(),
         quality: quality,
         width: selectedQualityInfo.width,
@@ -143,6 +210,7 @@ const ImagePage = () => {
     }
   };
 
+  // As funções de download e share continuam funcionando como antes
   const handleDownload = (img: GeneratedImage) => downloadImage(img, toast);
   const handleShare = (img: GeneratedImage) => shareImage(img, toast);
 
@@ -171,7 +239,7 @@ const ImagePage = () => {
                     <Label htmlFor="prompt">Descreva o que você quer ver</Label>
                     <Textarea id="prompt" placeholder="Ex: retrato fotorealista de um astronauta..." value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-1">
                     <Label>Modelo</Label>
                     <Select value={model} onValueChange={setModel}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -193,7 +261,8 @@ const ImagePage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-1">
+
+                  <div className="md:col-span-2">
                     <Label>Anexar Imagem</Label>
                     <Input
                         id="file-upload"
@@ -206,9 +275,10 @@ const ImagePage = () => {
                         htmlFor="file-upload"
                         className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground"
                     >
-                        Escolha o arquivo
+                        {selectedFile ? selectedFile.name.substring(0, 15) + '...' : 'Escolha o arquivo'}
                     </Label>
                   </div>
+
                 </div>
                 <div className="flex justify-end">
                     <Button onClick={generate} disabled={isGenerating} className="w-full sm:w-auto">
@@ -232,6 +302,8 @@ const ImagePage = () => {
                 </div>
               ) : images.length > 0 ? (
                 <CardContent className="p-0">
+                  {/* A imagem principal (images[0]) usa a `url` que será a de alta resolução logo após gerar,
+                      ou o thumbnail após recarregar a página. */}
                   <img src={images[0].url} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-auto object-cover rounded-t-lg" loading="eager" />
                   <div className="p-4 flex items-center justify-between gap-2 border-t">
                     <Button variant="outline" className="gap-2 flex-1" onClick={() => handleDownload(images[0])}>
@@ -247,6 +319,7 @@ const ImagePage = () => {
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-4xl">
+                        {/* O zoom sempre mostra a melhor qualidade disponível no estado atual */}
                         <img src={images[0].url} alt={`Imagem ampliada: ${images[0].prompt}`} className="w-full h-auto" />
                       </DialogContent>
                     </Dialog>
@@ -262,7 +335,8 @@ const ImagePage = () => {
           </div>
 
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* O histórico sempre usará a `url` que, após o carregamento, será a do thumbnail, tornando tudo mais rápido */}
               {images.slice(1).map((img) => (
                 <Dialog key={img.id}>
                   <Card className="relative group overflow-hidden rounded-lg aspect-square">
