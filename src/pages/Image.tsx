@@ -229,10 +229,10 @@ const ImagePage = () => {
                                     </Select>
                                 </div>
                                 <div className="md:col-span-1">
-                                    <Label>Anexar Imagem</Label>
+                                    <Label>Anexar</Label>
                                     <Input id="file-upload" type="file" accept="image/*" onChange={handleFileChange} className="sr-only"/>
                                     <Label htmlFor="file-upload" className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground">
-                                        Arquivo
+                                        Imagem
                                     </Label>
                                 </div>
                             </div>
