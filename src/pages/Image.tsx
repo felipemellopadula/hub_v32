@@ -12,6 +12,7 @@ import { Download, Image as ImageIcon, Share2, ZoomIn, Loader2, X } from "lucide
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { downloadImage, shareImage, GeneratedImage, dataURIToBlob } from "@/utils/imageUtils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const QUALITY_SETTINGS = [
     { id: "standard", label: "Padrão (1024x1024)", width: 1024, height: 1024, steps: 15 },
@@ -259,16 +260,31 @@ const ImagePage = () => {
                                       className="sr-only"
                                       disabled={!canAttachImage}
                                     />
-                                    <Label
-                                      htmlFor="file-upload"
-                                      aria-disabled={!canAttachImage}
-                                      className={`mt-2 flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background ${canAttachImage ? "cursor-pointer hover:bg-accent hover:text-accent-foreground" : "cursor-not-allowed opacity-50 pointer-events-none"}`}
-                                      title={canAttachImage ? "Anexar imagem" : "Disponível apenas no modelo GPT-Image 1"}
-                                    >
+                                    {!canAttachImage ? (
+                                      <TooltipProvider delayDuration={200}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Label
+                                              htmlFor="file-upload"
+                                              aria-disabled={!canAttachImage}
+                                              className={`mt-2 flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background cursor-not-allowed opacity-50`}
+                                            >
+                                              Imagem
+                                            </Label>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Disponível apenas no modelo GPT-Image 1</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : (
+                                      <Label
+                                        htmlFor="file-upload"
+                                        aria-disabled={!canAttachImage}
+                                        className={`mt-2 flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background cursor-pointer hover:bg-accent hover:text-accent-foreground`}
+                                      >
                                         Imagem
-                                    </Label>
-                                    {!canAttachImage && (
-                                      <p className="mt-2 text-xs text-muted-foreground">Disponível apenas no modelo GPT-Image 1</p>
+                                      </Label>
                                     )}
                                     {previewUrl && (
                                       <div className="relative mt-2 w-20 h-20 rounded-md overflow-hidden border">
