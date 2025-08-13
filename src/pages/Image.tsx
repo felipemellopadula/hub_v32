@@ -43,7 +43,7 @@ const ImagePage = () => {
     const selectedQualityInfo = useMemo(() => QUALITY_SETTINGS.find(q => q.id === quality)!, [quality]);
 
     useEffect(() => {
-        document.title = "Gerar Imagens com IA | Synergy AI";
+        document.title = "Gerar Imagens com IA | Synergy AI"; // SEO: title tag
     }, []);
 
     // --- LÓGICA DE BUSCA DE HISTÓRICO CORRIGIDA ---
@@ -61,8 +61,8 @@ const ImagePage = () => {
 
             // Agora que temos certeza que o usuário existe, buscamos os dados.
             const { data, error } = await supabase
-                .from('generated_images')
-                .select('*')
+                .from('user_images')
+                .select('id, prompt, image_path, created_at, width, height')
                 .eq('user_id', session.user.id)
                 .order('created_at', { ascending: false })
                 .limit(MAX_IMAGES_TO_FETCH);
@@ -72,18 +72,21 @@ const ImagePage = () => {
                 // Só mostra o erro se a falha for do banco, não por falta de login
                 toast({ title: "Erro", description: "Não foi possível carregar seu histórico.", variant: "destructive" });
             } else if (data) {
-                const formattedImages = data.map(dbImg => ({
-                    id: dbImg.id,
-                    prompt: dbImg.prompt,
-                    originalPrompt: dbImg.prompt,
-                    detailedPrompt: dbImg.prompt,
-                    url: dbImg.image_url,
-                    timestamp: dbImg.created_at,
-                    quality: dbImg.quality || 'standard',
-                    width: dbImg.width || 1024,
-                    height: dbImg.height || 1024,
-                    model: dbImg.model || MODELS[0].id,
-                }));
+                const formattedImages = data.map((dbImg) => {
+                    const { data: pub } = supabase.storage.from('images').getPublicUrl(dbImg.image_path);
+                    return {
+                        id: dbImg.id,
+                        prompt: dbImg.prompt || '',
+                        originalPrompt: dbImg.prompt || '',
+                        detailedPrompt: dbImg.prompt || '',
+                        url: pub.publicUrl,
+                        timestamp: dbImg.created_at,
+                        quality: 'standard',
+                        width: dbImg.width || 1024,
+                        height: dbImg.height || 1024,
+                        model: MODELS[0].id,
+                    } as GeneratedImage;
+                });
                 setImages(formattedImages);
             }
             // Finaliza o estado de carregamento
@@ -137,26 +140,36 @@ const ImagePage = () => {
             const imageBlob = dataURIToBlob(imageDataURI);
             const fileName = `${user.id}/${Date.now()}.png`;
             
-            const { error: uploadError } = await supabase.storage.from('generated_images').upload(fileName, imageBlob);
+            const { error: uploadError } = await supabase.storage.from('images').upload(fileName, imageBlob);
             if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage.from('generated_images').getPublicUrl(fileName);
+            const { data: pub } = supabase.storage.from('images').getPublicUrl(fileName);
 
-            const newImageData = { user_id: user.id, prompt, image_url: publicUrl, model, quality, width: selectedQualityInfo.width, height: selectedQualityInfo.height, };
-            const { data: insertData, error: insertError } = await supabase.from('generated_images').insert(newImageData).select().single();
+            const { data: insertData, error: insertError } = await supabase
+                .from('user_images')
+                .insert({
+                    user_id: user.id,
+                    prompt,
+                    image_path: fileName,
+                    width: selectedQualityInfo.width,
+                    height: selectedQualityInfo.height,
+                    format: apiData?.format || 'png',
+                })
+                .select()
+                .single();
             if (insertError) throw insertError;
 
             const newImageForState: GeneratedImage = {
                 id: insertData.id,
-                prompt: insertData.prompt,
-                originalPrompt: insertData.prompt,
-                detailedPrompt: insertData.prompt,
-                url: insertData.image_url,
+                prompt: insertData.prompt || prompt,
+                originalPrompt: insertData.prompt || prompt,
+                detailedPrompt: insertData.prompt || prompt,
+                url: pub.publicUrl,
                 timestamp: insertData.created_at,
-                quality: insertData.quality,
-                width: insertData.width,
-                height: insertData.height,
-                model: insertData.model,
+                quality,
+                width: insertData.width || selectedQualityInfo.width,
+                height: insertData.height || selectedQualityInfo.height,
+                model,
             };
 
             setImages(prev => [newImageForState, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
@@ -175,7 +188,7 @@ const ImagePage = () => {
     const handleShare = (img: GeneratedImage) => shareImage(img, toast);
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background" role="main">
             <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
