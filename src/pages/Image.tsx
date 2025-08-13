@@ -1,14 +1,3 @@
-Peço desculpas pelo erro! Você está certíssimo.
-
-O problema aconteceu porque eu incluí o texto da minha resposta (a explicação) dentro do bloco de código. Quando você copiou e colou, esse texto foi para o topo do seu arquivo Image.tsx, o que causa o erro de sintaxe.
-
-O arquivo .tsx só pode conter código, ele não entende texto normal como "Excelente! Você encontrou...". A primeira linha do seu arquivo deve ser sempre import ....
-
-Abaixo está o código correto e limpo, sem nenhum texto extra. Pode copiar e colar este bloco inteiro que agora vai funcionar perfeitamente.
-
-Código Correto e Limpo para Image.tsx
-TypeScript
-
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
