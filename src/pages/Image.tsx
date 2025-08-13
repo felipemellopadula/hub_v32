@@ -12,8 +12,6 @@ import { Download, Image as ImageIcon, Share2, ZoomIn } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { downloadImage, shareImage, GeneratedImage } from "@/utils/imageUtils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-// --- 1. Importamos a biblioteca de compressão ---
-import imageCompression from 'browser-image-compression';
 
 const QUALITY_SETTINGS = [
   { id: "standard", label: "Padrão (1024x1024)", width: 1024, height: 1024, steps: 15 },
@@ -23,11 +21,10 @@ const QUALITY_SETTINGS = [
 ];
 
 const MODELS = [
-  { id: "openai:1@1", label: "Gpt-Image 1" },
-  { id: "bytedance:3@1", label: "Seedream 3.0" },
-  { id: "runware:108@1", label: "Qwen-Image" },
+  { id: "openai:1@1", label: "GPT Image 1" },
 ];
 
+// 1 imagem principal + 9 no histórico
 const MAX_IMAGES = 10;
 const STORAGE_KEY = 'synergy_ai_images';
 
@@ -35,13 +32,12 @@ const ImagePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<string>(MODELS[0].id);
-  const [quality, setQuality] = useState<string>(QUALITY_SETTINGS[0].id);
+  const [model, setModel] = useState(MODELS[0].id);
+  const [quality, setQuality] = useState(QUALITY_SETTINGS[0].id);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const storageErrorShown = useRef(false);
-  
   const selectedQualityInfo = useMemo(() => QUALITY_SETTINGS.find(q => q.id === quality)!, [quality]);
 
   useEffect(() => {
@@ -52,7 +48,6 @@ const ImagePage = () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        // As imagens carregadas do storage serão as miniaturas
         setImages(JSON.parse(raw) as GeneratedImage[]);
       }
     } catch (err) {
@@ -60,61 +55,22 @@ const ImagePage = () => {
     }
   }, []);
 
-  // --- 2. A MÁGICA ACONTECE AQUI ---
-  // Este useEffect agora é assíncrono e comprime as imagens antes de salvar
   useEffect(() => {
-    const saveCompressedImages = async () => {
-      if (images.length === 0) return;
-
-      try {
-        // Mapeia cada imagem para uma promessa de compressão
-        const compressedImagesPromises = images.slice(0, MAX_IMAGES).map(async (img) => {
-          // Se a URL já for pequena (provavelmente já é um thumbnail), não faz nada
-          if (img.url.length < 200 * 1024) { // 200KB threshold
-             return img;
-          }
-
-          // Converte o Data URI de volta para um arquivo para poder comprimir
-          const imageFile = await imageCompression.getFilefromDataUrl(img.url, `${img.id}.jpg`);
-
-          // Opções de compressão: cria um thumbnail pequeno
-          const options = {
-            maxSizeMB: 0.05, // 50KB - bem pequeno!
-            maxWidthOrHeight: 256, // Redimensiona para no máximo 256px
-            useWebWorker: true,
-          };
-          
-          const compressedFile = await imageCompression(imageFile, options);
-          
-          // Converte o arquivo comprimido de volta para Data URI para salvar
-          const compressedUrl = await imageCompression.getDataUrlFromFile(compressedFile);
-
-          // Retorna um novo objeto de imagem com a URL da miniatura
-          return { ...img, url: compressedUrl };
+    // A lógica de salvar no localStorage continua a mesma
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(images.slice(0, MAX_IMAGES)));
+    } catch (err) {
+      console.warn("Falha ao salvar imagens no localStorage:", err);
+      if (!storageErrorShown.current) {
+        toast({
+          title: "Armazenamento local cheio",
+          description: "Não foi possível salvar as imagens localmente.",
+          variant: "destructive",
         });
-
-        // Espera todas as imagens serem comprimidas
-        const compressedImages = await Promise.all(compressedImagesPromises);
-
-        // Salva o array de imagens com miniaturas no localStorage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(compressedImages));
-
-      } catch (err) {
-        console.warn("Falha ao salvar imagens no localStorage:", err);
-        if (!storageErrorShown.current) {
-          toast({
-            title: "Armazenamento local cheio",
-            description: "Não foi possível salvar o histórico de imagens.",
-            variant: "destructive",
-          });
-          storageErrorShown.current = true;
-        }
+        storageErrorShown.current = true;
       }
-    };
-
-    saveCompressedImages();
+    }
   }, [images, toast]);
-
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -166,7 +122,8 @@ const ImagePage = () => {
         id: taskUUID,
         prompt,
         originalPrompt: prompt,
-        url: imageDataURI, // A imagem recém-gerada sempre está em alta resolução no state
+        detailedPrompt: prompt, // Mantido para consistência da interface
+        url: imageDataURI,
         timestamp: new Date().toISOString(),
         quality: quality,
         width: selectedQualityInfo.width,
@@ -303,28 +260,43 @@ const ImagePage = () => {
             </Card>
           </div>
 
+          {/* --- ALTERAÇÃO PRINCIPAL NO LAYOUT DO HISTÓRICO --- */}
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {images.slice(1).map((img) => (
-                <Dialog key={img.id}>
-                  <Card className="relative group overflow-hidden rounded-lg aspect-square">
-                    <DialogTrigger asChild>
-                      <img src={img.url} alt={`Imagem gerada: ${img.prompt}`} className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105" loading="lazy" />
-                    </DialogTrigger>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDownload(img); }}>
-                            <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleShare(img); }}>
-                            <Share2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                  </Card>
-                   <DialogContent className="max-w-4xl">
-                      <img src={img.url} alt={`Imagem ampliada: ${img.prompt}`} className="w-full h-auto" />
-                   </DialogContent>
-                </Dialog>
-              ))}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Criamos um array de 9 posições para renderizar os slots */}
+              {Array.from({ length: 9 }).map((_, index) => {
+                // Pegamos a imagem correspondente do histórico (pulando a primeira, que é a principal)
+                const img = images[index + 1];
+
+                // Se a imagem existir, renderiza o card com ela
+                if (img) {
+                  return (
+                    <Dialog key={img.id}>
+                      <Card className="relative group overflow-hidden rounded-lg aspect-square">
+                        <DialogTrigger asChild>
+                          <img src={img.url} alt={`Imagem gerada: ${img.prompt}`} className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                        </DialogTrigger>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDownload(img); }}>
+                                <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleShare(img); }}>
+                                <Share2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                      </Card>
+                       <DialogContent className="max-w-4xl">
+                          <img src={img.url} alt={`Imagem ampliada: ${img.prompt}`} className="w-full h-auto" />
+                       </DialogContent>
+                    </Dialog>
+                  );
+                }
+                
+                // Se a imagem não existir, renderiza um placeholder
+                return (
+                  <Card key={`placeholder-${index}`} className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20" />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -332,5 +304,3 @@ const ImagePage = () => {
     </div>
   );
 };
-
-export default ImagePage;
