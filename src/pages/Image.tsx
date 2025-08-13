@@ -1,3 +1,24 @@
+Excelente! Você encontrou os JSONs corretos, e isso resolve todo o mistério. Muito obrigado por compartilhar, isso nos dá a resposta exata.
+
+O Diagnóstico Final
+O problema era exatamente o que suspeitávamos: os ids dos modelos que estávamos usando no código eram apenas exemplos e não os ids oficiais que a API da Runware espera.
+
+Os JSONs que você enviou mostram os identificadores corretos que sua Edge Function precisa enviar para a Runware:
+
+Para o Qwen-Image: O id correto é runware:108@1.
+
+Para o Seedream 3.0: O id correto é bytedance:3@1.
+
+O erro acontecia porque nosso código enviava ids inválidos, e a API da Runware rejeitava a requisição.
+
+A Solução
+Agora, tudo o que precisamos fazer é atualizar a lista MODELS no seu código com esses ids corretos. Eu já fiz isso para você no código completo abaixo.
+
+Com esses ids oficiais, a seleção de modelos deve funcionar perfeitamente.
+
+Código Completo com os IDs Finais e Corretos
+TypeScript
+
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,12 +41,12 @@ const QUALITY_SETTINGS = [
   { id: "fast", label: "Rápido (512x512)", width: 512, height: 512, steps: 10 },
 ];
 
-// --- CORREÇÃO FINAL AQUI ---
-// Restaurado o ID "openai:1@1" para o "Gpt-Image 1", conforme solicitado.
+// --- CORREÇÃO FINAL COM OS IDs OFICIAIS ---
+// Atualizamos a lista com os IDs corretos que você encontrou.
 const MODELS = [
   { id: "openai:1@1", label: "Gpt-Image 1" },
-  { id: "runware:seedream-acg@1", label: "Seedream" },
-  { id: "alibaba:qwen-vl-plus@1", label: "Qwen-Image" },
+  { id: "bytedance:3@1", label: "Seedream 3.0" },
+  { id: "runware:108@1", label: "Qwen-Image" },
 ];
 // --- FIM DA CORREÇÃO ---
 
