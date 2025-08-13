@@ -149,7 +149,7 @@ const ImagePage = () => {
                 inputImageBase64 = (reader.result as string).split(',')[1];
             }
 
-            const body: any = { model, positivePrompt: prompt, width: selectedQualityInfo.width, height: selectedQualityInfo.height, numberResults: 1, outputFormat: "PNG", ...(inputImageBase64 ? { inputImage: inputImageBase64, strength: 0.8 } : {}), };
+            const body: any = { model, positivePrompt: prompt, width: selectedQualityInfo.width, height: selectedQualityInfo.height, numberResults: 1, outputFormat: "PNG", ...(inputImageBase64 && model === "openai:1@1" ? { inputImage: inputImageBase64 } : {}), };
             const { data: apiData, error: apiError } = await supabase.functions.invoke('generate-image', { body });
             if (apiError) throw apiError;
             
