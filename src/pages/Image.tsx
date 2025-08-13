@@ -187,7 +187,7 @@ const ImagePage = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <ImageIcon className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Synergy Imagem</h1>
+            <h1 className="text-2xl font-bold text-foreground">Synergy Image</h1>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -214,7 +214,7 @@ const ImagePage = () => {
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label>Qualidade/Tamanho</Label>
+                    <Label>Qualidade</Label>
                     <Select value={quality} onValueChange={setQuality}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -223,10 +223,10 @@ const ImagePage = () => {
                     </Select>
                   </div>
                   <div className="md:col-span-1">
-                    <Label>Anexar Imagem</Label>
+                    <Label>Imagem</Label>
                     <Input id="file-upload" type="file" accept="image/*" onChange={handleFileChange} className="sr-only"/>
                     <Label htmlFor="file-upload" className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground">
-                        Escolha o arquivo
+                        Arquivo
                     </Label>
                   </div>
                 </div>
