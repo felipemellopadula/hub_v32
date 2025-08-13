@@ -44,13 +44,13 @@ const Dashboard = () => {
       onClick: () => navigate('/image')
     },
     {
-      id: 'humanize',
+      id: 'translator',
       icon: UserCheck,
-      title: 'Humanizar',
-      description: 'Texto mais humano',
+      title: 'Tradutor / Humanizar',
+      description: 'Tradução e humanização de texto',
       color: 'bg-orange-500',
-      available: false,
-      onClick: () => {}
+      available: true,
+      onClick: () => navigate('/translator')
     },
     {
       id: 'code',

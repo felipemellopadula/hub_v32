@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Chat from "./pages/Chat";
 import VideoPage from "./pages/Video";
 import ImagePage from "./pages/Image";
+import TranslatorPage from "./pages/Translator";
 import SettingsPage from "./pages/Settings";
 import Share from "./pages/Share";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/chat" element={<Chat />} />
           <Route path="/video" element={<VideoPage />} />
           <Route path="/image" element={<ImagePage />} />
+          <Route path="/translator" element={<TranslatorPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/share" element={<Share />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
