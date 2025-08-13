@@ -1,4 +1,4 @@
-import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu } from "lucide-react";
+import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
@@ -14,6 +14,8 @@ import { PdfProcessor } from "@/utils/PdfProcessor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 interface Message {
   id: string;
   content: string;
@@ -918,7 +920,8 @@ const Chat = () => {
           <div className="border-t border-border bg-background p-4">
             <div className="max-w-4xl mx-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2">
-                <div className="flex-1 relative">
+                {/* Desktop version */}
+                <div className="hidden md:flex flex-1 relative">
                   <input
                     type="text"
                     value={inputValue}
@@ -992,9 +995,114 @@ const Chat = () => {
                     </TooltipProvider>
                   </div>
                 </div>
-                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg">
+                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="lg" className="hidden md:inline-flex">
                   Enviar
                 </Button>
+
+                {/* Mobile/iPad version - New layout */}
+                <div className="flex md:hidden w-full gap-2">
+                  {/* Plus button with attachments menu */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      multiple
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                    />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const attachButton = document.getElementById('attach-menu');
+                              if (attachButton) {
+                                attachButton.click();
+                              }
+                            }}
+                            className="h-10 w-10 p-0 hover:bg-muted rounded-full"
+                          >
+                            <Plus className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Anexos e busca web
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button id="attach-menu" className="hidden"></button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="top" align="start" className="mb-2">
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <Paperclip className="h-4 w-4 mr-2" />
+                          Anexar arquivo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={toggleWebSearchMode}>
+                          <Globe className="h-4 w-4 mr-2" />
+                          {isWebSearchMode ? 'Desativar busca web' : 'Buscar na web'}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Input area with auto-resize */}
+                  <div className="flex-1 relative">
+                    <Textarea
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder={isWebSearchMode ? "Digite para buscar na web..." : "Pergunte alguma coisa"}
+                      disabled={isLoading}
+                      className="w-full pl-4 pr-20 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[44px] max-h-32"
+                      rows={1}
+                      style={{
+                        height: 'auto',
+                        minHeight: '44px'
+                      }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                      }}
+                    />
+                    
+                    {/* Right side buttons - Mic and Send */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={isRecording ? stopRecording : startRecording}
+                              className={`h-8 w-8 p-0 hover:bg-muted rounded-full ${isRecording ? 'text-red-500' : ''}`}
+                            >
+                              <Mic className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Grave uma mensagem de até 30s
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <Button 
+                        type="submit" 
+                        disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)}
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </form>
               {attachedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
