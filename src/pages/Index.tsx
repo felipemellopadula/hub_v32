@@ -77,7 +77,7 @@ const Index = () => {
     );
   }
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -220,7 +220,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <BrainCircuit className="h-8 w-8 text-primary"/>
+                      <BrainCircuit className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Sinapse Core</CardTitle>
                     <CardDescription className="text-center">
@@ -231,7 +231,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <FileText className="h-8 w-8 text-primary"/>
+                      <FileText className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Análise de Documentos</CardTitle>
                     <CardDescription className="text-center">
@@ -242,7 +242,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <Layers className="h-8 w-8 text-primary"/>
+                      <Layers className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Contextos</CardTitle>
                     <CardDescription className="text-center">
@@ -253,7 +253,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <Users className="h-8 w-8 text-primary"/>
+                      <Users className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Flows</CardTitle>
                     <CardDescription className="text-center">
@@ -264,7 +264,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <FolderKanban className="h-8 w-8 text-primary"/>
+                      <FolderKanban className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Organize Chats em Pastas</CardTitle>
                     <CardDescription className="text-center">
@@ -275,7 +275,7 @@ const Index = () => {
                 <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-center h-12 mb-4">
-                      <LineChart className="h-8 w-8 text-primary"/>
+                      <LineChart className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-center">Análise de Dados</CardTitle>
                     <CardDescription className="text-center">
@@ -294,12 +294,12 @@ const Index = () => {
                 <p className="text-muted-foreground mt-2">Tudo o que você precisa para construir, implantar e escalar aplicações com IA.</p>
               </header>
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><BrainCircuit className="h-5 w-5 text-primary"/> Modelos de IA Avançados</CardTitle><CardDescription>Acesse IA de última geração para texto, imagem e áudio.</CardDescription></CardHeader></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary"/> Velocidade Extrema</CardTitle><CardDescription>Infra otimizada para respostas rápidas, mesmo em alto tráfego.</CardDescription></CardHeader></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary"/> Segurança Empresarial</CardTitle><CardDescription>Criptografia e medidas de segurança de nível bancário.</CardDescription></CardHeader></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/> Análises Detalhadas</CardTitle><CardDescription>Acompanhe uso, desempenho e custos com painéis.</CardDescription></CardHeader></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary"/> Disponibilidade Global</CardTitle><CardDescription>Baixa latência em qualquer lugar do mundo.</CardDescription></CardHeader></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Server className="h-5 w-5 text-primary"/> Infraestrutura Escalável</CardTitle><CardDescription>Escala automática do protótipo à produção.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><BrainCircuit className="h-5 w-5 text-primary" /> Modelos de IA Avançados</CardTitle><CardDescription>Acesse IA de última geração para texto, imagem e áudio.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" /> Velocidade Extrema</CardTitle><CardDescription>Infra otimizada para respostas rápidas, mesmo em alto tráfego.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Segurança Empresarial</CardTitle><CardDescription>Criptografia e medidas de segurança de nível bancário.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-primary" /> Análises Detalhadas</CardTitle><CardDescription>Acompanhe uso, desempenho e custos com painéis.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /> Disponibilidade Global</CardTitle><CardDescription>Baixa latência em qualquer lugar do mundo.</CardDescription></CardHeader></Card>
+                <Card className="bg-card border-border"><CardHeader><CardTitle className="flex items-center gap-2"><Server className="h-5 w-5 text-primary" /> Infraestrutura Escalável</CardTitle><CardDescription>Escala automática do protótipo à produção.</CardDescription></CardHeader></Card>
               </div>
             </div>
           </section>
