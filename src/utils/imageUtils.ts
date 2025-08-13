@@ -76,22 +76,24 @@ export const shareImage = async (image: GeneratedImage, toast: ToastFunction): P
     title: "Imagem Gerada por IA",
     text: image.prompt,
     url: image.url,
-  };
+  } as any;
 
   try {
     if (navigator.share) {
       await navigator.share(shareData);
-    } else {
-      await navigator.clipboard.writeText(image.url);
-      toast({
-        title: "URL Copiada",
-        description: "O link da imagem foi copiado para a área de transferência.",
-        variant: "default",
-      });
+      return;
     }
+
+    // Fallback: abre um modal/folha customizado será tratado pelo chamador; aqui só copia link para manter compatibilidade
+    await navigator.clipboard.writeText(image.url);
+    toast({
+      title: "Link Copiado",
+      description: "Copiamos o link da imagem para a área de transferência.",
+      variant: "default",
+    });
   } catch (error) {
     console.error("Erro ao compartilhar:", error);
-    toast({ title: "Erro ao Partilhar", description: "Ocorreu um problema ao tentar partilhar a imagem.", variant: "destructive" });
+    toast({ title: "Erro ao Partilhar", description: "Não foi possível partilhar.", variant: "destructive" });
   }
 };
 

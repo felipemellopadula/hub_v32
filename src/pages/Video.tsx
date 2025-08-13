@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Maximize, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const RESOLUTIONS = [
   { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p", w: 864, h: 480 },
@@ -97,6 +98,8 @@ const VideoPage = () => {
   const [uploadingStart, setUploadingStart] = useState(false);
   const [uploadingEnd, setUploadingEnd] = useState(false);
   const [savedVideos, setSavedVideos] = useState<string[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareData, setShareData] = useState<{ url: string; title: string; text: string }>({ url: "", title: "", text: "" });
 
   useEffect(() => {
     const stored = localStorage.getItem('savedVideos');
@@ -247,13 +250,11 @@ const VideoPage = () => {
     const text = (promptText || "Veja este vídeo que criei!").slice(0, 280);
 
     try {
-      // 1) Tenta abrir o menu nativo diretamente (na mesma página)
       if (navigator.share) {
         await navigator.share({ title, text, url });
         return;
       }
 
-      // 2) Se não houver suporte a share de URL, tenta share de arquivo (alguns navegadores dão suporte)
       const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
       if (res.ok) {
         const blob = await res.blob();
@@ -265,20 +266,13 @@ const VideoPage = () => {
           return;
         }
       }
-
-      // 3) Fallback final: copiar link
-      await navigator.clipboard.writeText(url);
-      toast({ title: 'Link Copiado', description: 'Seu navegador não suporta compartilhamento nativo aqui. Link copiado.', variant: 'default' });
-    } catch (error) {
-      console.error('Erro ao partilhar:', error);
-      try {
-        await navigator.clipboard.writeText(url);
-        toast({ title: 'Link Copiado', description: 'Não foi possível abrir o compartilhamento, copiamos o link para você.', variant: 'default' });
-      } catch (copyError) {
-        console.error('Erro ao copiar o link:', copyError);
-        toast({ title: 'Erro', description: 'Não foi possível partilhar ou copiar o link.', variant: 'destructive' });
-      }
+    } catch (e) {
+      // segue para fallback
     }
+
+    // Fallback: abre modal de opções de compartilhamento na própria página
+    setShareData({ url, title, text });
+    setShareOpen(true);
   };
 
 
@@ -462,6 +456,23 @@ const VideoPage = () => {
           </div>
 
         </div>
+        <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+          <DialogContent className="max-w-lg">
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Compartilhar</h3>
+              <p className="text-sm text-muted-foreground">Escolha uma opção para compartilhar seu vídeo.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareData.text + ' ' + shareData.url)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://t.me/share/url?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">Telegram</a>
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`} target="_blank" rel="noreferrer">Facebook</a>
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">X</a>
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareData.url)}`} target="_blank" rel="noreferrer">LinkedIn</a>
+                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(shareData.text + '\n' + shareData.url)}`}>Email</a>
+                <button className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" onClick={async () => { await navigator.clipboard.writeText(shareData.url); setShareOpen(false); }}>Copiar link</button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
