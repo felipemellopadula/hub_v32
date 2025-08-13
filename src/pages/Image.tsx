@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, ChangeEvent } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +26,7 @@ const MODELS = [
   { id: "runware:108@1", label: "Qwen-Image" },
 ];
 
-// 5 imagens por usuário (limite no banco)
-const MAX_IMAGES_TO_FETCH = 5; 
+const MAX_IMAGES_TO_FETCH = 10; 
 
 const ImagePage = () => {
   const navigate = useNavigate();
@@ -37,20 +36,14 @@ const ImagePage = () => {
   const [quality, setQuality] = useState(QUALITY_SETTINGS[0].id);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // Feedback para o usuário
+  const [isSaving, setIsSaving] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const selectedQualityInfo = useMemo(() => QUALITY_SETTINGS.find(q => q.id === quality)!, [quality]);
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setSelectedFile(file);
-  };
 
   useEffect(() => {
     document.title = "Gerar Imagens com IA | Synergy AI";
   }, []);
 
-  // --- BUSCA O HISTÓRICO DO BANCO DE DADOS AO CARREGAR A PÁGINA ---
   useEffect(() => {
     const fetchUserImages = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -60,7 +53,7 @@ const ImagePage = () => {
       }
 
       const { data, error } = await supabase
-        .from('user_images')
+        .from('generated_images')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -70,28 +63,24 @@ const ImagePage = () => {
         console.error("Erro ao buscar histórico:", error);
         toast({ title: "Erro", description: "Não foi possível carregar seu histórico.", variant: "destructive" });
       } else if (data) {
-        const formattedImages = data.map(dbImg => {
-          const { data: pub } = supabase.storage.from('images').getPublicUrl(dbImg.image_path);
-          return {
-            id: dbImg.id,
-            prompt: dbImg.prompt || '',
-            originalPrompt: dbImg.prompt || '',
-            detailedPrompt: dbImg.prompt || '',
-            url: pub.publicUrl,
-            timestamp: dbImg.created_at,
-            quality: 'standard',
-            width: dbImg.width || 1024,
-            height: dbImg.height || 1024,
-            model: MODELS[0].id,
-          } as GeneratedImage;
-        });
+        const formattedImages = data.map(dbImg => ({
+          id: dbImg.id,
+          prompt: dbImg.prompt,
+          originalPrompt: dbImg.prompt,
+          detailedPrompt: dbImg.prompt,
+          url: dbImg.image_url,
+          timestamp: dbImg.created_at,
+          quality: dbImg.quality || 'standard',
+          width: dbImg.width || 1024,
+          height: dbImg.height || 1024,
+          model: dbImg.model || MODELS[0].id,
+        }));
         setImages(formattedImages);
       }
     };
 
     fetchUserImages();
   }, [toast]);
-
 
   const generate = async () => {
     if (!prompt.trim()) {
@@ -106,64 +95,38 @@ const ImagePage = () => {
 
     setIsGenerating(true);
     try {
-      let inputImageBase64: string | undefined;
-      if (selectedFile) {
-        const reader = new FileReader();
-        reader.readAsDataURL(selectedFile);
-        await new Promise<void>((resolve, reject) => {
-          reader.onload = () => resolve();
-          reader.onerror = (error) => reject(error);
-        });
-        inputImageBase64 = (reader.result as string).split(',')[1];
-      }
-
-      const body: any = { model, positivePrompt: prompt, width: selectedQualityInfo.width, height: selectedQualityInfo.height, numberResults: 1, outputFormat: "PNG", ...(inputImageBase64 ? { inputImage: inputImageBase64, strength: 0.8 } : {}), };
+      const body: any = {}; // A ser preenchido pela lógica da API
       const { data: apiData, error: apiError } = await supabase.functions.invoke('generate-image', { body });
       if (apiError) throw apiError;
       
-      const base64 = apiData?.image as string | undefined;
-      const format = (apiData?.format as string | undefined) || 'webp';
-      const imageDataURI = base64 ? `data:image/${format};base64,${base64}` : undefined;
-      if (!imageDataURI) throw new Error("A API não retornou uma imagem.");
+      const imageDataURI = `data:image/${apiData?.format || 'webp'};base64,${apiData?.image}`;
+      if (!apiData?.image) throw new Error("A API não retornou uma imagem.");
 
       setIsSaving(true);
       
-      // --- LÓGICA DE UPLOAD E SALVAMENTO NO BANCO ---
       const imageBlob = dataURIToBlob(imageDataURI);
-      const ext = (format || 'png').toLowerCase();
-      const fileName = `${user.id}/${Date.now()}.${ext}`;
+      const fileName = `${user.id}/${Date.now()}.png`;
       
-      const { error: uploadError } = await supabase.storage.from('images').upload(fileName, imageBlob);
+      const { error: uploadError } = await supabase.storage.from('generated_images').upload(fileName, imageBlob);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('generated_images').getPublicUrl(fileName);
 
-      const newImageData = {
-        user_id: user.id,
-        prompt,
-        image_path: fileName,
-        width: selectedQualityInfo.width,
-        height: selectedQualityInfo.height,
-        format: ext,
-      };
-      const { data: insertData, error: insertError } = await supabase
-        .from('user_images')
-        .insert(newImageData)
-        .select()
-        .single();
+      const newImageData = { user_id: user.id, prompt, image_url: publicUrl, model, quality, width: selectedQualityInfo.width, height: selectedQualityInfo.height };
+      const { data: insertData, error: insertError } = await supabase.from('generated_images').insert(newImageData).select().single();
       if (insertError) throw insertError;
 
       const newImageForState: GeneratedImage = {
           id: insertData.id,
-          prompt: insertData.prompt || prompt,
-          originalPrompt: insertData.prompt || prompt,
-          detailedPrompt: insertData.prompt || prompt,
-          url: publicUrl,
+          prompt: insertData.prompt,
+          originalPrompt: insertData.prompt,
+          detailedPrompt: insertData.prompt,
+          url: insertData.image_url,
           timestamp: insertData.created_at,
-          quality: quality,
-          width: insertData.width || selectedQualityInfo.width,
-          height: insertData.height || selectedQualityInfo.height,
-          model: model,
+          quality: insertData.quality,
+          width: insertData.width,
+          height: insertData.height,
+          model: insertData.model,
       };
 
       setImages(prev => [newImageForState, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
@@ -180,14 +143,14 @@ const ImagePage = () => {
 
   const handleDownload = (img: GeneratedImage) => downloadImage(img, toast);
   const handleShare = (img: GeneratedImage) => shareImage(img, toast);
-
+  
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <ImageIcon className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Synergy Image</h1>
+            <h1 className="text-2xl font-bold text-foreground">Synergy Imagem</h1>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -214,7 +177,7 @@ const ImagePage = () => {
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label>Qualidade</Label>
+                    <Label>Qualidade/Tamanho</Label>
                     <Select value={quality} onValueChange={setQuality}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -223,10 +186,10 @@ const ImagePage = () => {
                     </Select>
                   </div>
                   <div className="md:col-span-1">
-                    <Label>Imagem</Label>
-                    <Input id="file-upload" type="file" accept="image/*" onChange={handleFileChange} className="sr-only"/>
+                    <Label>Anexar Imagem</Label>
+                    <Input id="file-upload" type="file" accept="image/*" className="sr-only"/>
                     <Label htmlFor="file-upload" className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground">
-                        Arquivo
+                        Escolha o arquivo
                     </Label>
                   </div>
                 </div>
@@ -241,20 +204,32 @@ const ImagePage = () => {
         </section>
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* --- CORREÇÃO DE LAYOUT MOBILE AQUI --- */}
           <div className="lg:col-span-3">
-            <Card className="w-full h-full min-h-[512px] flex items-center justify-center">
+            {/* O 'aspect-square' força o card a ser um quadrado, e 'overflow-hidden' garante que a imagem respeite as bordas arredondadas */}
+            <Card className="w-full rounded-lg aspect-square flex items-center justify-center overflow-hidden">
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-4 text-muted-foreground">
                   <Loader2 className="h-10 w-10 animate-spin" />
                   <span className="text-lg font-medium">Processando...</span>
                 </div>
               ) : images.length > 0 ? (
-                <CardContent className="p-0">
-                  <img src={images[0].url} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-auto object-cover rounded-t-lg" loading="eager" />
-                  <div className="p-4 flex items-center justify-between gap-2 border-t">
-                    <Button variant="outline" className="gap-2 flex-1" onClick={() => handleDownload(images[0])}><Download className="h-4 w-4" /> Baixar</Button>
-                    <Button variant="outline" className="gap-2 flex-1" onClick={() => handleShare(images[0])}><Share2 className="h-4 w-4" /> Compartilhar</Button>
-                    <Dialog><DialogTrigger asChild><Button variant="outline" className="gap-2 flex-1"><ZoomIn className="h-4 w-4" /> Ampliar</Button></DialogTrigger><DialogContent className="max-w-4xl"><img src={images[0].url} alt={`Imagem ampliada: ${images[0].prompt}`} className="w-full h-auto" /></DialogContent></Dialog>
+                <CardContent className="p-0 w-full h-full">
+                  {/* O 'h-full' e 'object-cover' fazem a imagem preencher o card quadrado */}
+                  <img src={images[0].url} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-full object-cover" loading="eager" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <div className="flex items-center justify-between gap-2">
+                      <Button variant="outline" className="gap-2 flex-1 bg-background/80" onClick={() => handleDownload(images[0])}><Download className="h-4 w-4" /> Baixar</Button>
+                      <Button variant="outline" className="gap-2 flex-1 bg-background/80" onClick={() => handleShare(images[0])}><Share2 className="h-4 w-4" /> Compartilhar</Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="gap-2 flex-1 bg-background/80"><ZoomIn className="h-4 w-4" /> Ampliar</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                          <img src={images[0].url} alt={`Imagem ampliada: ${images[0].prompt}`} className="w-full h-auto" />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </CardContent>
               ) : (
