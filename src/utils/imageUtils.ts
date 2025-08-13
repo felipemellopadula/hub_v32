@@ -6,11 +6,11 @@
 
 // Interface que define a estrutura de um objeto de imagem gerada.
 // Essencial para a tipagem correta das funções.
-interface GeneratedImage {
+export interface GeneratedImage {
   id: string;
   prompt: string;
   originalPrompt: string;
-  detailedPrompt: string;
+  detailedPrompt?: string;
   url: string;
   timestamp: string;
   quality: string;
