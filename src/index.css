@@ -185,10 +185,3 @@
   .light .logo-dark-theme { @apply inline-block; }
 }
 
-/* FORÇAR ALTURA TOTAL E DESATIVAR SCROLL PRINCIPAL */
-html,
-body,
-#root {
-  height: 100%;
-  overflow: hidden;
-}
