@@ -415,38 +415,62 @@ const Chat = () => {
 
   return (
     <div className="h-screen max-h-screen bg-background flex flex-col">
-      {/* Cabeçalho Fixo */}
-      <header className="flex-shrink-0 border-b border-border">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-4">
-            <div className="md:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0">
-                  <ConversationSidebar
-                    conversations={conversations}
-                    currentConversationId={currentConversationId}
-                    onSelectConversation={openConversation}
-                    onNewConversation={createNewConversation}
-                    onDeleteConversation={deleteConversation}
-                    onToggleFavorite={toggleFavoriteConversation}
-                    onRenameConversation={renameConversation}
-                    isMobile={true}
-                  />
-                </SheetContent>
-              </Sheet>
+      {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
+      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+        <div className="container mx-auto px-4 h-16 flex justify-between items-center">
+            {/* Lado Esquerdo: Voltar e Título */}
+            <div className="flex items-center gap-3 md:gap-4">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Voltar</span>
+                </Button>
+                <div className="h-6 w-px bg-border hidden sm:block" />
+                <h1 className="text-lg font-semibold text-foreground">Synergy Chat</h1>
             </div>
-            <h1 className="text-lg font-semibold text-foreground">Synergy Chat</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
-            <ThemeToggle />
-            <UserProfile />
-          </div>
+
+            {/* Lado Direito (Desktop) */}
+            <div className="hidden md:flex items-center gap-4">
+                <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+                <UserProfile />
+                <ThemeToggle />
+            </div>
+
+            {/* Lado Direito (Mobile) */}
+            <div className="md:hidden flex items-center gap-1">
+                <ThemeToggle />
+                <Sheet>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-[320px] p-0 flex flex-col">
+                        <SheetHeader className="p-4 border-b">
+                            <SheetTitle>Menu</SheetTitle>
+                        </SheetHeader>
+                        <div className="p-4 space-y-4 border-b">
+                           <UserProfile />
+                           <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+                        </div>
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                           <ConversationSidebar
+                              conversations={conversations}
+                              currentConversationId={currentConversationId}
+                              onSelectConversation={openConversation}
+                              onNewConversation={createNewConversation}
+                              onDeleteConversation={deleteConversation}
+                              onToggleFavorite={toggleFavoriteConversation}
+                              onRenameConversation={renameConversation}
+                              isMobile={true}
+                            />
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
         </div>
       </header>
+      {/* ===== FIM DO CABEÇALHO MODIFICADO ===== */}
+
 
       {/* Corpo principal com Sidebar e Chat */}
       <div className="flex-1 flex flex-row overflow-hidden">
@@ -501,12 +525,12 @@ const Chat = () => {
                         
                         {message.sender === 'bot' && (
                           <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                             <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
-                             <TooltipProvider>
+                              <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
+                              <TooltipProvider>
                                 <Tooltip><TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7"><Copy className="h-3.5 w-3.5" /></Button>
                                 </TooltipTrigger><TooltipContent>Copiar</TooltipContent></Tooltip>
-                            </TooltipProvider>
+                              </TooltipProvider>
                           </div>
                         )}
                       </div>
