@@ -26,10 +26,10 @@ serve(async (req) => {
       });
     }
 
-    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-    if (!googleApiKey) {
-      console.log('❌ Google API key not found');
-      return new Response(JSON.stringify({ error: 'Google API key not configured' }), {
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      console.log('❌ OpenAI API key not found');
+      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -60,44 +60,41 @@ INSTRUÇÕES IMPORTANTES:
 
 Texto:`;
 
-    console.log('🌐 Calling Gemini API...');
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${googleApiKey}`, {
+    console.log('🌐 Calling OpenAI API...');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: enhancedPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        }
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Você é um assistente de escrita especializado em criar conteúdo em português do Brasil.' },
+          { role: 'user', content: enhancedPrompt }
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
       }),
     });
 
-    console.log('📡 Gemini API response status:', response.status);
+    console.log('📡 OpenAI API response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Gemini API error:', response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      console.error('❌ OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📦 Gemini API response:', JSON.stringify(data, null, 2));
+    console.log('📦 OpenAI API response received');
     
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      console.error('❌ Invalid response structure from Gemini API:', data);
-      throw new Error('Invalid response from Gemini API');
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('❌ Invalid response structure from OpenAI API:', data);
+      throw new Error('Invalid response from OpenAI API');
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
+    const generatedText = data.choices[0].message.content;
     console.log('✅ Successfully generated text');
 
     return new Response(JSON.stringify({ generatedText }), {
