@@ -1,3 +1,12 @@
+Claro! Realizei os ajustes que você pediu para melhorar a estética da página de chat.
+
+O botão "Novo Chat" foi aumentado para ter uma aparência mais robusta e o cabeçalho agora tem sua largura limitada, alinhando-se ao design de outras partes do seu aplicativo, como a página de Imagem.
+
+Aqui está o código completo e ajustado:
+
+Código Corrigido
+JavaScript
+
 import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -404,7 +413,8 @@ const Chat = () => {
   return (
     <div className="h-screen max-h-screen bg-background flex flex-col">
       <header className="flex-shrink-0 border-b border-border">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        {/* AJUSTE AQUI: Adicionada a classe "container" para limitar a largura do header */}
+        <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
@@ -462,7 +472,8 @@ const Chat = () => {
 
       <div className="flex-1 flex flex-row overflow-hidden">
         <aside className="w-80 flex-shrink-0 hidden md:flex flex-col bg-background">
-          <Button onClick={createNewConversation} size="lg" className="m-3">
+          {/* AJUSTE AQUI: Aumentada a altura e o texto do botão para melhor estética */}
+          <Button onClick={createNewConversation} size="lg" className="m-3 h-12 text-base">
             <Plus className="w-4 h-4 mr-2" />
             Novo Chat
           </Button>
@@ -506,28 +517,28 @@ const Chat = () => {
                         )}
                         <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words">
                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  h1: ({ node, ...props }) => <h1 className="font-bold text-lg mb-3 mt-4 first:mt-0" {...props} />,
-                                  h2: ({ node, ...props }) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0" {...props} />,
-                                  h3: ({ node, ...props }) => <h3 className="font-bold text-sm mb-2 mt-3 first:mt-0" {...props} />,
-                                  p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
-                                  ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
-                                  ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
-                                  code: ({ node, inline, ...props }) => 
-                                    inline 
-                                    ? <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props} /> 
-                                    : <pre className="bg-muted p-3 rounded-md text-sm font-mono overflow-x-auto my-3" {...props} />,
-                                }}
-                              >{message.content}</ReactMarkdown>
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({ node, ...props }) => <h1 className="font-bold text-lg mb-3 mt-4 first:mt-0" {...props} />,
+                                h2: ({ node, ...props }) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0" {...props} />,
+                                h3: ({ node, ...props }) => <h3 className="font-bold text-sm mb-2 mt-3 first:mt-0" {...props} />,
+                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
+                                ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
+                                code: ({ node, inline, ...props }) => 
+                                  inline 
+                                  ? <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props} /> 
+                                  : <pre className="bg-muted p-3 rounded-md text-sm font-mono overflow-x-auto my-3" {...props} />,
+                              }}
+                            >{message.content}</ReactMarkdown>
                           {message.isStreaming && <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />}
                         </div>
                         {message.sender === 'bot' && !isLoading && (
                           <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                             <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
-                             <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                              <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
+                              <TooltipProvider><Tooltip><TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7 text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></Button>
-                             </TooltipTrigger><TooltipContent>Copiar</TooltipContent></Tooltip></TooltipProvider>
+                              </TooltipTrigger><TooltipContent>Copiar</TooltipContent></Tooltip></TooltipProvider>
                           </div>
                         )}
                       </div>
