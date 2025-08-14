@@ -435,7 +435,7 @@ const Chat = () => {
                   <UserProfile />
                   <SheetClose asChild>
                     <Button className="w-full" onClick={createNewConversation}>
-                      <Plus className="h-4 w-4 mr-2" /> Novo chat
+                      <Plus className="h-5 w-4 mr-2" /> Novo chat
                     </Button>
                   </SheetClose>
                   <div>
