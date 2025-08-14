@@ -1,12 +1,3 @@
-Claro! Realizei os ajustes que você pediu para melhorar a estética da página de chat.
-
-O botão "Novo Chat" foi aumentado para ter uma aparência mais robusta e o cabeçalho agora tem sua largura limitada, alinhando-se ao design de outras partes do seu aplicativo, como a página de Imagem.
-
-Aqui está o código completo e ajustado:
-
-Código Corrigido
-JavaScript
-
 import { ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -131,7 +122,16 @@ const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   const favorites = filteredConversations.filter(c => c.is_favorite);
   const recents = filteredConversations.filter(c => !c.is_favorite);
 
-  const ItemWrapper = isMobile ? SheetClose : React.Fragment;
+  const renderItemWithWrapper = (conv: ChatConversation) => {
+    if (isMobile) {
+      return (
+        <SheetClose key={conv.id} asChild>
+          {renderItem(conv)}
+        </SheetClose>
+      );
+    }
+    return renderItem(conv);
+  };
 
   return (
     <div className="flex flex-col h-full bg-background border-r border-border">
@@ -149,13 +149,13 @@ const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             <>
               <h4 className="px-2 py-2 text-xs font-semibold text-muted-foreground">Favoritos</h4>
               <div className="space-y-1">
-                {favorites.map(conv => <ItemWrapper key={conv.id}>{renderItem(conv)}</ItemWrapper>)}
+                {favorites.map(conv => renderItemWithWrapper(conv))}
               </div>
             </>
           )}
           <h4 className="px-2 pt-4 pb-2 text-xs font-semibold text-muted-foreground">Recentes</h4>
           <div className="space-y-1">
-             {recents.map(conv => <ItemWrapper key={conv.id}>{renderItem(conv)}</ItemWrapper>)}
+             {recents.map(conv => renderItemWithWrapper(conv))}
           </div>
           {filteredConversations.length === 0 && (
             <p className="p-4 text-center text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>
@@ -267,10 +267,10 @@ const Chat = () => {
         
         if (newConvId?.startsWith('temp_')) {
             setCurrentConversationId(data.id);
-            setConversations(prev => prev.map(c => c.id === newConvId ? data : c));
+            setConversations(prev => prev.map(c => c.id === newConvId ? data as ChatConversation : c));
         } else {
             setCurrentConversationId(data.id);
-            setConversations(prev => [data, ...prev]);
+            setConversations(prev => [data as ChatConversation, ...prev]);
         }
       } else {
         const currentConv = conversations.find(c => c.id === newConvId);
@@ -284,7 +284,7 @@ const Chat = () => {
           .eq('id', newConvId)
           .select('*').single();
         if (error) throw error;
-        setConversations(prev => [data, ...prev.filter(c => c.id !== data.id)]);
+        setConversations(prev => [data as ChatConversation, ...prev.filter(c => c.id !== data.id)]);
       }
     } catch (e) { console.error('Erro ao salvar conversa:', e); }
   };
@@ -316,7 +316,7 @@ const Chat = () => {
       .update({ is_favorite: !conv.is_favorite })
       .eq('id', conv.id).select('*').single();
     if (error) toast({ title: 'Erro', description: 'Não foi possível atualizar favorito.', variant: 'destructive' });
-    else if (data) setConversations(prev => prev.map(c => c.id === data.id ? data : c).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+    else if (data) setConversations(prev => prev.map(c => c.id === data.id ? data as ChatConversation : c).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
   };
   
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -352,9 +352,9 @@ const Chat = () => {
         if (error) { console.error(error); } 
         else if (data) {
             if (convId) { 
-              setConversations(prev => [data, ...prev.filter(c => c.id !== convId)]);
+              setConversations(prev => [data as ChatConversation, ...prev.filter(c => c.id !== convId)]);
             } else {
-              setConversations(prev => [data, ...prev]);
+              setConversations(prev => [data as ChatConversation, ...prev]);
             }
             setCurrentConversationId(data.id);
             convId = data.id;
@@ -401,10 +401,119 @@ const Chat = () => {
     setSelectedModel(newModel);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => { /* ... */ };
-  const startRecording = async () => { /* ... */ };
-  const stopRecording = () => { /* ... */ };
-  const transcribeAudio = async (audioBlob: Blob) => { /* ... */ };
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const newFiles = files.filter(file => {
+      if (file.size > 50 * 1024 * 1024) {
+        toast({ title: "Arquivo muito grande", description: `${file.name} é maior que 50MB`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    });
+
+    // Process PDFs
+    for (const file of newFiles.filter(f => f.type === 'application/pdf')) {
+      try {
+        const result = await PdfProcessor.processPdf(file);
+        if (result.success && result.content) {
+          setProcessedPdfs(prev => new Map(prev.set(file.name, result.content)));
+        } else {
+          toast({ title: "Erro", description: result.error || `Não foi possível processar ${file.name}`, variant: "destructive" });
+        }
+      } catch (error) {
+        console.error('Error processing PDF:', error);
+        toast({ title: "Erro", description: `Não foi possível processar ${file.name}`, variant: "destructive" });
+      }
+    }
+
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        stream.getTracks().forEach(track => track.stop());
+        await transcribeAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+
+      recordingTimeoutRef.current = window.setTimeout(() => {
+        stopRecording();
+      }, 30000); // 30 seconds max
+
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast({ title: "Erro", description: "Não foi possível iniciar a gravação", variant: "destructive" });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: formData,
+      });
+
+      if (error) throw error;
+      
+      if (data?.text) {
+        setInputValue(prev => prev + (prev ? ' ' : '') + data.text);
+      }
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      toast({ title: "Erro", description: "Não foi possível transcrever o áudio", variant: "destructive" });
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copiado!", description: "Texto copiado para a área de transferência" });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível copiar o texto", variant: "destructive" });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = [...attachedFiles];
+    const removedFile = newFiles.splice(index, 1)[0];
+    setAttachedFiles(newFiles);
+    
+    if (removedFile.type === 'application/pdf') {
+      setProcessedPdfs(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(removedFile.name);
+        return newMap;
+      });
+    }
+  };
 
   // --- RENDERIZAÇÃO ---
   if (loading) return <div className="h-screen bg-background flex items-center justify-center"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div></div>;
@@ -413,7 +522,6 @@ const Chat = () => {
   return (
     <div className="h-screen max-h-screen bg-background flex flex-col">
       <header className="flex-shrink-0 border-b border-border">
-        {/* AJUSTE AQUI: Adicionada a classe "container" para limitar a largura do header */}
         <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -425,192 +533,332 @@ const Chat = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <UserProfile />
+            <ModelSelector onModelSelect={handleModelSelect} selectedModel={selectedModel} />
             <ThemeToggle />
+            <UserProfile />
           </div>
 
-          <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Abrir menu">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-full max-w-xs p-0 flex flex-col">
-                <SheetHeader className="p-4 border-b">
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-                <div className="p-4 space-y-4">
-                  <UserProfile />
-                  <SheetClose asChild>
-                    <Button className="w-full" onClick={createNewConversation}>
-                      <Plus className="h-5 w-4 mr-2" /> Novo chat
-                    </Button>
-                  </SheetClose>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-2">Modelo</div>
-                    <ModelSelector onModelSelect={handleModelSelect} selectedModel={selectedModel} />
-                  </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                <ModelSelector onModelSelect={handleModelSelect} selectedModel={selectedModel} />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Tema</span>
+                  <ThemeToggle />
                 </div>
-                <div className="flex-1 flex flex-col overflow-hidden border-t">
-                  <ConversationSidebar
-                    conversations={conversations}
-                    currentConversationId={currentConversationId}
-                    onSelectConversation={openConversation}
-                    onNewConversation={createNewConversation}
-                    onDeleteConversation={deleteConversation}
-                    onToggleFavorite={toggleFavoriteConversation}
-                    isMobile={true}
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+                <UserProfile />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
-      <div className="flex-1 flex flex-row overflow-hidden">
-        <aside className="w-80 flex-shrink-0 hidden md:flex flex-col bg-background">
-          {/* AJUSTE AQUI: Aumentada a altura e o texto do botão para melhor estética */}
-          <Button onClick={createNewConversation} size="lg" className="m-3 h-12 text-base">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Chat
-          </Button>
-          <ConversationSidebar
-            conversations={conversations}
-            currentConversationId={currentConversationId}
-            onSelectConversation={openConversation}
-            onNewConversation={createNewConversation}
-            onDeleteConversation={deleteConversation}
-            onToggleFavorite={toggleFavoriteConversation}
-          />
-        </aside>
+      <div className="flex-1 flex overflow-hidden">
+        {/* SIDEBAR DE CONVERSAS - DESKTOP */}
+        <div className="hidden lg:flex w-80 flex-shrink-0">
+          <div className="w-full border-r border-border flex flex-col">
+            <div className="p-4 border-b border-border">
+              <Button onClick={createNewConversation} className="w-full h-11 justify-center gap-2 text-base font-medium">
+                <Plus className="h-5 w-5" />
+                Novo Chat
+              </Button>
+            </div>
+            <ConversationSidebar
+              conversations={conversations}
+              currentConversationId={currentConversationId}
+              onSelectConversation={openConversation}
+              onNewConversation={createNewConversation}
+              onDeleteConversation={deleteConversation}
+              onToggleFavorite={toggleFavoriteConversation}
+            />
+          </div>
+        </div>
 
-        <main className="flex-1 flex flex-col bg-muted/30">
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto p-4 space-y-4">
-              {messages.length === 0 && !isLoading ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground" style={{minHeight: 'calc(100vh - 250px)'}}>
-                    <div className="text-center">
-                        <h3 className="text-2xl font-bold mb-2">Olá, {profile.name}!</h3>
-                        <p>Selecione uma conversa ou inicie uma nova.</p>
-                        <p className="mt-2 text-sm">Você tem {tokenBalance.toLocaleString()} tokens disponíveis.</p>
-                    </div>
+        {/* SIDEBAR DE CONVERSAS - MOBILE */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="lg:hidden fixed top-20 left-4 z-10 bg-background/80 backdrop-blur-sm border">
+              <Menu className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-80 p-0">
+            <SheetHeader className="p-4 border-b border-border">
+              <SheetTitle>Conversas</SheetTitle>
+            </SheetHeader>
+            <div className="p-4 border-b border-border">
+              <SheetClose asChild>
+                <Button onClick={createNewConversation} className="w-full h-11 justify-center gap-2 text-base font-medium">
+                  <Plus className="h-5 w-5" />
+                  Novo Chat
+                </Button>
+              </SheetClose>
+            </div>
+            <ConversationSidebar
+              conversations={conversations}
+              currentConversationId={currentConversationId}
+              onSelectConversation={openConversation}
+              onNewConversation={createNewConversation}
+              onDeleteConversation={deleteConversation}
+              onToggleFavorite={toggleFavoriteConversation}
+              isMobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+
+        {/* ÁREA PRINCIPAL DE CHAT */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <ScrollArea className="flex-1" ref={chatContainerRef}>
+            <div className="container max-w-4xl mx-auto p-4 space-y-6">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                  <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full p-6 mb-6">
+                    <svg className="w-12 h-12 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-semibold text-foreground mb-2">Bem-vindo ao Synergy Chat</h2>
+                  <p className="text-muted-foreground max-w-md">
+                    Comece uma conversa com nossa IA avançada. Faça perguntas, peça ajuda ou explore ideias criativas!
+                  </p>
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>
-                    {message.sender === 'bot' && (
-                      <Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar>
-                    )}
-                    <div className={`max-w-[85%] rounded-lg px-4 py-3 ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'}`}>
-                      <div className="space-y-3">
-                        {message.files && (<div className="flex flex-wrap gap-2">{message.files.map((file, idx) => (<div key={idx} className="bg-primary-foreground/10 px-3 py-1 rounded-full text-xs">📎 {file.name}</div>))}</div>)}
-                        {message.reasoning && (
-                          <div className="border-b border-border/50 pb-2">
-                            <Button variant="ghost" size="sm" onClick={() => setExpandedReasoning(p => ({ ...p, [message.id]: !p[message.id] }))} className="h-auto p-1 text-xs opacity-70 hover:opacity-100">
-                              {expandedReasoning[message.id] ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />} Raciocínio
-                            </Button>
-                            {expandedReasoning[message.id] && <div className="mt-2 text-xs opacity-80 bg-muted rounded p-2 whitespace-pre-wrap">{message.reasoning}</div>}
+                  <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex gap-3 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className={message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}>
+                          {message.sender === 'user' ? 'U' : 'AI'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={`rounded-lg p-4 ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                        {message.files && message.files.length > 0 && (
+                          <div className="mb-3 space-y-1">
+                            {message.files.map((file, index) => (
+                              <div key={index} className="flex items-center gap-2 text-xs opacity-80">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{file.name}</span>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words">
-                           <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                h1: ({ node, ...props }) => <h1 className="font-bold text-lg mb-3 mt-4 first:mt-0" {...props} />,
-                                h2: ({ node, ...props }) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0" {...props} />,
-                                h3: ({ node, ...props }) => <h3 className="font-bold text-sm mb-2 mt-3 first:mt-0" {...props} />,
-                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
-                                ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
-                                ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
-                                code: ({ node, inline, ...props }) => 
-                                  inline 
-                                  ? <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props} /> 
-                                  : <pre className="bg-muted p-3 rounded-md text-sm font-mono overflow-x-auto my-3" {...props} />,
-                              }}
-                            >{message.content}</ReactMarkdown>
-                          {message.isStreaming && <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />}
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                          </ReactMarkdown>
                         </div>
-                        {message.sender === 'bot' && !isLoading && (
-                          <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                              <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
-                              <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7 text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></Button>
-                              </TooltipTrigger><TooltipContent>Copiar</TooltipContent></Tooltip></TooltipProvider>
+                        {message.reasoning && (
+                          <div className="mt-3 pt-3 border-t border-border/50">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setExpandedReasoning(prev => ({
+                                ...prev,
+                                [message.id]: !prev[message.id]
+                              }))}
+                              className="text-xs h-6 px-2"
+                            >
+                              {expandedReasoning[message.id] ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3 mr-1" />
+                                  Ocultar raciocínio
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3 w-3 mr-1" />
+                                  Ver raciocínio
+                                </>
+                              )}
+                            </Button>
+                            {expandedReasoning[message.id] && (
+                              <div className="mt-2 text-xs opacity-75">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {message.reasoning}
+                                </ReactMarkdown>
+                              </div>
+                            )}
                           </div>
                         )}
+                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
+                          <div className="flex items-center gap-2 text-xs opacity-60">
+                            {message.model && (
+                              <span>
+                                {getModelDisplayName(message.model)}
+                              </span>
+                            )}
+                            <span>
+                              {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          {message.sender === 'bot' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(message.content)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {message.sender === 'user' && (
-                      <Avatar className="h-8 w-8 shrink-0"><AvatarFallback>U</AvatarFallback></Avatar>
-                    )}
                   </div>
                 ))
               )}
               {isLoading && (
-                <div className="flex gap-3"><Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar><div className="bg-muted rounded-lg px-4 py-2 flex items-center"><div className="flex space-x-1"><div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div><div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div><div className="w-2 h-2 bg-current rounded-full animate-bounce"></div></div></div></div>
+                <div className="flex justify-start">
+                  <div className="flex gap-3 max-w-[80%]">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="bg-secondary text-secondary-foreground">AI</AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
-          </div>
-          
+          </ScrollArea>
+
+          {/* BOTÃO SCROLL TO BOTTOM */}
           {showScrollToBottom && (
-            <Button onClick={scrollToBottom} variant="outline" size="icon" className="absolute bottom-24 right-6 h-10 w-10 rounded-full shadow-lg z-20">
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed bottom-24 right-6 rounded-full shadow-lg z-10"
+              onClick={scrollToBottom}
+            >
               <ArrowDown className="h-4 w-4" />
             </Button>
           )}
 
-          <div className="flex-shrink-0 border-t border-border bg-background p-4">
-            <div className="max-w-4xl mx-auto">
-                {attachedFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {attachedFiles.map((file, idx) => (
-                      <div key={idx} className="bg-muted px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                        📎 {file.name}
-                        <button onClick={() => { setAttachedFiles(p => p.filter((_, i) => i !== idx)); if (file.type === 'application/pdf') setProcessedPdfs(p => { const n = new Map(p); n.delete(file.name); return n; }); }} className="text-muted-foreground hover:text-foreground text-lg leading-none -mr-1">&times;</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+          {/* ÁREA DE INPUT */}
+          <div className="flex-shrink-0 border-t border-border bg-background">
+            <div className="container max-w-4xl mx-auto p-4">
+              {attachedFiles.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {attachedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 text-sm">
+                      <Paperclip className="h-4 w-4" />
+                      <span className="truncate max-w-32">{file.name}</span>
+                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="h-5 w-5 p-0">
+                        <span className="text-xs">✕</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <form onSubmit={handleSendMessage} className="flex gap-2">
                 <div className="flex-1 relative">
-                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" multiple accept="image/*,.pdf,.doc,.docx" />
-                  <div className="absolute left-2 top-3 z-10">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="start" className="mb-2">
-                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="cursor-pointer"><Paperclip className="h-4 w-4 mr-2" />Anexar</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setIsWebSearchMode(p => !p)} className="cursor-pointer"><Globe className="h-4 w-4 mr-2" />{isWebSearchMode ? 'Desativar Busca Web' : 'Busca Web'}</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
                   <Textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={isWebSearchMode ? "Digite para buscar na web..." : "Pergunte alguma coisa..."}
-                    disabled={isLoading}
-                    className="w-full pl-14 pr-24 py-3 rounded-lg resize-none min-h-[52px]"
-                    rows={1}
-                    onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 128)}px`; }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !isMobile && !e.shiftKey) { e.preventDefault(); handleSendMessage(e as any); } }}
+                    placeholder="Digite sua mensagem..."
+                    className="min-h-[52px] max-h-32 resize-none pr-20"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
                   />
-                  <div className="absolute right-3 top-3 flex gap-1">
-                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" onClick={isRecording ? stopRecording : startRecording} className={`h-8 w-8 ${isRecording ? 'text-red-500' : ''}`}><Mic className="h-4 w-4" /></Button>
-                    </TooltipTrigger><TooltipContent>Gravar áudio</TooltipContent></Tooltip></TooltipProvider>
-                    <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="icon" className="h-8 w-8 rounded-full">
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
+                  <div className="absolute right-2 bottom-2 flex gap-1">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      multiple
+                      className="hidden"
+                      accept="image/*,application/pdf,.doc,.docx,.txt"
+                    />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Paperclip className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Anexar arquivo</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`h-8 w-8 p-0 ${isRecording ? 'text-red-500' : ''}`}
+                          >
+                            <Mic className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isRecording ? 'Parar gravação' : 'Gravar áudio'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsWebSearchMode(!isWebSearchMode)}
+                            className={`h-8 w-8 p-0 ${isWebSearchMode ? 'text-primary' : ''}`}
+                          >
+                            <Globe className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isWebSearchMode ? 'Desativar busca web' : 'Ativar busca web'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
+                <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} className="px-6">
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
               </form>
+              
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  Tokens: {tokenBalance.toLocaleString()} | Custo: {getTokenCost(selectedModel)} tokens
+                </span>
+                {isWebSearchMode && (
+                  <span className="text-primary">🌐 Busca web ativada</span>
+                )}
+              </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
