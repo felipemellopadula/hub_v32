@@ -60,7 +60,7 @@ INSTRUÇÕES IMPORTANTES:
 
 Texto:`;
 
-    console.log('🌐 Calling OpenAI API with GPT-5 Nano...');
+    console.log('🌐 Calling OpenAI API with GPT-4.1 Mini...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,13 +68,13 @@ Texto:`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-nano-2025-08-07',
+        model: 'gpt-4.1-mini-2025-04-14',
         messages: [
           { role: 'system', content: 'Você é um assistente de escrita especializado em criar conteúdo em português do Brasil.' },
           { role: 'user', content: enhancedPrompt }
         ],
-        max_completion_tokens: 2048,
-        // Note: GPT-5 models don't support temperature parameter
+        max_tokens: 2048,
+        temperature: 0.7
       }),
     });
 
@@ -95,7 +95,7 @@ Texto:`;
     }
 
     const generatedText = data.choices[0].message.content;
-    console.log('✅ Successfully generated text');
+    console.log('✅ Successfully generated text:', generatedText?.substring(0, 100) + '...');
 
     // Consume 10,000 tokens from user account
     console.log('💰 Consuming 10,000 tokens from user account...');
@@ -111,7 +111,7 @@ Texto:`;
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            modelName: 'gpt-5-nano-2025-08-07',
+            modelName: 'gpt-4.1-mini-2025-04-14',
             message: `Geração de texto: ${format} - ${tone} - ${length}`,
             tokenCost: 10000
           }),

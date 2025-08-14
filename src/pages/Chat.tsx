@@ -261,10 +261,10 @@ const Chat = () => {
         
         if (newConvId?.startsWith('temp_')) {
             setCurrentConversationId(data.id);
-            setConversations(prev => prev.map(c => c.id === newConvId ? data : c));
+            setConversations(prev => prev.map(c => c.id === newConvId ? {...data, messages: Array.isArray(data.messages) ? data.messages : []} : c));
         } else {
             setCurrentConversationId(data.id);
-            setConversations(prev => [data, ...prev]);
+            setConversations(prev => [{...data, messages: Array.isArray(data.messages) ? data.messages : []}, ...prev]);
         }
       } else {
         const currentConv = conversations.find(c => c.id === newConvId);
@@ -278,7 +278,7 @@ const Chat = () => {
           .eq('id', newConvId)
           .select('*').single();
         if (error) throw error;
-        setConversations(prev => [data, ...prev.filter(c => c.id !== data.id)]);
+        setConversations(prev => [{...data, messages: Array.isArray(data.messages) ? data.messages : []}, ...prev.filter(c => c.id !== data.id)]);
       }
     } catch (e) { console.error('Erro ao salvar conversa:', e); }
   };
@@ -313,7 +313,7 @@ const Chat = () => {
       .update({ is_favorite: !conv.is_favorite })
       .eq('id', conv.id).select('*').single();
     if (error) toast({ title: 'Erro', description: 'Não foi possível atualizar favorito.', variant: 'destructive' });
-    else if (data) setConversations(prev => prev.map(c => c.id === data.id ? data : c));
+    else if (data) setConversations(prev => prev.map(c => c.id === data.id ? {...data, messages: Array.isArray(data.messages) ? data.messages : []} : c));
   };
   
   const renameConversation = async (id: string, newTitle: string) => {
@@ -324,7 +324,7 @@ const Chat = () => {
         .select('*').single();
     if (error) toast({ title: 'Erro', description: 'Não foi possível renomear a conversa.', variant: 'destructive' });
     else if (data) {
-        setConversations(prev => prev.map(c => c.id === data.id ? data : c));
+        setConversations(prev => prev.map(c => c.id === data.id ? {...data, messages: Array.isArray(data.messages) ? data.messages : []} : c));
         toast({ title: 'Conversa renomeada!' });
     }
   };
