@@ -258,15 +258,21 @@ const Chat = () => {
       const serial = toSerializable(finalMessages);
       let newConvId = convId;
 
-      if (!newConvId) {
+      if (!newConvId || newConvId.startsWith('temp_')) {
         const { data, error } = await supabase
           .from('chat_conversations')
           .insert({ user_id: user!.id, title: deriveTitle(finalMessages), messages: serial })
           .select('*').single();
         if (error) throw error;
-        newConvId = data.id;
-        setCurrentConversationId(data.id);
-        setConversations(prev => [data, ...prev]);
+        
+        // Substitui o ID temporário pelo ID real do banco
+        if (newConvId?.startsWith('temp_')) {
+            setCurrentConversationId(data.id);
+            setConversations(prev => prev.map(c => c.id === newConvId ? data : c));
+        } else {
+            setCurrentConversationId(data.id);
+            setConversations(prev => [data, ...prev]);
+        }
       } else {
         const currentConv = conversations.find(c => c.id === newConvId);
         const shouldRename = !currentConv || currentConv.title === 'Nova conversa' || currentConv.messages.length === 0;
@@ -358,7 +364,7 @@ const Chat = () => {
     let convId = currentConversationId;
     if (!convId) {
         const tempId = `temp_${Date.now()}`;
-        const newTempConv = { id: tempId, title: deriveTitle(newMessages), messages: newMessages, is_favorite: false, user_id: user!.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString()};
+        const newTempConv = { id: tempId, title: deriveTitle(newMessages), messages: toSerializable(newMessages), is_favorite: false, user_id: user!.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString()};
         setConversations(prev => [newTempConv, ...prev]);
         setCurrentConversationId(tempId);
         convId = tempId;
@@ -474,8 +480,8 @@ const Chat = () => {
         </aside>
 
         {/* Área Principal do Chat */}
-        <main className="flex-1 flex flex-col overflow-hidden relative">
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
+        <main className="flex-1 flex flex-col overflow-hidden relative z-10">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto bg-background">
             <div className="max-w-4xl mx-auto p-4 space-y-4">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-[calc(100vh-250px)] text-muted-foreground">
@@ -535,7 +541,7 @@ const Chat = () => {
           </div>
           
           {showScrollToBottom && (
-            <Button onClick={scrollToBottom} variant="outline" size="icon" className="absolute bottom-24 right-6 h-10 w-10 rounded-full shadow-lg z-10">
+            <Button onClick={scrollToBottom} variant="outline" size="icon" className="absolute bottom-24 right-6 h-10 w-10 rounded-full shadow-lg z-20">
               <ArrowDown className="h-4 w-4" />
             </Button>
           )}
