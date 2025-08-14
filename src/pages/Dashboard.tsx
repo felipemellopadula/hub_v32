@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { MessageCircle, Video, Image, UserCheck, PenTool, FileAudio, LogOut } from "lucide-react";
+import { MessageCircle, Video, Image, Languages, PenTool, FileAudio, LogOut } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,7 +45,7 @@ const Dashboard = () => {
     },
     {
       id: 'translator',
-      icon: UserCheck,
+      icon: Languages,
       title: 'Tradutor / Humanizar',
       description: 'Tradução e humanização de texto',
       color: 'bg-orange-500',
