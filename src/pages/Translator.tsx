@@ -67,16 +67,7 @@ const TranslatorPage = () => {
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
-          messages: [
-            {
-              role: 'system',
-              content: `Você é um tradutor profissional. Traduza o texto do usuário ${sourceLanguage === 'auto' ? 'detectando automaticamente o idioma de origem' : `do ${getLanguageName(sourceLanguage)}`} para ${getLanguageName(targetLanguage)}. Mantenha o tom, contexto e significado original. Responda APENAS com a tradução, sem explicações adicionais.`
-            },
-            {
-              role: 'user',
-              content: sourceText
-            }
-          ],
+          message: `Traduza o seguinte texto ${sourceLanguage === 'auto' ? 'detectando automaticamente o idioma de origem' : `do ${getLanguageName(sourceLanguage)}`} para ${getLanguageName(targetLanguage)}. Mantenha o tom, contexto e significado original. Responda APENAS com a tradução, sem explicações adicionais:\n\n${sourceText}`,
           model: translationModel
         }
       });
@@ -121,10 +112,7 @@ const TranslatorPage = () => {
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
-          messages: [
-            {
-              role: 'system',
-              content: `Você é um especialista em humanização de textos gerados por IA. Sua tarefa é reescrever o texto fornecido para que soe mais natural e humano. Faça as seguintes melhorias:
+          message: `Você é um especialista em humanização de textos gerados por IA. Sua tarefa é reescrever o texto fornecido para que soe mais natural e humano. Faça as seguintes melhorias:
 
 1. Adicione variações no tom e ritmo das frases
 2. Use contrações e linguagem mais coloquial quando apropriado
@@ -135,13 +123,10 @@ const TranslatorPage = () => {
 7. Remova repetições robóticas e padrões de IA
 8. Mantenha o significado e informações importantes
 
-O texto deve soar como se fosse escrito por uma pessoa real, não por uma máquina.`
-            },
-            {
-              role: 'user',
-              content: humanizeInput
-            }
-          ],
+O texto deve soar como se fosse escrito por uma pessoa real, não por uma máquina.
+
+Texto a humanizar:
+${humanizeInput}`,
           model: "gemini-pro"
         }
       });
