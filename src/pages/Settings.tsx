@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Save, Camera, ArrowLeft } from "lucide-react";
 import ModelUsageChart from "@/components/settings/ModelUsageChart";
 import SettingsStats from "@/components/settings/SettingsStats";
-import ToggleTheme from "@/components/ToggleTheme";
+import ToggleTheme from "@/components/ThemeToggle";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
