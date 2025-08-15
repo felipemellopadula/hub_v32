@@ -22,11 +22,14 @@ const MODEL_COSTS = {
   'gpt-4.1-mini': 4000, // $0.8 entrada + $3.2 saída (ajuste fino)
   'gpt-4.1-nano': 1000, // $0.2 entrada + $0.8 saída (ajuste fino)
   'o4-mini': 8000, // $4 entrada + $16 saída (ajuste fino)
-  'claude-3-haiku-20240307': 2000,
+  'claude-3-haiku-20240307': 12000,
   // Google Gemini Models
   'gemini-2.5-pro-002': 12000,
-  'gemini-2.5-flash-002': 4000,
-  'gemini-2.5-flash-lite-001': 1500,
+  'gemini-2.5-flash-002': 12000,
+  'gemini-2.5-flash-lite-001': 12000,
+  // Legacy models
+  'gpt-4o-mini': 12000,
+  'gpt-4o': 12000,
   // DeepSeek Models
   'deepseek-chat': 8000,
   'deepseek-reasoner': 12000,

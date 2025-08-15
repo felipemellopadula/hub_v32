@@ -37,18 +37,21 @@ serve(async (req) => {
       throw new Error('Invalid authentication')
     }
 
-    // Model token costs
+    // Model token costs - 12k tokens for all models
     const MODEL_COSTS: Record<string, number> = {
-      'claude-3-5-sonnet-20241022': 10000,
-      'claude-3-opus-20240229': 10000,
-      'grok-beta': 10000,
-      'gpt-4o': 10000,
-      'gpt-4o-mini': 2000,
-      'gpt-4-turbo': 10000,
-      'claude-3-haiku-20240307': 2000,
+      'claude-3-5-sonnet-20241022': 12000,
+      'claude-3-opus-20240229': 12000,
+      'claude-3-haiku-20240307': 12000,
+      'grok-beta': 12000,
+      'gpt-4o': 12000,
+      'gpt-4o-mini': 12000,
+      'gpt-4-turbo': 12000,
+      'gemini-2.5-flash-002': 12000,
+      'gemini-2.5-pro-002': 12000,
+      'gemini-pro': 12000,
     }
 
-    const cost = MODEL_COSTS[modelName] || 5000
+    const cost = MODEL_COSTS[modelName] || 12000
 
     // Get current user profile
     const { data: profile, error: profileError } = await supabase
