@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Save, Camera, ArrowLeft } from "lucide-react";
 import ModelUsageChart from "@/components/settings/ModelUsageChart";
 import SettingsStats from "@/components/settings/SettingsStats";
-import ThemeToggle from "@/components/ThemeToggle";
+import ToggleTheme from "@/components/ToggleTheme";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -163,7 +163,7 @@ const SettingsPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
+            <ToggleTheme />
           </div>
         </div>
       </header>
@@ -233,10 +233,10 @@ const SettingsPage = () => {
             />
             <Card>
               <CardHeader>
-                <CardTitle>Uso por Modelo</CardTitle>
+                <CardTitle className="text-foreground">Uso por Modelo</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="w-full h-64">
+              <CardContent className="p-0">
+                <div className="w-full h-80 relative overflow-hidden">
                   <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />
                 </div>
               </CardContent>
