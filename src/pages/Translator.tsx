@@ -77,10 +77,6 @@ const TranslatorPage = () => {
       if (data?.response) {
         setTranslatedText(data.response);
         await consumeTokens(translationModel, sourceText);
-        toast({
-          title: "Tradução concluída",
-          description: `Texto traduzido usando ${getModelDisplayName(translationModel)}.`
-        });
       }
     } catch (error) {
       console.error('Erro na tradução:', error);
@@ -104,7 +100,7 @@ const TranslatorPage = () => {
       return;
     }
 
-    const hasTokens = await checkTokenBalance("gemini-pro");
+    const hasTokens = await checkTokenBalance("gpt-4o-mini");
     if (!hasTokens) return;
 
     setIsHumanizing(true);
@@ -127,7 +123,7 @@ O texto deve soar como se fosse escrito por uma pessoa real, não por uma máqui
 
 Texto a humanizar:
 ${humanizeInput}`,
-          model: "gemini-pro"
+          model: "gpt-4o-mini"
         }
       });
 
@@ -135,11 +131,7 @@ ${humanizeInput}`,
 
       if (data?.response) {
         setHumanizedOutput(data.response);
-        await consumeTokens("gemini-pro", humanizeInput);
-        toast({
-          title: "Texto humanizado",
-          description: "Seu texto foi reescrito com um toque mais humano."
-        });
+        await consumeTokens("gpt-4o-mini", humanizeInput);
       }
     } catch (error) {
       console.error('Erro na humanização:', error);
