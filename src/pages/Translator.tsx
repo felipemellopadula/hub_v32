@@ -21,7 +21,7 @@ const TranslatorPage = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
-  const [translationModel, setTranslationModel] = useState("gpt-4o-mini");
+  const [translationModel] = useState("gpt-4o-mini");
   const [isTranslating, setIsTranslating] = useState(false);
   
   // Humanization state
@@ -210,23 +210,6 @@ ${humanizeInput}`,
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Model Selection */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Modelo de IA</label>
-                <Select value={translationModel} onValueChange={setTranslationModel}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                    <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
-                    <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             {/* Language Selection */}
             <div className="flex flex-col sm:flex-row gap-4 items-center">
               <div className="flex-1">
