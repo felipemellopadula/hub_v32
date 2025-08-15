@@ -294,6 +294,12 @@ const Chat = () => {
     setProcessedPdfs(new Map());
   };
 
+  // Start new conversation when model changes
+  const handleModelChange = (newModel: string) => {
+    setSelectedModel(newModel);
+    createNewConversation();
+  };
+
   const deleteConversation = async (id: string) => {
     const { error } = await supabase.from('chat_conversations').delete().eq('id', id);
     if (error) {
@@ -433,7 +439,7 @@ const Chat = () => {
 
             {/* Lado Direito (Desktop) */}
             <div className="hidden md:flex items-center gap-4">
-                <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+                <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
                 <UserProfile />
                 <ThemeToggle />
             </div>
@@ -453,7 +459,7 @@ const Chat = () => {
                         </SheetHeader>
                         <div className="p-4 space-y-4 border-b">
                            <UserProfile />
-                           <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+                           <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
                         </div>
                         <div className="flex-1 flex flex-col overflow-hidden">
                            <ConversationSidebar

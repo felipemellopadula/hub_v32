@@ -21,7 +21,7 @@ const TranslatorPage = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
-  const [translationModel, setTranslationModel] = useState("synergy-ia");
+  const [translationModel, setTranslationModel] = useState("gpt-4o-mini");
   const [isTranslating, setIsTranslating] = useState(false);
   
   // Humanization state
@@ -234,8 +234,9 @@ O texto deve soar como se fosse escrito por uma pessoa real, não por uma máqui
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="synergy-ia">Synergy IA</SelectItem>
-                    <SelectItem value="gpt-4.1-2025-04-14">GPT 4.1</SelectItem>
+                    <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                    <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
+                    <SelectItem value="gemini-flash">Gemini Flash</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
