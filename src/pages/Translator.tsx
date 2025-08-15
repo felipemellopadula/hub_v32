@@ -221,7 +221,7 @@ ${humanizeInput}`,
                   <SelectContent>
                     <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
                     <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
-                    <SelectItem value="gemini-2.5-flash-002">Gemini 2.5 Flash</SelectItem>
+                    <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

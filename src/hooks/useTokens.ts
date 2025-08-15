@@ -27,6 +27,7 @@ const MODEL_COSTS = {
   'gemini-2.5-pro-002': 12000,
   'gemini-2.5-flash-002': 12000,
   'gemini-2.5-flash-lite-001': 12000,
+  'gemini-pro': 12000,
   // Legacy models
   'gpt-4o-mini': 12000,
   'gpt-4o': 12000,
@@ -168,6 +169,7 @@ export const useTokens = () => {
       'gemini-2.5-pro-002': 'Gemini 2.5 Pro',
       'gemini-2.5-flash-002': 'Gemini 2.5 Flash',
       'gemini-2.5-flash-lite-001': 'Gemini 2.5 Flash-Lite',
+      'gemini-pro': 'Gemini Pro',
       // DeepSeek Models
       'deepseek-chat': 'DeepSeek Chat V3',
       'deepseek-reasoner': 'DeepSeek Reasoner',
