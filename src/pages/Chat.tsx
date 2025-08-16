@@ -428,9 +428,15 @@ const Chat = () => {
         <div className="container mx-auto px-4 h-16 flex justify-between items-center">
             {/* Lado Esquerdo: Voltar e Título */}
             <div className="flex items-center gap-3 md:gap-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+                {/* BOTÃO PARA DESKTOP */}
+                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="hidden sm:flex items-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline">Voltar</span>
+                    <span>Voltar</span>
+                </Button>
+                {/* BOTÃO PARA MOBILE */}
+                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="sm:hidden flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Voltar</span>
                 </Button>
                 <div className="h-6 w-px bg-border hidden sm:block" />
                 <div className="flex items-center gap-2">
