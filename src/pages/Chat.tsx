@@ -533,6 +533,17 @@ const Chat = () => {
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm]}
                             components={{
+                              p: ({ children }) => <p className="mb-6 last:mb-0">{children}</p>,
+                              h1: ({ children }) => <h1 className="text-2xl font-bold mb-6">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-xl font-semibold mb-5">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-lg font-medium mb-5">{children}</h3>,
+                              ul: ({ children }) => <ul className="list-disc list-inside mb-6 space-y-1">{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ol>,
+                              blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic mb-6">{children}</blockquote>,
+                              hr: () => <hr className="my-6 border-border" />,
+                              a: ({ children, href, ...props }) => (
+                                <a href={href} className="text-primary underline" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+                              ),
                               code: ({ className, children, ...props }: any) => {
                                 const isInline = !className?.includes('language-');
                                 return isInline ? (
@@ -540,7 +551,7 @@ const Chat = () => {
                                     {children}
                                   </code>
                                 ) : (
-                                  <pre className="bg-muted p-3 rounded-md overflow-x-auto my-2">
+                                  <pre className="bg-muted p-3 rounded-md overflow-x-auto my-6">
                                     <code className="text-xs font-mono block whitespace-pre-wrap break-all" {...props}>
                                       {children}
                                     </code>
