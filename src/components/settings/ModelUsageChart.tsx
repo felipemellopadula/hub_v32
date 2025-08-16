@@ -89,16 +89,38 @@ export default function ModelUsageChart({ cycleStart, cycleEnd }: ModelUsageChar
             Sem uso registrado neste ciclo.
           </div>
         ) : (
-          <div className="h-72">
+          <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                <Pie 
+                  data={data} 
+                  dataKey="value" 
+                  nameKey="name" 
+                  innerRadius={30} 
+                  outerRadius={70} 
+                  paddingAngle={2}
+                  fontSize={12}
+                >
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => value.toLocaleString()} />
-                <Legend />
+                <Tooltip 
+                  formatter={(value: number) => [value.toLocaleString(), 'Tokens']}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    color: 'hsl(var(--foreground))',
+                    fontSize: '12px'
+                  }}
+                />
+                <Legend 
+                  wrapperStyle={{
+                    fontSize: '12px',
+                    color: 'hsl(var(--foreground))'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
