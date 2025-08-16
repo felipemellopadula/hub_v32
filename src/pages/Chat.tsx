@@ -430,7 +430,7 @@ const Chat = () => {
                 <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     {/* Alterado aqui: removido 'hidden sm:inline' para sempre mostrar 'Voltar' */}
-                    <span>Voltar</span> 
+                    <span>Voltar</span>
                 </Button>
                 <div className="h-6 w-px bg-border hidden sm:block" />
                 <div className="flex items-center gap-2">
