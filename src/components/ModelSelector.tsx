@@ -144,7 +144,7 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                     >
                       {model.category}
                     </Badge>
-            _message:       </div>
+          </div>
                 </SelectItem>
               ))}
             </div>
