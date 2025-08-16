@@ -1,4 +1,4 @@
-import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3 } from "lucide-react";
+import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // --- INTERFACES ---
+interface FileAttachment {
+  name: string;
+  type: string;
+  content?: string; // Conteúdo processado, ex: texto extraído de PDF
+}
+
 interface Message {
   id: string;
   content: string;
@@ -29,20 +35,137 @@ interface Message {
   model?: string;
   reasoning?: string;
   isStreaming?: boolean;
-  files?: { name: string; type: string }[];
+  files?: FileAttachment[];
 }
 
 interface ChatConversation {
-  id: string;
+  id:string;
   user_id: string;
   title: string;
-  messages: any[]; // Idealmente, seria `Message[]`, mas `any[]` para compatibilidade com Supabase
+  messages: Message[];
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// --- COMPONENTES FILHOS ---
+// --- SUBCOMPONENTES (para melhor organização) ---
+
+const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
+  const isUser = message.sender === 'user';
+  
+  return (
+    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'items-start'}`}>
+      {!isUser && (
+        <Avatar className="mt-1">
+          <AvatarFallback>IA</AvatarFallback>
+        </Avatar>
+      )}
+      <div className={`max-w-xl p-3 rounded-lg relative group ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose dark:prose-invert prose-p:my-0">
+          {message.content}
+        </ReactMarkdown>
+        {message.files && message.files.length > 0 && (
+          <div className="mt-2 border-t pt-2">
+            <p className="text-xs font-semibold">Anexos:</p>
+            <ul className="text-sm list-disc list-inside">
+              {message.files.map((file, index) => <li key={index}>{file.name}</li>)}
+            </ul>
+          </div>
+        )}
+        <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.content)}>
+                  <Copy className="mr-2 h-4 w-4" /> Copiar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatInputFooter: React.FC<{
+  input: string;
+  setInput: (value: string) => void;
+  attachedFiles: File[];
+  setAttachedFiles: (files: File[]) => void;
+  isSending: boolean;
+  onSendMessage: () => void;
+}> = ({ input, setInput, attachedFiles, setAttachedFiles, isSending, onSendMessage }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setAttachedFiles([...attachedFiles, ...Array.from(event.target.files)]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  return (
+    <footer className="p-4 border-t">
+      {attachedFiles.length > 0 && (
+        <div className="mb-2 p-2 border rounded-md">
+          <p className="text-sm font-medium mb-1">Anexos:</p>
+          <div className="flex flex-wrap gap-2">
+            {attachedFiles.map((file, index) => (
+              <div key={index} className="flex items-center gap-2 bg-muted p-1 rounded-md text-xs">
+                <span>{file.name}</span>
+                <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleRemoveFile(index)}>
+                  <X className="h-3 w-3"/>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="relative">
+        <Textarea
+          placeholder="Digite sua mensagem ou anexe um arquivo..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              onSendMessage();
+            }
+          }}
+          className="pr-32"
+          rows={1}
+          disabled={isSending}
+        />
+        <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
+                  <Paperclip className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Anexar Arquivo</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple/>
+          <Button onClick={onSendMessage} disabled={isSending || (!input.trim() && attachedFiles.length === 0)}>
+            {isSending ? "Enviando..." : "Enviar"}
+          </Button>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+
+// --- COMPONENTES FILHOS (Sidebar) ---
 
 interface ConversationSidebarProps {
   conversations: ChatConversation[];
@@ -184,7 +307,7 @@ const Chat: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { tokens, spendTokens } = useTokens();
+  const { tokens, spendTokens, fetchTokens } = useTokens();
   const isMobile = useIsMobile();
   
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -192,11 +315,13 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const fetchConversations = useCallback(async () => {
     if (!user) return;
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('conversations')
@@ -208,27 +333,26 @@ const Chat: React.FC = () => {
       setConversations(data || []);
     } catch (error: any) {
       toast({ title: "Erro ao buscar conversas", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   }, [user, toast]);
 
   useEffect(() => {
     fetchConversations();
-  }, [fetchConversations]);
+    fetchTokens(); // busca os tokens do usuário ao carregar
+  }, [fetchConversations, fetchTokens]);
 
   useEffect(() => {
-    // Auto-scroll para a última mensagem
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isStreaming]);
 
   const handleSelectConversation = (conv: ChatConversation) => {
     setCurrentConversation(conv);
-    // Lógica para buscar as mensagens da conversa selecionada
-    // Exemplo:
-    // const fetchedMessages = await fetchMessagesForConversation(conv.id);
-    // setMessages(fetchedMessages);
-    setMessages(conv.messages || []); // Simulação
+    setMessages(conv.messages || []);
+    navigate(`/chat/${conv.id}`);
   };
 
   const handleNewConversation = () => {
@@ -236,89 +360,117 @@ const Chat: React.FC = () => {
     setMessages([]);
     setInput('');
     setAttachedFiles([]);
-    navigate('/chat'); // ou a rota base do chat
+    navigate('/chat');
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() && attachedFiles.length === 0) return;
+    if ((!input.trim() && attachedFiles.length === 0) || isStreaming) return;
     if (!user) {
-      toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
-      return;
+      return toast({ title: "Erro de Autenticação", description: "Você precisa estar logado.", variant: "destructive" });
+    }
+    if (tokens !== null && tokens < 1) {
+      return toast({ title: "Créditos Insuficientes", description: "Você não tem tokens para enviar uma mensagem.", variant: "destructive" });
     }
     
     setIsLoading(true);
+
+    const processedFiles: FileAttachment[] = [];
+    for (const file of attachedFiles) {
+        if (file.type === "application/pdf") {
+            const textContent = await PdfProcessor.extractText(file);
+            processedFiles.push({ name: file.name, type: file.type, content: textContent });
+        } else {
+            processedFiles.push({ name: file.name, type: file.type });
+        }
+    }
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       content: input,
       sender: 'user',
       timestamp: new Date(),
-      files: attachedFiles.map(f => ({ name: f.name, type: f.type })),
+      files: processedFiles,
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setAttachedFiles([]);
     
-    let currentConvId = currentConversation?.id;
+    let conversationId = currentConversation?.id;
 
     try {
-      // Se for uma nova conversa, cria ela primeiro
-      if (!currentConvId) {
+      // Cria a conversa se não existir
+      if (!conversationId) {
         const title = input.substring(0, 30) || "Nova Conversa";
-        const { data, error } = await supabase
+        const { data: newConvData, error } = await supabase
             .from('conversations')
-            .insert({ user_id: user.id, title: title, messages: [userMessage] })
+            .insert({ user_id: user.id, title, messages: [userMessage] })
             .select()
             .single();
-        
         if (error) throw error;
-        currentConvId = data.id;
-        setCurrentConversation(data);
-        setConversations(prev => [data, ...prev]);
+        conversationId = newConvData.id;
+        setCurrentConversation(newConvData);
+        setConversations(prev => [newConvData, ...prev]);
       }
 
-      // TODO: Implementar chamada para a API de IA (backend)
-      // A API receberia a mensagem, o histórico, e retornaria uma resposta em streaming
-      
-      // Simulação de resposta da IA
-      await new Promise(res => setTimeout(res, 1500));
-      const botResponse: Message = {
-        id: `bot-${Date.now()}`,
-        content: `Esta é uma resposta simulada para: "${userMessage.content}". A lógica real de streaming e API seria implementada aqui.`,
-        sender: 'bot',
-        timestamp: new Date(),
-        model: 'gemini-pro',
+      // Adiciona a mensagem de bot vazia para o streaming
+      const botMessageId = `bot-${Date.now()}`;
+      const botMessagePlaceholder: Message = {
+          id: botMessageId,
+          content: '▍',
+          sender: 'bot',
+          timestamp: new Date(),
+          isStreaming: true,
+      };
+      setMessages(prev => [...prev, botMessagePlaceholder]);
+      setIsStreaming(true);
+
+      // --- LÓGICA DE STREAMING (SIMULAÇÃO) ---
+      // No mundo real, você usaria fetch com um ReadableStream ou Server-Sent Events
+      const responseStream = ["Esta ", "é ", "uma ", "resposta ", "em ", "tempo ", "real, ", "simulando ", "o ", "streaming ", "de ", "uma ", "API ", "de ", "IA. "];
+      let fullResponse = "";
+      for (const chunk of responseStream) {
+          await new Promise(res => setTimeout(res, 50)); // Simula latência de rede
+          fullResponse += chunk;
+          setMessages(prev => prev.map(m => 
+              m.id === botMessageId ? { ...m, content: fullResponse + '▍' } : m
+          ));
+      }
+
+      const finalBotMessage: Message = {
+          ...botMessagePlaceholder,
+          content: fullResponse,
+          isStreaming: false,
       };
 
-      setMessages(prev => [...prev, botResponse]);
+      const finalMessages = [...newMessages, finalBotMessage];
+      setMessages(finalMessages);
 
-      // Atualizar a conversa no Supabase com as novas mensagens
-      const updatedMessages = [...messages, userMessage, botResponse];
-      const { error: updateError } = await supabase
+      // Atualizar conversa no Supabase
+      await supabase
         .from('conversations')
-        .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
-        .eq('id', currentConvId);
+        .update({ messages: finalMessages, updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
       
-      if (updateError) throw updateError;
-      
+      spendTokens(1); // Deduz 1 token (ou a lógica de custo que preferir)
+
     } catch (error: any) {
         toast({ title: "Erro ao enviar mensagem", description: error.message, variant: "destructive" });
-        // Reverter a mensagem do usuário em caso de erro
-        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+        setMessages(messages); // Reverte para o estado anterior em caso de erro
     } finally {
         setIsLoading(false);
+        setIsStreaming(false);
     }
   };
 
+  // Funções de CRUD para conversas
   const handleDeleteConversation = async (id: string) => {
     try {
       const { error } = await supabase.from('conversations').delete().eq('id', id);
       if (error) throw error;
-
       setConversations(prev => prev.filter(c => c.id !== id));
-      if (currentConversation?.id === id) {
-        handleNewConversation();
-      }
+      if (currentConversation?.id === id) handleNewConversation();
       toast({ title: "Sucesso", description: "Conversa deletada." });
     } catch (error: any) {
       toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
@@ -326,18 +478,13 @@ const Chat: React.FC = () => {
   };
   
   const handleToggleFavorite = async (conv: ChatConversation) => {
-    // Lógica para favoritar/desfavoritar
+    // Implementar lógica de favoritar
   };
 
   const handleRenameConversation = async (id: string, newTitle: string) => {
     try {
-        const { error } = await supabase
-            .from('conversations')
-            .update({ title: newTitle })
-            .eq('id', id);
-        
+        const { error } = await supabase.from('conversations').update({ title: newTitle }).eq('id', id);
         if (error) throw error;
-
         setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
         if (currentConversation?.id === id) {
             setCurrentConversation(prev => prev ? { ...prev, title: newTitle } : null);
@@ -362,7 +509,6 @@ const Chat: React.FC = () => {
       />
 
       <main className="flex flex-col flex-1 h-full">
-        {/* Cabeçalho do Chat */}
         <header className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             {isMobile && (
@@ -370,7 +516,7 @@ const Chat: React.FC = () => {
                 <ArrowLeft />
               </Button>
             )}
-            <h2 className="text-lg font-semibold">{currentConversation?.title || "Nova Conversa"}</h2>
+            <h2 className="text-lg font-semibold truncate">{currentConversation?.title || "Nova Conversa"}</h2>
           </div>
           <div className="flex items-center gap-4">
             <ModelSelector />
@@ -379,7 +525,6 @@ const Chat: React.FC = () => {
           </div>
         </header>
 
-        {/* Área de Mensagens */}
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
             {messages.length === 0 ? (
@@ -388,61 +533,20 @@ const Chat: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-                    {msg.sender === 'bot' && (
-                      <Avatar>
-                        <AvatarFallback>IA</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className={`max-w-xl p-3 rounded-lg ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose dark:prose-invert">
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && (
-                   <div className="flex gap-3">
-                      <Avatar>
-                        <AvatarFallback>IA</AvatarFallback>
-                      </Avatar>
-                      <div className="max-w-xl p-3 rounded-lg bg-muted">
-                        Digitando...
-                      </div>
-                   </div>
-                )}
+                {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
               </div>
             )}
           </ScrollArea>
         </div>
 
-        {/* Área de Input */}
-        <footer className="p-4 border-t">
-          <div className="relative">
-            <Textarea
-              placeholder="Digite sua mensagem ou anexe um arquivo..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              className="pr-24"
-              rows={1}
-            />
-            <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
-              <Button variant="ghost" size="icon">
-                <Paperclip className="h-5 w-5" />
-              </Button>
-              <Button onClick={handleSendMessage} disabled={isLoading}>
-                {isLoading ? "Enviando..." : "Enviar"}
-              </Button>
-            </div>
-          </div>
-        </footer>
+        <ChatInputFooter
+          input={input}
+          setInput={setInput}
+          attachedFiles={attachedFiles}
+          setAttachedFiles={setAttachedFiles}
+          isSending={isLoading || isStreaming}
+          onSendMessage={handleSendMessage}
+        />
       </main>
     </div>
   );
