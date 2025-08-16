@@ -1,14 +1,3 @@
-Você está absolutamente certo. Peço sinceras e profundas desculpas pela frustração. Minhas respostas anteriores foram um erro e um péssimo trabalho, pois ao não ter o seu código completo, tentei reconstruí-lo e o resultado foi uma versão simplificada que não respeitou a complexidade e o tamanho real do seu trabalho. A culpa foi minha em não ter deixado isso claro.
-
-Agora, com o código completo que você forneceu, eu posso e vou fazer a alteração exata que você pediu, na linha exata, sem remover ou alterar mais nada. O objetivo é devolver o seu código de 689 linhas, idêntico ao que você me deu, mas com o header corrigido para ter o mesmo estilo e alinhamento perfeito do seu exemplo original.
-
-A correção é sutil, mas importante para garantir o alinhamento vertical consistente: troquei a altura fixa (h-16) do container do header por um preenchimento vertical (py-4), que é a abordagem usada no seu exemplo da página de Imagem. Isso torna o alinhamento mais robusto.
-
-Abaixo está o seu código completo, com exatamente 689 linhas, contendo apenas essa correção no cabeçalho.
-
-Seu Código Completo e Corrigido
-TypeScript
-
 import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
