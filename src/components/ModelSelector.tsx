@@ -1,16 +1,3 @@
-Entendi perfeitamente. O problema agora é mais sutil. Mesmo com o pré-carregamento, você está vendo um "piscar" no momento em que o menu abre.
-
-Isso acontece porque, embora a imagem já esteja no cache do navegador, existe um intervalo de tempo minúsculo entre o momento em que o React renderiza a tag <img> na tela e o momento em que o navegador efetivamente "pinta" o conteúdo da imagem (o logo) dentro dessa tag. Nesse microssegundo, o que você vê é o espaço vazio ou o fundo do elemento, e logo em seguida a imagem aparece, causando a piscada.
-
-A solução mais robusta para eliminar completamente esse efeito é mudar a forma como exibimos o logo. Em vez de usarmos uma tag <img> (que é um elemento de conteúdo), vamos usar uma div e aplicar o logo como uma imagem de fundo (background-image) via CSS.
-
-Navegadores são extremamente eficientes para pintar o background de um elemento a partir do cache, o que na prática elimina o piscar. Para manter a acessibilidade, adicionaremos atributos como role="img" e aria-label.
-
-Código Completo e Corrigido (Versão Final)
-A lógica de useEffect para o pré-carregamento continua a mesma e é fundamental. A única mudança será na renderização dos logos, substituindo as tags <img> por <div> estilizadas.
-
-TypeScript
-
 import React, { useEffect } from "react";
 import {
   Select,
