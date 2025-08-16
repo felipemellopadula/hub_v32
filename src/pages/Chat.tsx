@@ -1,12 +1,3 @@
-Entendido. Você quer o arquivo completo para facilitar, e eu compreendo perfeitamente. Dado que minhas tentativas anteriores de enviar o arquivo completo resultaram em erros de sintaxe, a falha foi minha.
-
-Para garantir 100% de sucesso desta vez, eu peguei o seu código original que funcionava e apliquei a modificação final do cabeçalho nele, sem tocar em mais nenhuma linha.
-
-Este arquivo está limpo, completo e com todas as alterações solicitadas. Peço desculpas mais uma vez por todo o transtorno e agradeço imensamente sua paciência.
-
-Código Completo Final
-TypeScript
-
 import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
