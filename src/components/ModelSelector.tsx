@@ -60,8 +60,6 @@ interface ModelSelectorProps {
   selectedModel?: string;
 }
 
-// --- ALTERAÇÃO AQUI ---
-// Adicionamos as classes hover:* para manter a cor do badge durante o hover do item pai
 const getCategoryColor = (category: Model['category']) => {
   switch (category) {
     case 'premium': return 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground';
@@ -102,12 +100,12 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                 <SelectItem
                   key={model.id}
                   value={model.id}
-                  // --- ALTERAÇÃO AQUI ---
-                  // Removemos a classe 'hover:bg-accent' para usar o estilo padrão do componente
                   className="cursor-pointer pl-6"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center space-x-3">
+                    {/* --- ALTERAÇÃO AQUI --- */}
+                    {/* Adicionamos flex-1 e min-w-0 para que esta div ocupe o espaço e empurre o badge */}
+                    <div className="flex flex-1 items-center space-x-3 min-w-0">
                       {model.id !== 'synergy-ia' && (
                         <div className="w-6 h-6 rounded-md bg-muted/50 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
                           <img
@@ -129,7 +127,7 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                                 alt="Ícone SynergyIA"
                                 className="w-3.5 h-3.5 object-contain"
                                 onError={(e) => {
-            _message:                         e.currentTarget.style.display = 'none';
+                                  e.currentTarget.style.display = 'none';
                                 }}
                               />
                             </div>
@@ -146,7 +144,7 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                     >
                       {model.category}
                     </Badge>
-                  </div>
+            _message:       </div>
                 </SelectItem>
               ))}
             </div>
