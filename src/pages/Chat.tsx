@@ -425,7 +425,7 @@ const Chat = () => {
     <div className="h-screen max-h-screen bg-background flex flex-col">
       {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 h-16 flex justify-between items-center">
             {/* Lado Esquerdo: Voltar e Título */}
             <div className="flex items-center gap-3 md:gap-4">
                 <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -563,7 +563,7 @@ const Chat = () => {
                                  h2: ({ children }) => <h2 className="text-xl font-semibold mb-5">{children}</h2>,
                                  h3: ({ children }) => <h3 className="text-lg font-medium mb-5">{children}</h3>,
                                  ul: ({ children }) => <ul className="list-disc list-inside mb-6 space-y-1">{children}</ul>,
-                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ul>,
+                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ol>,
                                  blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic mb-6">{children}</blockquote>,
                                  hr: () => <hr className="my-6 border-border" />,
                                  a: ({ children, href, ...props }) => (
