@@ -282,7 +282,6 @@ const SettingsPage = () => {
               cycleStart={cycleStart}
               cycleEnd={cycleEnd}
               nextReset={nextReset}
-              formatDate={formatDate}
             />
             {/* CHAMADA PARA O NOVO COMPONENTE DO GRÁFICO */}
             <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />

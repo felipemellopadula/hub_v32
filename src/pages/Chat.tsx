@@ -516,9 +516,30 @@ const Chat = () => {
                     {message.sender === 'bot' && (
                       <Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar>
                     )}
-                    <div className={`max-w-[85%] rounded-lg px-4 py-3 ${message.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' : 'bg-muted'}`}>
-                      <div className="space-y-3">
-                        {message.files && (<div className="flex flex-wrap gap-2">{message.files.map((file, idx) => (<div key={idx} className="bg-background/50 px-3 py-1 rounded-full text-xs">📎 {file.name}</div>))}</div>)}
+                     <div className={`max-w-[85%] rounded-lg px-4 py-3 relative group ${message.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' : 'bg-muted'}`}>
+                       <div className="space-y-3">
+                         {message.files && (<div className="flex flex-wrap gap-2">{message.files.map((file, idx) => (<div key={idx} className="bg-background/50 px-3 py-1 rounded-full text-xs">📎 {file.name}</div>))}</div>)}
+                         
+                         {message.sender === 'user' && (
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <Button
+                                   variant="ghost"
+                                   size="icon"
+                                   className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-foreground/20"
+                                   onClick={() => {
+                                     navigator.clipboard.writeText(message.content);
+                                     toast({ title: "Copiado para a área de transferência!" });
+                                   }}
+                                 >
+                                   <Copy className="h-3 w-3" />
+                                 </Button>
+                               </TooltipTrigger>
+                               <TooltipContent>Copiar mensagem</TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         )}
                         
                         {message.reasoning && (
                           <div className="border-b border-border/50 pb-2">
