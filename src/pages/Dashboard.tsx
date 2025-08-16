@@ -1,9 +1,10 @@
-import { useEffect } from "react"; // 1. Importar o useEffect
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageCircle, Video, Image, Languages, PenTool, FileAudio, LogOut } from "lucide-react";
+// 1. RENOMEAMOS o ícone 'Image' para 'ImageIcon' para evitar conflito.
+import { MessageCircle, Video, Image as ImageIcon, Languages, PenTool, FileAudio, LogOut } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserProfile } from "@/components/UserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -11,18 +12,17 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
-  // 2. Adicionar o useEffect para pré-carregar os logos
   useEffect(() => {
+    // Agora, 'new Image()' refere-se corretamente ao construtor do navegador.
     const logoDarkUrl = "/lovable-uploads/c26d1b3b-b8c2-4bbf-9902-d76ebe9534f5.png";
     const logoLightUrl = "/lovable-uploads/95128e47-ede1-4ceb-a2f2-4d0c2ed4eb80.png";
 
-    // A criação do objeto Image já inicia o download em segundo plano
     const imgDark = new Image();
     imgDark.src = logoDarkUrl;
 
     const imgLight = new Image();
     imgLight.src = logoLightUrl;
-  }, []); // Array vazio garante que rode apenas uma vez
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -50,7 +50,8 @@ const Dashboard = () => {
     },
     {
       id: 'image',
-      icon: Image,
+      // 2. Usamos o novo nome 'ImageIcon' aqui.
+      icon: ImageIcon,
       title: 'Imagem',
       description: 'Criação de imagens',
       color: 'bg-green-500',
@@ -93,8 +94,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-2">
             <Link to="/" aria-label="Voltar para a página inicial" className="flex items-center gap-2">
               <h1 className="sr-only">Synergy AI</h1>
-              {/* 3. Substituir as tags <img> por <div> */}
-              <div
+              <div
                 role="img"
                 aria-label="Synergy AI logo escuro"
                 className="logo-dark-theme h-8 w-[140px]"
