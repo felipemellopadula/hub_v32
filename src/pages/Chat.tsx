@@ -443,12 +443,16 @@ const Chat = () => {
             <div className="hidden md:flex items-center gap-4">
                 <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
                 <UserProfile />
-                <ThemeToggle />
+                <div className="flex-shrink-0">
+                  <ThemeToggle />
+                </div>
             </div>
 
             {/* Lado Direito (Mobile) */}
             <div className="md:hidden flex items-center gap-1">
-                <ThemeToggle />
+                <div className="flex-shrink-0">
+                  <ThemeToggle />
+                </div>
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -559,7 +563,7 @@ const Chat = () => {
                                  h2: ({ children }) => <h2 className="text-xl font-semibold mb-5">{children}</h2>,
                                  h3: ({ children }) => <h3 className="text-lg font-medium mb-5">{children}</h3>,
                                  ul: ({ children }) => <ul className="list-disc list-inside mb-6 space-y-1">{children}</ul>,
-                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ol>,
+                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ul>,
                                  blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic mb-6">{children}</blockquote>,
                                  hr: () => <hr className="my-6 border-border" />,
                                  a: ({ children, href, ...props }) => (
