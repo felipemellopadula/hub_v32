@@ -95,14 +95,24 @@ const Index = () => {
               <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
               <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
             </nav>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
               {user ? (
-                <Button onClick={() => navigate("/dashboard")} className="hidden sm:inline-flex">
+                <Button 
+                  onClick={() => navigate("/dashboard")} 
+                  size="sm"
+                  className="text-xs sm:text-sm"
+                >
                   Dashboard
                 </Button>
               ) : (
-                <Button onClick={() => setShowAuthModal(true)}>Login</Button>
+                <Button 
+                  onClick={() => setShowAuthModal(true)}
+                  size="sm"
+                  className="text-xs sm:text-sm"
+                >
+                  Login
+                </Button>
               )}
             </div>
           </div>
