@@ -425,12 +425,12 @@ const Chat = () => {
     <div className="h-screen max-h-screen bg-background flex flex-col">
       {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div className="container mx-auto px-2 h-12 flex justify-between items-center">
+        <div className="container mx-auto px-2 h-10 flex justify-between items-center">
             {/* Lado Esquerdo: Voltar e Título */}
             <div className="flex items-center gap-3 md:gap-4">
                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 hover:bg-muted">
                             <ArrowLeft className="h-4 w-4" />
-                            Voltar
+                            <span className="hidden sm:inline">Voltar</span>
                         </Button>
                 <div className="h-6 w-px bg-border hidden sm:block" />
                 <div className="flex items-center gap-2">
@@ -448,11 +448,9 @@ const Chat = () => {
                 </div>
             </div>
 
-            {/* Lado Direito (Mobile) */}
-            <div className="md:hidden flex items-center gap-1">
-                <div className="flex-shrink-0">
-                  <ThemeToggle />
-                </div>
+            {/* Lado Direito (Mobile) - Nova organização */}
+            <div className="md:hidden flex items-center gap-2">
+                <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -465,7 +463,9 @@ const Chat = () => {
                         </SheetHeader>
                         <div className="p-4 space-y-4 border-b">
                            <UserProfile />
-                           <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
+                           <div className="flex-shrink-0">
+                             <ThemeToggle />
+                           </div>
                         </div>
                         <div className="flex-1 flex flex-col overflow-hidden">
                            <ConversationSidebar
