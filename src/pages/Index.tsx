@@ -232,7 +232,7 @@ const Index = () => {
                     <div className="flex items-center justify-center h-12 mb-4">
                       <BrainCircuit className="h-8 w-8 text-primary" />
                     </div>
-                    <CardTitle className="text-center">Sinapse Core</CardTitle>
+                    <CardTitle className="text-center">Synergy Core</CardTitle>
                     <CardDescription className="text-center">
                       Nossa IA proprietária que seleciona automaticamente o modelo mais indicado para cada tarefa. Você não precisa se preocupar com nada e tem a segurança que sempre terá a melhor IA, independente do que estiver fazendo.
                     </CardDescription>
