@@ -425,7 +425,7 @@ const Chat = () => {
     <div className="h-screen max-h-screen bg-background flex flex-col">
       {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div className="container mx-auto px-2 pt-0.1 pb-3 flex justify-between items-center">
+        <div className="container mx-auto px-2 pb-3 flex justify-between items-center">
             {/* Lado Esquerdo: Voltar e Título */}
             <div className="flex items-center gap-3 md:gap-4">
                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 hover:bg-muted">
