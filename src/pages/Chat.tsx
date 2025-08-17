@@ -422,16 +422,16 @@ const Chat = () => {
   if (!user || !profile) return null;
 
   return (
-    <div className="h-screen max-h-screen bg-background flex flex-col">
-      {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
-      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
+      {/* ===== HEADER ===== */}
+      <header className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex justify-between items-center">
             {/* Lado Esquerdo: Voltar e Título */}
             <div className="flex items-center gap-3 md:gap-4">
                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 hover:bg-muted">
-                            <ArrowLeft className="h-4 w-4" />
-                            Voltar
-                        </Button>
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
                 <div className="h-6 w-px bg-border hidden sm:block" />
                 <div className="flex items-center gap-2">
                     <MessageCircle className="h-5 w-5 text-blue-500" />
@@ -484,13 +484,11 @@ const Chat = () => {
             </div>
         </div>
       </header>
-      {/* ===== FIM DO CABEÇALHO MODIFICADO ===== */}
-
 
       {/* Corpo principal com Sidebar e Chat */}
-      <div className="flex-1 flex flex-row overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
         {/* Sidebar de Conversas (Desktop) */}
-        <aside className="w-80 flex-shrink-0 hidden md:flex flex-col bg-background">
+        <aside className="w-80 flex-shrink-0 hidden md:flex">
           <ConversationSidebar
             conversations={conversations}
             currentConversationId={currentConversationId}
@@ -503,11 +501,11 @@ const Chat = () => {
         </aside>
 
         {/* Área Principal do Chat */}
-        <main className="flex-1 flex flex-col bg-background">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
             <div className="max-w-4xl mx-auto p-4 space-y-4">
               {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground" style={{minHeight: 'calc(100vh - 250px)'}}>
+                <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <h3 className="text-2xl font-bold mb-2">Olá, {profile.name}!</h3>
                     <p>Selecione uma conversa ou inicie uma nova.</p>
