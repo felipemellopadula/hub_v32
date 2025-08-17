@@ -37,9 +37,10 @@ const modelsByProvider = {
     { id: 'deepseek-chat', name: 'DeepSeek Chat V3', provider: 'DeepSeek', category: 'premium' as const },
     { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', provider: 'DeepSeek', category: 'premium' as const },
   ],
-  'APILLM': [
+  'META': [
     { id: 'Llama-4-Maverick-17B-128E-Instruct-FP8', name: 'Llama 4 Maverick', provider: 'APILLM', category: 'premium' as const },
     { id: 'Llama-4-Scout-17B-16E-Instruct-FP8', name: 'Llama 4 Scout', provider: 'APILLM', category: 'standard' as const },
+    { id: 'llama', name: 'Llama', provider: 'Meta', category: 'standard' as const },
   ],
   'xAI': [
     { id: 'grok-4-0709', name: 'Grok 4', provider: 'xAI', category: 'premium' as const },
@@ -50,9 +51,6 @@ const modelsByProvider = {
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google', category: 'premium' as const },
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', category: 'standard' as const },
     { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite', provider: 'Google', category: 'fast' as const },
-  ],
-  'Meta': [
-    { id: 'llama', name: 'Llama', provider: 'Meta', category: 'standard' as const },
   ],
 };
 
