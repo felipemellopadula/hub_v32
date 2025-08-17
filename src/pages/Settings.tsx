@@ -280,7 +280,7 @@ const SettingsPage = () => {
               cycleStart={cycleStart}
               cycleEnd={cycleEnd}
               nextReset={nextReset}
-              formatDate={formatDate}
+              
             />
             <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />
           </div>
