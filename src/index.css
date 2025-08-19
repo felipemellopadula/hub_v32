@@ -120,20 +120,18 @@
     --sidebar-border: 220 13% 91%;
   }
   
-  /* ✅ CORREÇÃO PRINCIPAL: Garante que padding e borda não aumentem o tamanho total do elemento */
+  /* ✅ Garante que padding e borda não aumentem o tamanho total do elemento */
   *,
   *::before,
   *::after {
     box-sizing: border-box;
   }
 
-  /* 🔹 CORREÇÃO GERAL: garante altura total e evita scroll indesejado */
+  /* 🔹 CORREÇÃO APLICADA AQUI: Regra global simplificada */
   html, body, #root {
     @apply bg-background text-foreground;
-    height: 100%;
+    /* A altura e o overflow agora são controlados pelo componente da página (ex: <div className="h-screen...">) */
     margin: 0;
     padding: 0;
-    /* Impede que a página em si tenha barra de rolagem */
-    overflow: hidden; 
   }
 }
