@@ -164,7 +164,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, loading } = useAuth();
-  const { consumeTokens, getTokenCost, getModelDisplayName, tokenBalance } = useTokens();
+  const { consumeTokens, getModelDisplayName, tokenBalance } = useTokens();
   const isMobile = useIsMobile();
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -423,23 +423,20 @@ const Chat = () => {
 
   return (
     <div className="h-screen max-h-screen bg-background flex flex-col">
-      {/* ===== INÍCIO DO CABEÇALHO MODIFICADO ===== */}
+      {/* ===== CABEÇALHO ===== */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center"> {/* <-- CORREÇÃO APLICADA AQUI */}
-            {/* Lado Esquerdo: Voltar e Título */}
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-3 md:gap-4">
                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 hover:bg-muted">
-                        <ArrowLeft className="h-4 w-4" />
-                        Voltar
-                    </Button>
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
                 <div className="h-6 w-px bg-border hidden sm:block" />
                 <div className="flex items-center gap-2">
                     <MessageCircle className="h-5 w-5 text-blue-500" />
                     <h1 className="text-lg font-semibold text-foreground">Chat</h1>
                 </div>
             </div>
-
-            {/* Lado Direito (Desktop) */}
             <div className="hidden md:flex items-center gap-4">
                 <ModelSelector onModelSelect={handleModelChange} selectedModel={selectedModel} />
                 <UserProfile />
@@ -447,8 +444,6 @@ const Chat = () => {
                   <ThemeToggle />
                 </div>
             </div>
-
-            {/* Lado Direito (Mobile) */}
             <div className="md:hidden flex items-center gap-1">
                 <div className="flex-shrink-0">
                   <ThemeToggle />
@@ -484,12 +479,9 @@ const Chat = () => {
             </div>
         </div>
       </header>
-      {/* ===== FIM DO CABEÇALHO MODIFICADO ===== */}
 
-
-      {/* Corpo principal com Sidebar e Chat */}
+      {/* ===== CORPO PRINCIPAL ===== */}
       <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Sidebar de Conversas (Desktop) */}
         <aside className="w-80 flex-shrink-0 hidden md:flex flex-col bg-background">
           <ConversationSidebar
             conversations={conversations}
@@ -502,7 +494,6 @@ const Chat = () => {
           />
         </aside>
 
-        {/* Área Principal do Chat */}
         <main className="flex-1 flex flex-col bg-background">
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
             <div className="max-w-4xl mx-auto p-4 space-y-4">
@@ -516,96 +507,78 @@ const Chat = () => {
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>
-                    {message.sender === 'bot' && (
-                      <Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar>
-                    )}
-                      <div className={`max-w-[85%] rounded-lg px-4 py-3 relative group ${message.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' : 'bg-muted'}`}>
-                          <div className="space-y-3">
-                           {message.files && (<div className="flex flex-wrap gap-2">{message.files.map((file, idx) => (<div key={idx} className="bg-background/50 px-3 py-1 rounded-full text-xs">📎 {file.name}</div>))}</div>)}
-                           
-                           {message.sender === 'user' && (
-                               <TooltipProvider>
-                                   <Tooltip>
-                                       <TooltipTrigger asChild>
-                                           <Button
-                                               variant="ghost"
-                                               size="icon"
-                                               className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-foreground/20"
-                                               onClick={() => {
-                                                   navigator.clipboard.writeText(message.content);
-                                                   toast({ title: "Copiado para a área de transferência!" });
-                                               }}
-                                           >
-                                               <Copy className="h-3 w-3" />
-                                           </Button>
-                                       </TooltipTrigger>
-                                       <TooltipContent>Copiar mensagem</TooltipContent>
-                                   </Tooltip>
-                               </TooltipProvider>
-                           )}
-                           
-                           {message.reasoning && (
-                               <div className="border-b border-border/50 pb-2">
-                                   <Button variant="ghost" size="sm" onClick={() => setExpandedReasoning(p => ({ ...p, [message.id]: !p[message.id] }))} className="h-auto p-1 text-xs opacity-70 hover:opacity-100">
-                                       {expandedReasoning[message.id] ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />} Raciocínio
-                                   </Button>
-                                   {expandedReasoning[message.id] && <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap overflow-hidden">{message.reasoning}</div>}
-                               </div>
-                           )}
+                  <div key={message.id} className={`flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>
+                    
+                    {/* ===== INÍCIO DA CORREÇÃO: LÓGICA DE RENDERIZAÇÃO DAS MENSAGENS ===== */}
 
-                           <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words overflow-hidden">
-                             <ReactMarkdown 
-                               remarkPlugins={[remarkGfm]}
-                               components={{
-                                 p: ({ children }) => <p className="mb-6 last:mb-0">{children}</p>,
-                                 h1: ({ children }) => <h1 className="text-2xl font-bold mb-6">{children}</h1>,
-                                 h2: ({ children }) => <h2 className="text-xl font-semibold mb-5">{children}</h2>,
-                                 h3: ({ children }) => <h3 className="text-lg font-medium mb-5">{children}</h3>,
-                                 ul: ({ children }) => <ul className="list-disc list-inside mb-6 space-y-1">{children}</ul>,
-                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-6 space-y-1">{children}</ol>,
-                                 blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic mb-6">{children}</blockquote>,
-                                 hr: () => <hr className="my-6 border-border" />,
-                                 a: ({ children, href, ...props }) => (
-                                   <a href={href} className="text-primary underline" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-                                 ),
-                                 code: ({ className, children, ...props }: any) => {
-                                   const isInline = !className?.includes('language-');
-                                   return isInline ? (
-                                     <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono break-all" {...props}>
-                                       {children}
-                                     </code>
-                                   ) : (
-                                     <pre className="bg-muted p-3 rounded-md overflow-x-auto my-6">
-                                       <code className="text-xs font-mono block whitespace-pre-wrap break-all" {...props}>
-                                         {children}
-                                       </code>
-                                     </pre>
-                                   );
-                                 },
-                                 pre: ({ children }: any) => <>{children}</>,
-                               }}
-                             >
-                               {message.content}
-                             </ReactMarkdown>
-                             {message.isStreaming && <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />}
-                           </div>
-                           
-                           {message.sender === 'bot' && (
-                               <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                                   <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
-                                   <TooltipProvider>
-                                     <Tooltip><TooltipTrigger asChild>
-                                         <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7"><Copy className="h-3.5 w-3.5" /></Button>
-                                     </TooltipTrigger><TooltipContent>Copiar</TooltipContent></Tooltip>
-                                   </TooltipProvider>
-                               </div>
-                           )}
-                         </div>
-                      </div>
-                    {message.sender === 'user' && (
-                      <Avatar className="h-8 w-8 shrink-0"><AvatarFallback>U</AvatarFallback></Avatar>
+                    {message.sender === 'bot' ? (
+                      <>
+                        <Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar>
+                        <div className="max-w-[85%] rounded-lg px-4 py-3 bg-muted">
+                          <div className="space-y-3">
+                            {message.reasoning && (
+                              <div className="border-b border-border/50 pb-2">
+                                <Button variant="ghost" size="sm" onClick={() => setExpandedReasoning(p => ({ ...p, [message.id]: !p[message.id] }))} className="h-auto p-1 text-xs opacity-70 hover:opacity-100">
+                                  {expandedReasoning[message.id] ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />} Raciocínio
+                                </Button>
+                                {expandedReasoning[message.id] && <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap overflow-hidden">{message.reasoning}</div>}
+                              </div>
+                            )}
+                            <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words overflow-hidden">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                              {message.isStreaming && <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />}
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                              <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7"><Copy className="h-3.5 w-3.5" /></Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="group flex flex-col items-end max-w-[90%]">
+                          <div className="rounded-lg px-4 py-3 bg-primary text-primary-foreground">
+                            <div className="space-y-3">
+                              {message.files && (<div className="flex flex-wrap gap-2">{message.files.map((file, idx) => (<div key={idx} className="bg-background/50 px-3 py-1 rounded-full text-xs">📎 {file.name}</div>))}</div>)}
+                              <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words overflow-hidden">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="pr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 mt-1 hover:bg-muted/50"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(message.content);
+                                      toast({ title: "Copiado!" });
+                                    }}
+                                  >
+                                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copiar</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </div>
+                        <Avatar className="h-8 w-8 shrink-0"><AvatarFallback>U</AvatarFallback></Avatar>
+                      </>
                     )}
+                    {/* ===== FIM DA CORREÇÃO ===== */}
+                    
                   </div>
                 ))
               )}
@@ -622,7 +595,7 @@ const Chat = () => {
             </Button>
           )}
 
-          {/* Área de Input */}
+          {/* ===== ÁREA DE INPUT ===== */}
           <div className="flex-shrink-0 border-t border-border bg-background px-4 pt-4 pb-8">
             <div className="max-w-4xl mx-auto">
                 {attachedFiles.length > 0 && (
@@ -653,7 +626,6 @@ const Chat = () => {
                     value={inputValue}
                     onChange={(e) => {
                       setInputValue(e.target.value);
-                      // Reset height when content changes
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = 'auto';
                       target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
@@ -666,7 +638,6 @@ const Chat = () => {
                       if (e.key === 'Enter' && !isMobile && !e.shiftKey) { 
                         e.preventDefault(); 
                         handleSendMessage(e as any);
-                        // Reset height after sending
                         const target = e.target as HTMLTextAreaElement;
                         target.style.height = '52px';
                       } 
