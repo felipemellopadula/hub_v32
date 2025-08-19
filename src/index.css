@@ -1,44 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 /* AI Hub Design System - Modern & Elegant */
-
 @layer base {
   :root {
     /* Base colors - Dark theme */
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-
     /* Card system */
     --card: 240 10% 5.9%;
     --card-foreground: 0 0% 98%;
-
     /* Interactive elements */
     --popover: 240 10% 5.9%;
     --popover-foreground: 0 0% 98%;
-
     /* Primary brand colors - Purple gradient theme */
     --primary: 260 100% 68%;
     --primary-foreground: 0 0% 98%;
     --primary-glow: 280 100% 75%;
-
     /* Secondary theme */
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-
     /* Muted elements */
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-
     /* User message color (cinza diferente do muted) */
     --user-message: 240 5% 25%;
     --user-message-foreground: 0 0% 98%;
-
     /* Accent colors */
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
-
     /* Status colors */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -46,15 +36,12 @@
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
-
     /* Borders and inputs */
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 260 100% 68%;
-
     /* Design tokens */
     --radius: 0.75rem;
-
     --sidebar-background: 240 10% 5.9%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 260 100% 68%;
@@ -63,41 +50,32 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 3.7% 15.9%;
   }
-
   .light {
     /* Base colors - Light theme */
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-
     /* Card system */
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
-
     /* Interactive elements */
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-
     /* Primary brand colors - Purple gradient theme */
     --primary: 260 100% 68%;
     --primary-foreground: 0 0% 98%;
     --primary-glow: 280 100% 75%;
-
     /* Secondary theme */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
     /* Muted elements */
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     /* User message color (cinza diferente do muted) */
     --user-message: 210 40% 92%;
     --user-message-foreground: 240 10% 3.9%;
-
     /* Accent colors */
     --accent: 210 40% 96%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
     /* Status colors */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -105,12 +83,10 @@
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
-
     /* Borders and inputs */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 260 100% 68%;
-
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -119,20 +95,19 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
   }
-  
-  /* --- ÁREA DA CORREÇÃO DEFINITIVA --- */
-
-  /* Resets globais e essenciais para todos os elementos */
+ 
+  /* ✅ Garante que padding e borda não aumentem o tamanho total do elemento */
   *,
   *::before,
   *::after {
-    box-sizing: border-box; /* Garante que padding e borda não aumentem o tamanho */
-    margin: 0; /* Remove margens padrão do navegador */
-    padding: 0; /* Remove paddings padrão do navegador */
+    box-sizing: border-box;
   }
-
-  /* Aplica cores base ao body, deixando o controle de layout para os componentes */
-  body {
+  /* 🔹 CORREÇÃO APLICADA AQUI: Regra global simplificada */
+  html, body, #root {
     @apply bg-background text-foreground;
+    /* A altura e o overflow agora são controlados pelo componente da página (ex: <div className="h-screen...">) */
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 }
