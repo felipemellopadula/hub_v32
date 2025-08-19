@@ -120,18 +120,19 @@
     --sidebar-border: 220 13% 91%;
   }
   
-  /* ✅ Garante que padding e borda não aumentem o tamanho total do elemento */
+  /* --- ÁREA DA CORREÇÃO --- */
+
+  /* Resets globais e essenciais para todos os elementos */
   *,
   *::before,
   *::after {
-    box-sizing: border-box;
+    box-sizing: border-box; /* Garante que padding e borda não aumentem o tamanho */
+    margin: 0; /* Remove margens padrão do navegador */
+    padding: 0; /* Remove paddings padrão do navegador */
   }
 
-  /* 🔹 CORREÇÃO APLICADA AQUI: Regra global simplificada */
-  html, body, #root {
+  /* Aplica cores base ao body, deixando o controle de layout para os componentes */
+  body {
     @apply bg-background text-foreground;
-    /* A altura e o overflow agora são controlados pelo componente da página (ex: <div className="h-screen...">) */
-    margin: 0;
-    padding: 0;
   }
 }
