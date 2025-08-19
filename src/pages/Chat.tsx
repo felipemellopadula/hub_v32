@@ -481,7 +481,7 @@ const Chat = () => {
                       />
                       <div className="p-4 border-t border-border mt-auto space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Tokens: {tokenBalance}</span>
+                         
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">Tema</span>
