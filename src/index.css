@@ -1,7 +1,5 @@
 @tailwind base;
-
 @tailwind components;
-
 @tailwind utilities;
 
 /* AI Hub Design System - Modern & Elegant */
@@ -120,5 +118,14 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
+  }
+
+  /* 🔹 CORREÇÃO: garante que não sobre tarja em cima/baixo */
+  html, body, #root {
+    @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100vh;
   }
 }
