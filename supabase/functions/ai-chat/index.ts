@@ -375,14 +375,18 @@ const callOpenAI = async (message: string, model: string, files?: Array<{name: s
     }
   }
   
-  // Define max tokens based on model - set to provider maximums where known
-  let maxTokens = 8192; // Safe default
-  if (model.includes('gpt-4o')) {
-    maxTokens = 16384; // GPT-4o and gpt-4o-mini max output tokens
+  // Define max tokens based on model - Updated based on latest OpenAI limits
+  let maxTokens = 4096; // Conservative default for older models
+  if (model.includes('gpt-5')) {
+    maxTokens = 32768; // GPT-5 can output up to 32k tokens
   } else if (model.includes('gpt-4.1')) {
-    maxTokens = 16384; // GPT-4.1 series max output tokens
+    maxTokens = 32768; // GPT-4.1 can output up to 32k tokens  
+  } else if (model.includes('gpt-4o')) {
+    maxTokens = 16384; // GPT-4o and gpt-4o-mini max output tokens
   } else if (model.includes('o4-mini')) {
     maxTokens = 65536; // o4-mini max output tokens
+  } else if (model.includes('o4')) {
+    maxTokens = 100000; // o4 max output tokens
   }
 
   // Add reasoning support for o4 models
@@ -452,8 +456,13 @@ const callOpenAI = async (message: string, model: string, files?: Array<{name: s
     body: JSON.stringify({
       model,
       messages,
-      max_tokens: maxTokens,
+      // Use max_completion_tokens for newer models, max_tokens for legacy
+      ...(model.includes('gpt-5') || model.includes('gpt-4.1') || model.includes('o4') ? 
+        { max_completion_tokens: maxTokens } : 
+        { max_tokens: maxTokens }
+      ),
       stream: false,
+      // Temperature not supported on newer models
       ...(model.includes('gpt-5') || model.includes('o4') ? {} : { temperature: 0.7 }),
     }),
   });
@@ -904,8 +913,18 @@ serve(async (req) => {
             const fullPdfContent = await processPdfFromStorage(file.storagePath);
             console.log('PDF processed successfully, content length:', fullPdfContent.length);
             
+            // Map fictional models to real ones for processing
+            let actualModel = model;
+            if (model === 'gpt-5') {
+              actualModel = 'gpt-4o';
+            } else if (model === 'gpt-5-mini') {
+              actualModel = 'gpt-4o-mini';  
+            } else if (model === 'gpt-5-nano') {
+              actualModel = 'gpt-4o-mini';
+            }
+            
             // Check model limitations and chunk if necessary
-            const limitations = getModelLimitations(actualModel || model);
+            const limitations = getModelLimitations(actualModel);
             
             if (fullPdfContent.length > limitations.maxTokens * 4) { // Estimate chars per token
               console.log('PDF is large, chunking required. Model limitations:', limitations);
@@ -949,7 +968,7 @@ serve(async (req) => {
                   } else if (model.includes('Llama-4')) {
                     chunkResponse = await callAPILLM(chunkMessage, model, [chunkFile]);
                   } else {
-                    chunkResponse = await callOpenAI(chunkMessage, 'gpt-4.1-mini', [chunkFile]);
+                    chunkResponse = await callOpenAI(chunkMessage, 'gpt-4o-mini', [chunkFile]);
                   }
                   
                   combinedResponse += `\n\n### Análise da Parte ${i + 1}/${chunks.length}:\n${chunkResponse}`;
@@ -1024,7 +1043,7 @@ serve(async (req) => {
       response = await callAPILLM(message, model, files);
     } else {
       console.log('Using default OpenAI model for:', model);
-      const text = await callOpenAI(message, 'gpt-4.1-mini', files);
+      const text = await callOpenAI(message, 'gpt-4o-mini', files);
       return new Response(JSON.stringify({ response: text }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
