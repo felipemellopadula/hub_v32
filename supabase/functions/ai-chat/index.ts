@@ -564,6 +564,23 @@ const callApillm = async (message: string, model: string) => {
   if (!apiKey) {
     throw new Error('APILLM_API_KEY não configurada');
   }
+  
+  // Lista de modelos válidos conhecidos baseados na pesquisa
+  const validModels = [
+    'llama-4-maverick',
+    'llama-4-scout', 
+    'deepseek-r1',
+    'llama-3.3-70b-instruct',
+    'llama-3.2-11b-instruct',
+    'llama-3.2-8b-instruct',
+    'llama-3.2-3b-instruct',
+    'llama-3.2-1b-instruct'
+  ];
+  
+  // Verificar se o modelo é válido
+  if (!validModels.includes(model)) {
+    console.warn(`⚠️ Modelo ${model} pode não ser válido. Modelos conhecidos:`, validModels);
+  }
 
   const modelLimits = getModelLimits(model);
   console.log('📊 Limites do modelo:', modelLimits);
@@ -589,6 +606,7 @@ const callApillm = async (message: string, model: string) => {
 
   try {
     console.log('🌐 Fazendo requisição para endpoint:', APILLM_CHAT_ENDPOINT);
+    console.log('🔑 Authorization header (partial):', `Bearer ${apiKey?.substring(0, 10)}...`);
     
     const response = await fetch(APILLM_CHAT_ENDPOINT, {
       method: 'POST',
@@ -600,29 +618,39 @@ const callApillm = async (message: string, model: string) => {
     });
 
     console.log('📥 Response status APILLM:', response.status);
-    console.log('📥 Response headers APILLM:', response.headers);
-
-    if (!response.ok) {
-      let errorMessage = 'Erro desconhecido';
-      let responseBody = '';
-      
-      try {
-        responseBody = await response.text();
-        console.log('🚨 Response body completo:', responseBody);
-        
-        const errorData = JSON.parse(responseBody);
-        errorMessage = errorData.error?.message || errorData.message || JSON.stringify(errorData);
-      } catch (parseError) {
-        console.log('❌ Erro ao parsear response:', parseError);
-        errorMessage = responseBody || `HTTP ${response.status}`;
-      }
-      
-      console.error('🚨 Erro da API APILLM:', response.status, '-', errorMessage);
-      throw new Error(`Erro da API APILLM: ${response.status} - ${errorMessage}`);
-    }
+    console.log('📥 Response headers APILLM:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
 
     const responseText = await response.text();
-    console.log('📥 Response body completo APILLM:', responseText);
+    console.log('📄 Response body length:', responseText.length);
+    console.log('📄 Response body preview (first 500 chars):', responseText.substring(0, 500));
+
+    if (!response.ok) {
+      console.error('🚨 Erro da API APILLM:', response.status, '-', responseText);
+      
+      // Tentar com modelo fallback se o modelo não for encontrado
+      if (response.status === 404 && responseText.includes('Model not found')) {
+        console.log('🔄 Tentando com modelo fallback: llama-3.2-8b-instruct');
+        const fallbackPayload = { ...requestPayload, model: 'llama-3.2-8b-instruct' };
+        
+        const fallbackResponse = await fetch(APILLM_CHAT_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(fallbackPayload),
+        });
+        
+        if (fallbackResponse.ok) {
+          const fallbackText = await fallbackResponse.text();
+          const fallbackData = JSON.parse(fallbackText);
+          console.log('✅ Fallback funcionou! Resposta:', fallbackData.choices?.[0]?.message?.content?.substring(0, 100) + '...');
+          return fallbackData.choices[0].message.content;
+        }
+      }
+      
+      throw new Error(`Erro da API APILLM: ${response.status} - ${responseText}`);
+    }
     
     const data = JSON.parse(responseText);
     console.log('✅ Response APILLM parseiada com sucesso');
@@ -632,10 +660,10 @@ const callApillm = async (message: string, model: string) => {
       throw new Error('Formato de resposta inválido da API APILLM');
     }
 
-    console.log('✅ Conteúdo da resposta:', data.choices[0].message.content);
+    console.log('✅ Conteúdo da resposta APILLM:', data.choices[0].message.content?.substring(0, 100) + '...');
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('Erro ao chamar APILLM:', error);
+    console.error('❌ Erro ao chamar APILLM:', error);
     throw error;
   }
 };
@@ -811,8 +839,7 @@ serve(async (req) => {
         response = await callXaiGrok(message, model);
       } else if (model.includes('deepseek')) {
         response = await callDeepseek(message, model);
-      } else if (model.includes('llama') || model.includes('mixtral') || model.includes('command-r') || 
-                 model.includes('qwen') || model.includes('gemma') || model.includes('phi-3')) {
+      } else if (model.includes('llama') || model.includes('deepseek-r1') || model === 'llama-4-maverick' || model === 'llama-4-scout') {
         response = await callApillm(message, model);
       } else {
         throw new Error(`Modelo não suportado: ${model}`);

@@ -35,8 +35,14 @@ const MODEL_COSTS = {
   'deepseek-chat': 8000,
   'deepseek-reasoner': 12000,
   // APILLM Models
-  'Llama-4-Maverick-17B-128E-Instruct-FP8': 8000,
-  'Llama-4-Scout-17B-16E-Instruct-FP8': 6000,
+  'llama-4-maverick': 8000,
+  'llama-4-scout': 6000,
+  'deepseek-r1': 5000,
+  'llama-3.3-70b-instruct': 3000,
+  'llama-3.2-11b-instruct': 2000,
+  'llama-3.2-8b-instruct': 1000,
+  'llama-3.2-3b-instruct': 800,
+  'llama-3.2-1b-instruct': 500,
 } as const;
 
 export const useTokens = () => {
@@ -174,8 +180,14 @@ export const useTokens = () => {
       'deepseek-chat': 'DeepSeek Chat V3',
       'deepseek-reasoner': 'DeepSeek Reasoner',
       // APILLM Models
-      'Llama-4-Maverick-17B-128E-Instruct-FP8': 'Llama 4 Maverick',
-      'Llama-4-Scout-17B-16E-Instruct-FP8': 'Llama 4 Scout',
+      'llama-4-maverick': 'Llama 4 Maverick',
+      'llama-4-scout': 'Llama 4 Scout',
+      'deepseek-r1': 'DeepSeek R1',
+      'llama-3.3-70b-instruct': 'Llama 3.3 70B Instruct',
+      'llama-3.2-11b-instruct': 'Llama 3.2 11B Instruct',
+      'llama-3.2-8b-instruct': 'Llama 3.2 8B Instruct',
+      'llama-3.2-3b-instruct': 'Llama 3.2 3B Instruct',
+      'llama-3.2-1b-instruct': 'Llama 3.2 1B Instruct',
     };
     
     return displayNames[modelName] || modelName;
