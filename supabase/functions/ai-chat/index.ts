@@ -169,6 +169,15 @@ const getModelLimits = (model: string) => {
     };
   }
   
+  if (model.includes('grok')) {
+    return {
+      maxTokensPerChunk: 10000,
+      maxTokens: 4096,
+      delayMs: 1000,
+      useMaxCompletionTokens: false
+    };
+  }
+  
   // Default for other models
   return {
     maxTokensPerChunk: 8000,
@@ -422,6 +431,47 @@ const callGoogleGemini = async (message: string, model: string) => {
   }
 };
 
+const callXaiGrok = async (message: string, model: string) => {
+  console.log('Chamando xAI Grok com modelo:', model);
+  
+  const apiKey = Deno.env.get('XAI_API_KEY');
+  if (!apiKey) {
+    throw new Error('XAI_API_KEY não configurada');
+  }
+
+  const modelLimits = getModelLimits(model);
+
+  try {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'user', content: message }
+        ],
+        max_tokens: modelLimits.maxTokens,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Erro da API xAI Grok:', response.status, '-', errorData.error?.message || 'Erro desconhecido');
+      throw new Error(`Erro da API xAI Grok: ${response.status} - ${errorData.error?.message || 'Erro desconhecido'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Erro ao chamar xAI Grok:', error);
+    throw error;
+  }
+};
+
 const processLargePdf = async (content: string, userMessage: string, model: string) => {
   const modelLimits = getModelLimits(model);
   const estimatedTokens = estimateTokens(content);
@@ -438,6 +488,8 @@ const processLargePdf = async (content: string, userMessage: string, model: stri
       return await callAnthropic(optimizedPrompt, model);
     } else if (model.includes('gemini')) {
       return await callGoogleGemini(optimizedPrompt, model);
+    } else if (model.includes('grok')) {
+      return await callXaiGrok(optimizedPrompt, model);
     }
   }
   
@@ -470,6 +522,8 @@ ${chunks.length > 1 ? `(Esta é apenas uma parte do documento completo)` : ''}`;
         response = await callAnthropic(chunkPrompt, model);
       } else if (model.includes('gemini')) {
         response = await callGoogleGemini(chunkPrompt, model);
+      } else if (model.includes('grok')) {
+        response = await callXaiGrok(chunkPrompt, model);
       } else {
         throw new Error('Modelo não suportado para processamento de PDF');
       }
@@ -508,6 +562,8 @@ Crie um resumo consolidado que:
         return await callAnthropic(finalSummaryPrompt, model);
       } else if (model.includes('gemini')) {
         return await callGoogleGemini(finalSummaryPrompt, model);
+      } else if (model.includes('grok')) {
+        return await callXaiGrok(finalSummaryPrompt, model);
       }
     } catch (error) {
       console.log('Erro ao criar resumo final, retornando resumos parciais');
@@ -564,6 +620,8 @@ serve(async (req) => {
         response = await callAnthropic(message, model);
       } else if (model.includes('gemini')) {
         response = await callGoogleGemini(message, model);
+      } else if (model.includes('grok')) {
+        response = await callXaiGrok(message, model);
       } else {
         throw new Error(`Modelo não suportado: ${model}`);
       }
