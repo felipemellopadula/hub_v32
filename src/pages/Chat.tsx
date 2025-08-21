@@ -32,6 +32,8 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   model?: string;
+  reasoning?: string;
+  isStreaming?: boolean;
 }
 
 interface ChatConversation {
@@ -58,21 +60,11 @@ const ConversationSidebar: React.FC<{
   const handleRename = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     const newTitle = prompt("Digite o novo título da conversa:");
-    if (newTitle && newTitle.trim()) {
-      onRenameConversation(id, newTitle.trim());
-    }
+    if (newTitle && newTitle.trim()) onRenameConversation(id, newTitle.trim());
   };
   const renderItem = (conv: ChatConversation) => (
     <div key={conv.id} className={`group relative rounded-lg p-3 cursor-pointer transition-colors duration-200 ${currentConversationId === conv.id ? "bg-muted" : "hover:bg-muted/50"}`} onClick={() => onSelectConversation(conv)}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-foreground truncate">{conv.title}</h3>
-          <p className="text-xs text-muted-foreground mt-1">{new Date(conv.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
-        </div>
-        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(conv); }}><Star className={`h-4 w-4 mr-2 ${conv.is_favorite ? 'text-yellow-500 fill-current' : ''}`} />{conv.is_favorite ? 'Desfavoritar' : 'Favoritar'}</DropdownMenuItem><DropdownMenuItem onClick={(e) => handleRename(e, conv.id)}><Edit3 className="h-4 w-4 mr-2" />Renomear</DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDeleteConversation(conv.id); }} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Deletar</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-        </div>
-      </div>
+      <div className="flex items-start justify-between"><div className="flex-1 min-w-0"><h3 className="text-sm font-medium text-foreground truncate">{conv.title}</h3><p className="text-xs text-muted-foreground mt-1">{new Date(conv.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p></div><div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(conv); }}><Star className={`h-4 w-4 mr-2 ${conv.is_favorite ? 'text-yellow-500 fill-current' : ''}`} />{conv.is_favorite ? 'Desfavoritar' : 'Favoritar'}</DropdownMenuItem><DropdownMenuItem onClick={(e) => handleRename(e, conv.id)}><Edit3 className="h-4 w-4 mr-2" />Renomear</DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDeleteConversation(conv.id); }} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Deletar</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></div>
     </div>
   );
   const favorites = conversations.filter(c => c.is_favorite);
@@ -82,27 +74,26 @@ const ConversationSidebar: React.FC<{
   );
 };
 
-
 // --- COMPONENTE PRINCIPAL ---
 const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, loading } = useAuth();
-  const { consumeTokens, tokenBalance } = useTokens();
+  const { consumeTokens, getModelDisplayName, tokenBalance } = useTokens();
   const isMobile = useIsMobile();
   
+  const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined);
-
-  // Estados para a nova arquitetura de PDF
+  
   const [pdfContent, setPdfContent] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [pdfInfo, setPdfInfo] = useState<{ pages?: number; size?: number } | null>(null);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -122,7 +113,7 @@ const Chat = () => {
     else setConversations((data as any) || []);
   };
 
-  const toSerializable = (msgs: Message[]) => msgs.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
+  const toSerializable = (msgs: Message[]) => msgs.map(m => ({ ...m, sender: m.sender, content: m.content, timestamp: m.timestamp.toISOString(), model: m.model, reasoning: m.reasoning }));
   const fromSerializable = (msgs: any[]): Message[] => (msgs || []).map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
   const deriveTitle = (msgs: Message[]) => (msgs.find(m => m.sender === 'user')?.content?.trim() || 'Nova conversa').slice(0, 50);
 
@@ -170,7 +161,6 @@ const Chat = () => {
     await fetchConversations();
   };
 
-  // LÓGICA CORRETA PARA UPLOAD E ENVIO
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -201,66 +191,62 @@ const Chat = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!inputValue.trim() && !pdfContent) || isLoading) return;
-
+    
     await consumeTokens(selectedModel, inputValue);
 
-    let finalMessage = inputValue;
-    let displayMessage = inputValue;
-
-    // Constrói o prompt com o texto do PDF, se existir
-    if (pdfContent && pdfInfo) {
-      if (inputValue.toLowerCase().includes('resumo') || !inputValue.trim()) {
-        finalMessage = PdfProcessor.createSummaryPrompt(pdfContent, pdfInfo.pages || 0);
-        displayMessage = `Resumo do PDF: ${fileName}`;
-      } else {
-        finalMessage = PdfProcessor.createAnalysisPrompt(pdfContent, pdfInfo.pages || 0, inputValue);
-        displayMessage = `Análise sobre: ${inputValue}`;
-      }
-    }
-    
+    const displayMessage = inputValue || `Analisar o arquivo: ${fileName}`;
     const userMessage: Message = { id: Date.now().toString(), content: displayMessage, sender: 'user', timestamp: new Date() };
+    
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
+    
+    const userInput = inputValue; // Guarda o input antes de limpar
     setInputValue('');
     setIsLoading(true);
 
     try {
-      // **AQUI ESTÁ A MUDANÇA MAIS IMPORTANTE**
-      // Criamos um payload que a sua função `ai-chat` entende, mas enviando o texto processado.
+      // --- ESTA É A CORREÇÃO CRÍTICA ---
+      // Construímos o payload exatamente como a sua função `ai-chat` espera:
+      // 1. `message` é APENAS o texto do usuário.
+      // 2. `files` contém um objeto com o `pdfContent` bruto extraído no navegador.
+      // O backend (`ai-chat`) será responsável por juntar os dois.
       const payload = {
-        message: finalMessage,
-        model: selectedModel,
-        files: pdfContent ? [{
-          name: fileName,
-          type: 'application/pdf',
-          pdfContent: finalMessage // Enviamos o PROMPT INTEIRO aqui
-        }] : undefined,
+          message: userInput, // Apenas o que o usuário digitou
+          model: selectedModel,
+          files: pdfContent ? [{
+              name: fileName,
+              type: 'application/pdf',
+              pdfContent: pdfContent // Apenas o conteúdo extraído do PDF
+          }] : undefined,
       };
 
       const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: payload
+          body: payload
       });
 
       if (error) throw error;
       
       const responseContent = typeof data.response === 'string' ? data.response : data.response?.content || "Não recebi uma resposta válida.";
+      const reasoning = data.response?.reasoning;
 
-      const aiMessage: Message = { id: (Date.now() + 1).toString(), content: responseContent, sender: 'bot', timestamp: new Date(), model: selectedModel };
+      const aiMessage: Message = { id: (Date.now() + 1).toString(), content: responseContent, sender: 'bot', timestamp: new Date(), model: selectedModel, reasoning };
       const finalMessages = [...updatedMessages, aiMessage];
       setMessages(finalMessages);
       
       await upsertConversation(finalMessages);
 
+      // Limpa o estado do PDF após o sucesso
       setPdfContent(''); setFileName(''); setPdfInfo(null);
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({ title: "Erro", description: "Não foi possível enviar a mensagem. A função do Supabase pode estar com erro.", variant: "destructive" });
-      setMessages(messages); // Reverte para o estado anterior
+      setMessages(messages); // Reverte para o estado anterior em caso de erro
     } finally {
       setIsLoading(false);
     }
   };
+
 
   if (loading) return <div className="h-screen bg-background flex items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
   if (!user || !profile) return null;
@@ -279,7 +265,7 @@ const Chat = () => {
         <aside className="w-80 flex-shrink-0 hidden md:flex flex-col bg-background"><ConversationSidebar conversations={conversations} currentConversationId={currentConversationId} onSelectConversation={openConversation} onNewConversation={createNewConversation} onDeleteConversation={deleteConversation} onToggleFavorite={toggleFavoriteConversation} onRenameConversation={renameConversation} /></aside>
 
         <main className="flex-1 flex flex-col bg-background">
-          <ScrollArea className="flex-1"><div className="max-w-4xl mx-auto p-4 space-y-6">{messages.length === 0 ? (<div className="flex items-center justify-center h-full text-muted-foreground" style={{minHeight: 'calc(100vh - 300px)'}}><div className="text-center"><Bot className="h-12 w-12 mx-auto mb-4 opacity-50" /><h3 className="text-2xl font-bold mb-2">Olá, {profile.name}!</h3><p>Selecione uma conversa ou comece uma nova.</p><p className="mt-2 text-sm">Tokens disponíveis: {tokenBalance.toLocaleString()}</p></div></div>) : (messages.map((message) => (<div key={message.id} className={`flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>{message.sender === 'bot' && <Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar>}<div className={`max-w-[85%] rounded-lg px-4 py-3 ${message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}><div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown></div></div>{message.sender === 'user' && <Avatar className="h-8 w-8 shrink-0"><AvatarFallback>{profile.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback></Avatar>}</div>)))}
+          <ScrollArea className="flex-1"><div className="max-w-4xl mx-auto p-4 space-y-6">{messages.length === 0 ? (<div className="flex items-center justify-center h-full text-muted-foreground" style={{minHeight: 'calc(100vh - 300px)'}}><div className="text-center"><Bot className="h-12 w-12 mx-auto mb-4 opacity-50" /><h3 className="text-2xl font-bold mb-2">Olá, {profile.name}!</h3><p>Selecione uma conversa ou comece uma nova.</p><p className="mt-2 text-sm">Tokens disponíveis: {tokenBalance.toLocaleString()}</p></div></div>) : (messages.map((message) => (<div key={message.id} className={`flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>{message.sender === 'bot' ? (<><Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar><div className="max-w-[85%] rounded-lg px-4 py-3 bg-muted"><div className="space-y-3">{message.reasoning && (<div className="border-b border-border/50 pb-2"><Button variant="ghost" size="sm" onClick={() => setExpandedReasoning(p => ({ ...p, [message.id]: !p[message.id] }))} className="h-auto p-1 text-xs opacity-70 hover:opacity-100">{expandedReasoning[message.id] ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />} Raciocínio</Button>{expandedReasoning[message.id] && <div className="mt-2 text-xs opacity-80 bg-background/50 rounded p-2 whitespace-pre-wrap overflow-hidden">{message.reasoning}</div>}</div>)}<div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown></div><div className="flex items-center justify-between pt-2 border-t border-border/50"><p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p><Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Copiado!" }); }} className="h-7 w-7"><Copy className="h-3.5 w-3.5" /></Button></div></div></div></>) : (<><div className="max-w-[85%] rounded-lg px-4 py-3 bg-primary text-primary-foreground"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown></div><Avatar className="h-8 w-8 shrink-0"><AvatarFallback>{profile.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback></Avatar></>)}</div>)))}
               {isLoading && <div className="flex gap-3"><Avatar className="h-8 w-8 shrink-0"><AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback></Avatar><div className="bg-muted rounded-lg px-4 py-2 flex items-center"><div className="flex space-x-1"><div className="w-2 h-2 bg-current rounded-full animate-bounce delay-75"></div><div className="w-2 h-2 bg-current rounded-full animate-bounce delay-150"></div><div className="w-2 h-2 bg-current rounded-full animate-bounce delay-300"></div></div></div></div>}
               <div ref={messagesEndRef} /></div>
           </ScrollArea>
