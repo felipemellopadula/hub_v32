@@ -8,6 +8,7 @@ import { Send, Bot, User, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PdfProcessor } from "@/utils/PdfProcessor";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -28,6 +29,9 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [selectedModel, setSelectedModel] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [pdfContent, setPdfContent] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
+  const [pdfPages, setPdfPages] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,16 +48,32 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     try {
       const result = await PdfProcessor.processPdf(file);
       
-      if (result.success) {
-        const pdfMessage = `[Arquivo: ${file.name}]\n\n${result.content}`;
-        setInputValue(pdfMessage);
-        toast.success(`PDF processado com sucesso! ${result.pageCount} páginas lidas.`);
+      if (result.success && result.content) {
+        setPdfContent(result.content);
+        setFileName(file.name);
+        setPdfPages(result.pageCount || 0);
+        toast.success(`PDF processado com sucesso! ${result.pageCount} páginas (${result.fileSize}MB)`);
       } else {
-        toast.error(result.error || 'Erro ao processar PDF');
+        let errorMessage = result.error || "Erro desconhecido";
+        
+        if (result.isPasswordProtected) {
+          errorMessage = "PDF protegido por senha. Não é possível processar arquivos protegidos.";
+        }
+
+        toast.error(errorMessage);
+        
+        // Limpar campos em caso de erro
+        setPdfContent('');
+        setFileName('');
+        setPdfPages(0);
       }
     } catch (error) {
       console.error('Erro ao processar PDF:', error);
       toast.error('Erro interno ao processar PDF');
+      
+      setPdfContent('');
+      setFileName('');
+      setPdfPages(0);
     } finally {
       setIsProcessingPdf(false);
       // Reset file input
@@ -64,11 +84,27 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !selectedModel) return;
+    if ((!inputValue.trim() && !pdfContent) || !selectedModel) return;
+
+    let messageContent = inputValue;
+    let displayMessage = inputValue || `Análise do arquivo: ${fileName}`;
+
+    // Se há PDF anexado, criar prompts otimizados usando PdfProcessor
+    if (pdfContent && pdfPages) {
+      if (inputValue.toLowerCase().includes('resumo') || inputValue.toLowerCase().includes('resume') || !inputValue.trim()) {
+        // Usar prompt de resumo automático
+        messageContent = PdfProcessor.createSummaryPrompt(pdfContent, pdfPages);
+        displayMessage = `Resumo do PDF: ${fileName}`;
+      } else {
+        // Usar prompt de análise detalhada
+        messageContent = PdfProcessor.createAnalysisPrompt(pdfContent, pdfPages, inputValue);
+        displayMessage = `Análise sobre: ${inputValue}`;
+      }
+    }
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
-      content: inputValue,
+      content: displayMessage,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -90,80 +126,53 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     setMessages(prev => [...prev, tempBotMessage]);
 
     try {
-      const response = await fetch('https://myqgnnqltemfpzdxwybj.supabase.co/functions/v1/ai-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cWdubnFsdGVtZnB6ZHh3eWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODc3NjIsImV4cCI6MjA2OTQ2Mzc2Mn0.X0jHc8AkyZNZbi3kg5Qh6ngg7aAbijFXchM6bYsAnlE`,
-          'apikey': `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cWdubnFsdGVtZnB6ZHh3eWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODc3NjIsImV4cCI6MjA2OTQ2Mzc2Mn0.X0jHc8AkyZNZbi3kg5Qh6ngg7aAbijFXchM6bYsAnlE`,
-        },
-        body: JSON.stringify({
-          message: userMessage.content,
+      // Determine which edge function to use based on the selected model
+      const getEdgeFunctionName = (model: string) => {
+        if (model.includes('gpt-') || model.includes('o3') || model.includes('o4')) {
+          return 'openai-chat';
+        }
+        if (model.includes('gemini')) {
+          return 'gemini-chat';
+        }
+        if (model.includes('claude')) {
+          return 'anthropic-chat';
+        }
+        if (model.includes('llama') || model.includes('deepseek')) {
+          return 'apillm-chat';
+        }
+        return 'ai-chat'; // Fallback to original function
+      };
+
+      const functionName = getEdgeFunctionName(selectedModel);
+      console.log(`Using edge function: ${functionName} for model: ${selectedModel}`);
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: {
+          message: messageContent,
           model: selectedModel,
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get AI response');
+      if (error) {
+        throw new Error(error.message || 'Erro ao enviar mensagem');
       }
 
-      // Check if response is streaming (for OpenAI models) or regular JSON
-      const contentType = response.headers.get('content-type');
-      const isStreaming = contentType?.includes('text/event-stream');
-
-      if (isStreaming) {
-        // Handle streaming response
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let accumulatedContent = '';
-
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') break;
-                
-                try {
-                  const parsed = JSON.parse(data);
-                  const delta = parsed.choices?.[0]?.delta?.content;
-                  
-                  if (delta) {
-                    accumulatedContent += delta;
-                    
-                    // Update the bot message with accumulated content
-                    setMessages(prev => 
-                      prev.map(msg => 
-                        msg.id === botMessageId 
-                          ? { ...msg, content: accumulatedContent }
-                          : msg
-                      )
-                    );
-                  }
-                } catch (e) {
-                  // Skip invalid JSON
-                }
-              }
-            }
-          }
-        }
-      } else {
-        // Handle regular JSON response (non-OpenAI models)
-        const data = await response.json();
-        
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === botMessageId 
-              ? { ...msg, content: data.response }
-              : msg
-          )
-        );
+      const aiMessageContent = data.response || data.message || 'Resposta vazia recebida.';
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === botMessageId 
+            ? { ...msg, content: aiMessageContent }
+            : msg
+        )
+      );
+      
+      // Limpar PDF após o envio
+      setPdfContent('');
+      setFileName('');
+      setPdfPages(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -292,6 +301,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
               placeholder={
                 isProcessingPdf
                   ? "Processando PDF..."
+                  : pdfContent && fileName
+                  ? `PDF anexado: ${fileName}. Digite 'resumo' ou faça perguntas específicas...`
                   : selectedModel
                   ? "Digite sua mensagem ou anexe um PDF..."
                   : "Selecione um modelo primeiro"
@@ -302,7 +313,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || !selectedModel || isLoading || isProcessingPdf}
+              disabled={(!inputValue.trim() && !pdfContent) || !selectedModel || isLoading || isProcessingPdf}
               className="bg-primary hover:bg-primary-glow text-primary-foreground"
             >
               <Send className="h-4 w-4" />

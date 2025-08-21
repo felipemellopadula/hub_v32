@@ -14,10 +14,11 @@ export interface PdfProcessResult {
 }
 
 export class PdfProcessor {
-  // Limites de tamanho
-  static readonly MAX_FILE_SIZE_MB = 50; // 50MB
-  static readonly MAX_PAGES = 1000; // 2000 páginas
+  // Limites removidos para PDFs grandes
+  static readonly MAX_FILE_SIZE_MB = 500; // 500MB
+  static readonly MAX_PAGES = 10000; // 10000 páginas
   static readonly MAX_FILE_SIZE_BYTES = PdfProcessor.MAX_FILE_SIZE_MB * 1024 * 1024;
+  static readonly BATCH_SIZE = 50; // Processar em lotes de 50 páginas
 
   static async processPdf(file: File): Promise<PdfProcessResult> {
     try {
@@ -55,59 +56,72 @@ export class PdfProcessor {
 
       const numPages = pdfDocument.numPages;
 
-      // Verificar número de páginas
-      if (numPages > this.MAX_PAGES) {
-        return {
-          success: false,
-          error: `PDF tem muitas páginas. Máximo permitido: ${this.MAX_PAGES} páginas`,
-          pageCount: numPages,
-          fileSize: Math.round(file.size / (1024 * 1024) * 100) / 100
-        };
-      }
+      // Informar sobre o processamento de PDFs grandes
+      console.log(`Processando PDF com ${numPages} páginas. Isso pode levar alguns minutos...`);
 
       let fullText = '';
       let hasImages = false;
+      let processedPages = 0;
 
-      // Processar cada página
-      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        const page = await pdfDocument.getPage(pageNum);
-        
-        // Tentar extrair texto primeiro
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .filter(str => str.trim().length > 0)
-          .join(' ');
+      // Processar páginas em lotes para PDFs grandes
+      for (let batchStart = 1; batchStart <= numPages; batchStart += this.BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + this.BATCH_SIZE - 1, numPages);
+        console.log(`Processando páginas ${batchStart} a ${batchEnd} de ${numPages}...`);
 
-        if (pageText.trim()) {
-          fullText += `\n--- Página ${pageNum} ---\n${pageText}\n`;
-        } else {
-          // Se não há texto, tentar OCR na imagem da página
-          hasImages = true;
-          try {
-            const viewport = page.getViewport({ scale: 2.0 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d')!;
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+        for (let pageNum = batchStart; pageNum <= batchEnd; pageNum++) {
+          const page = await pdfDocument.getPage(pageNum);
+          
+          // Tentar extrair texto primeiro
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .filter(str => str.trim().length > 0)
+            .join(' ');
 
-            await page.render({
-              canvasContext: context,
-              viewport: viewport,
-            }).promise;
+          if (pageText.trim()) {
+            // Para PDFs grandes, não incluir "--- Página X ---" para economizar espaço
+            fullText += `${pageText}\n`;
+          } else {
+            // Se não há texto, tentar OCR na imagem da página (apenas para poucas páginas)
+            hasImages = true;
+            if (pageNum <= 10 || pageNum % 10 === 0) { // OCR apenas em algumas páginas para economizar tempo
+              try {
+                const viewport = page.getViewport({ scale: 1.5 }); // Escala menor para PDFs grandes
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d')!;
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
 
-            // Usar Tesseract para OCR
-            const worker = await createWorker('por+eng'); // Português e Inglês
-            const { data: { text } } = await worker.recognize(canvas);
-            await worker.terminate();
+                await page.render({
+                  canvasContext: context,
+                  viewport: viewport,
+                }).promise;
 
-            if (text.trim()) {
-              fullText += `\n--- Página ${pageNum} (OCR) ---\n${text}\n`;
+                // Usar Tesseract para OCR
+                const worker = await createWorker('por+eng');
+                const { data: { text } } = await worker.recognize(canvas);
+                await worker.terminate();
+
+                if (text.trim()) {
+                  fullText += `${text}\n`;
+                }
+              } catch (ocrError) {
+                console.warn(`Erro no OCR da página ${pageNum}:`, ocrError);
+              }
             }
-          } catch (ocrError) {
-            console.warn(`Erro no OCR da página ${pageNum}:`, ocrError);
-            fullText += `\n--- Página ${pageNum} ---\n[Página contém imagens/gráficos que não puderam ser processados]\n`;
           }
+          
+          processedPages++;
+          
+          // Pequena pausa a cada 25 páginas para não travar o browser
+          if (processedPages % 25 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+        
+        // Pausa maior entre lotes
+        if (batchEnd < numPages) {
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
       }
 
@@ -138,6 +152,31 @@ export class PdfProcessor {
   }
 
   static getMaxFileInfo(): string {
-    return `Tamanho máximo: ${this.MAX_FILE_SIZE_MB}MB | Páginas máximas: ${this.MAX_PAGES}`;
+    return `Suporte a PDFs grandes: até ${this.MAX_FILE_SIZE_MB}MB | Sem limite de páginas`;
+  }
+
+  // Método para criar resumo automático de PDFs grandes
+  static createSummaryPrompt(content: string, pages: number): string {
+    return `Este é um PDF com ${pages} páginas. Conteúdo extraído:
+
+${content}
+
+Por favor, forneça:
+1. Um resumo executivo dos pontos principais
+2. Os tópicos mais importantes abordados
+3. Conclusões ou insights relevantes
+4. Qualquer informação crítica que se destaque
+
+Seja conciso mas abrangente na sua análise.`;
+  }
+
+  // Método para análise detalhada
+  static createAnalysisPrompt(content: string, pages: number, question: string): string {
+    return `Analisando PDF com ${pages} páginas sobre: "${question}"
+
+Conteúdo do documento:
+${content}
+
+Com base no conteúdo acima, responda à pergunta de forma detalhada, citando partes relevantes do documento quando possível.`;
   }
 }
