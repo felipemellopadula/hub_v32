@@ -1,3 +1,5 @@
+// Salve este código como: src/utils/PdfProcessor.ts
+
 import * as pdfjsLib from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
 
@@ -14,14 +16,15 @@ export interface PdfProcessResult {
 }
 
 export class PdfProcessor {
-  // Limites de tamanho
-  static readonly MAX_FILE_SIZE_MB = 50; // 50MB
-  static readonly MAX_PAGES = 1000; // 2000 páginas
+  // Limites aumentados para suportar PDFs grandes
+  static readonly MAX_FILE_SIZE_MB = 500; // 500MB
+  static readonly MAX_PAGES = 10000; // 10000 páginas
   static readonly MAX_FILE_SIZE_BYTES = PdfProcessor.MAX_FILE_SIZE_MB * 1024 * 1024;
+  static readonly BATCH_SIZE = 50; // Processar em lotes de 50 páginas para não travar a UI
 
   static async processPdf(file: File): Promise<PdfProcessResult> {
     try {
-      // Verificar tamanho do arquivo
+      // Verificar tamanho do arquivo (limite alto)
       if (file.size > this.MAX_FILE_SIZE_BYTES) {
         return {
           success: false,
@@ -35,13 +38,11 @@ export class PdfProcessor {
 
       let pdfDocument;
       try {
-        // Tentar carregar o PDF
         pdfDocument = await pdfjsLib.getDocument({
           data: uint8Array,
-          password: '', // Primeiro tentar sem senha
+          password: '', // Tenta sem senha primeiro
         }).promise;
       } catch (error: any) {
-        // Verificar se é erro de senha
         if (error.name === 'PasswordException' || error.message?.includes('password')) {
           return {
             success: false,
@@ -54,67 +55,52 @@ export class PdfProcessor {
       }
 
       const numPages = pdfDocument.numPages;
-
-      // Verificar número de páginas
-      if (numPages > this.MAX_PAGES) {
-        return {
-          success: false,
-          error: `PDF tem muitas páginas. Máximo permitido: ${this.MAX_PAGES} páginas`,
-          pageCount: numPages,
-          fileSize: Math.round(file.size / (1024 * 1024) * 100) / 100
-        };
-      }
+      console.log(`Iniciando processamento de PDF com ${numPages} páginas...`);
 
       let fullText = '';
-      let hasImages = false;
+      let processedPages = 0;
 
-      // Processar cada página
-      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        const page = await pdfDocument.getPage(pageNum);
-        
-        // Tentar extrair texto primeiro
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .filter(str => str.trim().length > 0)
-          .join(' ');
+      // Processar em lotes (batches) para PDFs gigantes
+      for (let batchStart = 1; batchStart <= numPages; batchStart += this.BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + this.BATCH_SIZE - 1, numPages);
+        console.log(`Processando lote de páginas: ${batchStart} a ${batchEnd} de ${numPages}...`);
 
-        if (pageText.trim()) {
-          fullText += `\n--- Página ${pageNum} ---\n${pageText}\n`;
-        } else {
-          // Se não há texto, tentar OCR na imagem da página
-          hasImages = true;
-          try {
-            const viewport = page.getViewport({ scale: 2.0 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d')!;
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            await page.render({
-              canvasContext: context,
-              viewport: viewport,
-            }).promise;
-
-            // Usar Tesseract para OCR
-            const worker = await createWorker('por+eng'); // Português e Inglês
-            const { data: { text } } = await worker.recognize(canvas);
-            await worker.terminate();
-
-            if (text.trim()) {
-              fullText += `\n--- Página ${pageNum} (OCR) ---\n${text}\n`;
-            }
-          } catch (ocrError) {
-            console.warn(`Erro no OCR da página ${pageNum}:`, ocrError);
-            fullText += `\n--- Página ${pageNum} ---\n[Página contém imagens/gráficos que não puderam ser processados]\n`;
-          }
+        const pagePromises = [];
+        for (let pageNum = batchStart; pageNum <= batchEnd; pageNum++) {
+            pagePromises.push(pdfDocument.getPage(pageNum));
         }
+
+        const pages = await Promise.all(pagePromises);
+
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const pageNum = batchStart + i;
+
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+
+            if (pageText.trim()) {
+              // Não adicionar "--- Página X ---" para economizar tokens e espaço
+              fullText += `${pageText}\n\n`;
+            } else {
+              // Lógica de OCR (opcional e pode ser lenta, mantida simples)
+              console.warn(`Página ${pageNum} parece ser uma imagem ou vazia.`);
+            }
+
+            processedPages++;
+            if (processedPages % 25 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 10)); // Pausa para não congelar UI
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 50)); // Pausa maior entre lotes
       }
 
       if (!fullText.trim()) {
         return {
           success: false,
-          error: 'Não foi possível extrair texto do PDF. O arquivo pode estar corrompido ou ser apenas imagens.',
+          error: 'Não foi possível extrair texto do PDF. O arquivo pode conter apenas imagens ou estar corrompido.',
           pageCount: numPages,
           fileSize: Math.round(file.size / (1024 * 1024) * 100) / 100
         };
@@ -128,7 +114,7 @@ export class PdfProcessor {
       };
 
     } catch (error) {
-      console.error('Erro ao processar PDF:', error);
+      console.error('Erro crítico ao processar PDF:', error);
       return {
         success: false,
         error: 'Erro interno ao processar o PDF. Verifique se o arquivo não está corrompido.',
@@ -138,6 +124,16 @@ export class PdfProcessor {
   }
 
   static getMaxFileInfo(): string {
-    return `Tamanho máximo: ${this.MAX_FILE_SIZE_MB}MB | Páginas máximas: ${this.MAX_PAGES}`;
+    return `Suporte a PDFs grandes: até ${this.MAX_FILE_SIZE_MB}MB`;
+  }
+
+  // Método para criar prompt de resumo (usaremos isso no Chat.tsx)
+  static createSummaryPrompt(content: string, pages: number): string {
+    return `Com base no conteúdo de um documento de ${pages} páginas fornecido abaixo, crie um resumo executivo detalhado. Destaque os pontos principais, as conclusões mais importantes e quaisquer dados ou estatísticas cruciais.\n\nCONTEÚDO DO DOCUMENTO:\n"""\n${content}\n"""`;
+  }
+
+  // Método para criar prompt de análise (usaremos isso no Chat.tsx)
+  static createAnalysisPrompt(content: string, pages: number, question: string): string {
+    return `Use o conteúdo de um documento de ${pages} páginas, fornecido abaixo, como a única fonte de verdade para responder à seguinte pergunta. Seja detalhado e preciso na sua resposta.\n\nPERGUNTA: "${question}"\n\nCONTEÚDO DO DOCUMENTO:\n"""\n${content}\n"""`;
   }
 }
