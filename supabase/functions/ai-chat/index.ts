@@ -21,11 +21,9 @@ interface ChatRequest {
   files?: ChatFile[];
 }
 
-// --- FUNÇÕES AUXILIARES (INSPIRADAS NO CÓDIGO QUE FUNCIONA) ---
-
+// --- FUNÇÕES AUXILIARES ---
 function estimateTokenCount(text: string): number {
-  // 1 token ≈ 3.5 caracteres em português. Usar 3 para margem de segurança.
-  return Math.ceil(text.length / 3);
+  return Math.ceil(text.length / 3.5); // Média de caracteres por token
 }
 
 function splitIntoChunks(text: string, maxChars: number): string[] {
@@ -47,10 +45,10 @@ serve(async (req) => {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openaiApiKey) {
-      throw new Error("A chave da API da OpenAI (OPENAI_API_KEY) não foi encontrada.");
+      throw new Error("OPENAI_API_KEY não foi encontrada nas configurações do seu projeto Supabase.");
     }
     if (!model) {
-      throw new Error('O modelo é obrigatório.');
+      throw new Error('O nome do modelo é obrigatório.');
     }
 
     // --- TRADUÇÃO DE MODELOS ---
@@ -60,32 +58,28 @@ serve(async (req) => {
     else if (model.includes('gpt-4.1')) apiModel = 'gpt-4-turbo';
     console.log(`Model mapping: '${model}' -> '${apiModel}'`);
 
-    // --- EXTRAÇÃO DO CONTEÚDO ---
-    let fullContent = message;
-    // Se há um PDF, o conteúdo dele se torna a mensagem principal.
-    if (files && files.length > 0 && files[0].pdfContent) {
-      fullContent = files[0].pdfContent;
-      console.log(`Conteúdo do PDF '${files[0].name}' extraído. Tamanho: ${fullContent.length} caracteres.`);
+    // --- LÓGICA DE CONTEÚDO (SIMPLIFICADA) ---
+    // O `fullContent` é o prompt que o frontend já preparou (seja a pergunta do user ou o prompt com o texto do PDF)
+    let fullContent = (files && files.length > 0 && files[0].pdfContent) ? files[0].pdfContent : message;
+
+    if (!fullContent || !fullContent.trim()) {
+      throw new Error("A mensagem para a IA está vazia.");
     }
 
     // --- LÓGICA DE FATIAMENTO (CHUNK) SIMPLIFICADA ---
-    const INPUT_TOKEN_LIMIT = 25000; // Limite seguro para evitar erro de TPM
+    const INPUT_TOKEN_LIMIT = 28000; // Limite de segurança para não estourar os 30k de TPM
     const estimatedTokens = estimateTokenCount(fullContent);
     
     let processedMessage = fullContent;
     let responsePrefix = '';
 
-    console.log(`Tokens estimados: ${estimatedTokens} / Limite seguro: ${INPUT_TOKEN_LIMIT}`);
-
     if (estimatedTokens > INPUT_TOKEN_LIMIT) {
       const maxChars = INPUT_TOKEN_LIMIT * 3;
       const chunks = splitIntoChunks(fullContent, maxChars);
-      console.log(`Documento muito grande. Fatiado em ${chunks.length} partes.`);
-
-      responsePrefix = `⚠️ **Atenção:** O documento enviado é muito grande e excede o limite de processamento. A análise abaixo foi feita com base **apenas no início do documento** para fornecer uma visão geral.\n\n---\n\n`;
       
-      // Usa apenas a primeira fatia, como no seu exemplo funcional
-      processedMessage = `O seguinte texto é a primeira parte de um documento muito longo. Faça um resumo conciso e identifique os pontos principais APENAS deste trecho:\n\n"""\n${chunks[0]}\n"""`;
+      responsePrefix = `⚠️ **Atenção:** O documento enviado é muito grande. A análise abaixo foi feita com base **apenas no início do documento** para fornecer uma visão geral.\n\n---\n\n`;
+      
+      processedMessage = `O texto a seguir é a primeira parte de um documento muito longo. O usuário pediu para "${message || 'fazer um resumo'}". Analise este trecho e forneça uma resposta baseada apenas nele:\n\n"""\n${chunks[0]}\n"""`;
     }
     
     // --- MONTAGEM E ENVIO DA REQUISIÇÃO PARA A OPENAI ---
@@ -101,26 +95,22 @@ serve(async (req) => {
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${openaiApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`OpenAI API Error: ${response.status}`, errorBody);
       throw new Error(`Erro na API da OpenAI: ${errorBody}`);
     }
 
     const data = await response.json();
     const generatedText = data.choices[0]?.message?.content ?? 'Desculpe, não consegui obter uma resposta.';
     
-    // Adiciona o aviso no início da resposta, se necessário
     const finalResponse = responsePrefix + generatedText;
 
-    return new Response(JSON.stringify({ response: { content: finalResponse } }), {
+    // **IMPORTANTE: Retornando no formato simples que o frontend agora espera**
+    return new Response(JSON.stringify({ response: finalResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
