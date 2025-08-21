@@ -1,4 +1,4 @@
-import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3, Square } from "lucide-react";
+import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
@@ -186,7 +186,6 @@ const Chat = () => {
   const recordingTimeoutRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref para o intervalo
 
   // --- LÓGICA DE NEGÓCIO ---
   
@@ -302,6 +301,7 @@ const Chat = () => {
     setProcessedPdfs(new Map());
   };
 
+  // --- INÍCIO DA MODIFICAÇÃO: TOAST REMOVIDO ---
   const deleteConversation = async (id: string) => {
     const { error } = await supabase.from('chat_conversations').delete().eq('id', id);
     if (error) {
@@ -312,7 +312,9 @@ const Chat = () => {
     if (currentConversationId === id) {
       createNewConversation();
     }
+    // A linha do toast de sucesso foi removida daqui.
   };
+  // --- FIM DA MODIFICAÇÃO ---
   
   const toggleFavoriteConversation = async (conv: ChatConversation) => {
     const { data, error } = await supabase
@@ -334,19 +336,6 @@ const Chat = () => {
         setConversations(prev => prev.map(c => c.id === data.id ? { ...data, messages: Array.isArray(data.messages) ? data.messages : [] } : c));
         toast({ title: 'Conversa renomeada!' });
     }
-  };
-
-  const handleStopGeneration = () => {
-    if (typingIntervalRef.current) {
-      clearInterval(typingIntervalRef.current);
-      typingIntervalRef.current = null;
-    }
-    setIsLoading(false);
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.isStreaming ? { ...msg, isStreaming: false } : msg
-      )
-    );
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -404,7 +393,7 @@ const Chat = () => {
         setMessages(prev => [...newMessages, placeholderBotMessage]);
 
         let charIndex = 0;
-        typingIntervalRef.current = setInterval(() => {
+        const typingInterval = setInterval(() => {
             if (charIndex < fullBotText.length) {
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMessageId 
@@ -413,10 +402,7 @@ const Chat = () => {
                 ));
                 charIndex++;
             } else {
-                if (typingIntervalRef.current) {
-                    clearInterval(typingIntervalRef.current);
-                    typingIntervalRef.current = null;
-                }
+                clearInterval(typingInterval);
                 
                 const finalBotMessage: Message = { ...placeholderBotMessage, content: fullBotText, isStreaming: false };
                 const finalMessages = [...newMessages, finalBotMessage];
@@ -686,28 +672,9 @@ const Chat = () => {
                     <TooltipProvider><Tooltip><TooltipTrigger asChild>
                       <Button type="button" variant="ghost" size="icon" onClick={isRecording ? stopRecording : startRecording} className={`h-8 w-8 ${isRecording ? 'text-red-500' : ''}`}><Mic className="h-4 w-4" /></Button>
                     </TooltipTrigger><TooltipContent>Gravar áudio</TooltipContent></Tooltip></TooltipProvider>
-                    
-                    {isLoading ? (
-                      <Button
-                        type="button"
-                        onClick={handleStopGeneration}
-                        size="icon"
-                        variant="destructive"
-                        className="h-8 w-8 rounded-full"
-                      >
-                        <Square className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        type="submit"
-                        disabled={!inputValue.trim() && attachedFiles.length === 0}
-                        size="icon"
-                        className="h-8 w-8 rounded-full"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                    )}
-
+                    <Button type="submit" disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)} size="icon" className="h-8 w-8 rounded-full">
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </form>
