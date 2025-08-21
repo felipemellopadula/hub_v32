@@ -2,33 +2,15 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// --- INTERFACES ---
-interface ChatFile {
-  name: string;
-  type: string;
-  pdfContent?: string;
-}
-
-interface ChatRequest {
-  message: string;
-  model: string;
-  files?: ChatFile[];
-}
-
-// --- FUNÇÕES AUXILIARES DE FATIAMENTO (CHUNKING) ---
+// --- FUNÇÕES AUXILIARES PARA OPENAI ---
 function estimateTokenCount(text: string): number {
-  return Math.ceil(text.length / 3.5); // Aproximação segura para português
+  return Math.ceil(text.length / 3.5);
 }
 
 function splitIntoChunks(text: string, maxChars: number): string[] {
@@ -47,98 +29,93 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model, files }: ChatRequest = await req.json();
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    const { message, model } = await req.json();
 
-    if (!openaiApiKey) {
-      throw new Error("OPENAI_API_KEY não foi encontrada.");
-    }
     if (!model) {
-      throw new Error('O modelo é obrigatório.');
+      throw new Error('O nome do modelo é obrigatório.');
+    }
+    if (!message || !message.trim()) {
+      throw new Error("A mensagem para a IA está vazia.");
     }
 
-    // --- TRADUÇÃO DE MODELOS (Mantida para compatibilidade) ---
-    let apiModel = model;
-    if (model.includes('gpt-5-mini') || model.includes('gpt-5-nano')) apiModel = 'gpt-4o-mini';
-    else if (model.includes('gpt-5')) apiModel = 'gpt-4o';
-    else if (model.includes('gpt-4.1')) apiModel = 'gpt-4-turbo';
+    let finalResponse: string;
 
-    console.log(`Model mapping: '${model}' -> '${apiModel}'`);
-    
-    // --- LÓGICA DE CONTEÚDO ---
-    let fullContent = message;
-    let isPdfRequest = false;
-    let fileName = '';
+    // --- ROTEADOR INTELIGENTE ---
+    // Verifica se o modelo é do Gemini ou da OpenAI
+    if (model.includes('gemini')) {
+      // --- LÓGICA DO GEMINI ---
+      console.log(`Roteando para Gemini com o modelo: ${model}`);
+      const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+      if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada.');
 
-    if (files && files.length > 0 && files[0].pdfContent) {
-        fileName = files[0].name;
-        isPdfRequest = true;
-        // O frontend já monta o prompt otimizado para PDF, então usamos ele
-        fullContent = files[0].pdfContent;
-    }
-    
-    if (!fullContent || !fullContent.trim()) {
-        throw new Error("A mensagem para a IA está vazia.");
-    }
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: message }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+        }),
+      });
 
-    // --- A SOLUÇÃO: LÓGICA DE FATIAMENTO (CHUNKING) ---
-    const INPUT_TOKEN_LIMIT = 15000; // Limite seguro e agressivo de 15k tokens, como na imagem.
-    const estimatedTokens = estimateTokenCount(fullContent);
-    
-    let processedMessage = fullContent;
-    let responsePrefix = '';
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Erro da API Gemini: ${response.status} - ${errorData}`);
+      }
+      const data = await response.json();
+      finalResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Não foi possível gerar resposta do Gemini.';
 
-    console.log(`Tokens estimados: ${estimatedTokens}. Limite de processamento: ${INPUT_TOKEN_LIMIT}`);
+    } else {
+      // --- LÓGICA DA OPENAI (PADRÃO) ---
+      console.log(`Roteando para OpenAI com o modelo: ${model}`);
+      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+      if (!openaiApiKey) throw new Error('OPENAI_API_KEY não configurada.');
 
-    if (isPdfRequest && estimatedTokens > INPUT_TOKEN_LIMIT) {
-      const maxChars = INPUT_TOKEN_LIMIT * 3.5;
-      const chunks = splitIntoChunks(fullContent, maxChars);
+      let apiModel = model;
+      if (model.includes('gpt-5-mini') || model.includes('gpt-5-nano')) apiModel = 'gpt-4o-mini';
+      else if (model.includes('gpt-5')) apiModel = 'gpt-4o';
+      else if (model.includes('gpt-4.1')) apiModel = 'gpt-4-turbo';
+
+      console.log(`Model mapping: '${model}' -> '${apiModel}'`);
       
-      console.log(`PDF grande detectado. Fatiado em ${chunks.length} partes. Processando a primeira parte.`);
+      let processedMessage = message;
+      const INPUT_TOKEN_LIMIT = 28000;
+      const estimatedTokens = estimateTokenCount(message);
 
-      responsePrefix = `⚠️ **Atenção:** O documento "${fileName}" é muito grande. Para evitar exceder os limites da API, a análise abaixo foi feita com base **apenas no início do documento**.\n\n---\n\n`;
+      if (estimatedTokens > INPUT_TOKEN_LIMIT) {
+        console.log(`Mensagem grande detectada (${estimatedTokens} tokens). Fatiando.`);
+        const maxChars = INPUT_TOKEN_LIMIT * 3.5;
+        const chunks = splitIntoChunks(message, maxChars);
+        processedMessage = `O seguinte texto é a primeira parte de um documento muito longo. O usuário pediu para "${message.substring(0, 100)}...". Analise este trecho e forneça uma resposta baseada apenas nele:\n\n"""\n${chunks[0]}\n"""`;
+      }
       
-      // Monta a mensagem para a IA analisar apenas o primeiro pedaço.
-      processedMessage = chunks[0];
-    }
-    
-    // --- MONTAGEM E ENVIO DA REQUISIÇÃO PARA A OPENAI ---
-    const requestBody = {
-      model: apiModel,
-      messages: [
-        { role: 'system', content: 'Você é um assistente prestativo, especializado em analisar documentos e responder em português do Brasil.' },
-        { role: 'user', content: processedMessage }
-      ],
-      max_tokens: 4096,
-      temperature: 0.5,
-    };
+      const requestBody = {
+        model: apiModel,
+        messages: [{ role: 'user', content: processedMessage }],
+        max_tokens: 4096,
+      };
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${openaiApiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${openaiApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Erro na API da OpenAI: ${errorBody}`);
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Erro na API da OpenAI: ${errorBody}`);
+      }
+
+      const data = await response.json();
+      finalResponse = data.choices[0]?.message?.content ?? 'Não foi possível gerar resposta da OpenAI.';
     }
 
-    const data = await response.json();
-    const generatedText = data.choices[0]?.message?.content ?? 'Desculpe, não consegui obter uma resposta.';
-    const finalResponse = responsePrefix + generatedText;
-
-    // A sua UI espera um objeto com `content` e `reasoning`, então vamos manter esse formato
-    return new Response(JSON.stringify({ response: { content: finalResponse, reasoning: null } }), {
+    // --- RESPOSTA FINAL UNIFICADA ---
+    return new Response(JSON.stringify({ response: finalResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
     });
 
   } catch (error) {
-    console.error('Erro fatal na função ai-chat:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    console.error(`Erro fatal na função [ai-chat]:`, error);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
