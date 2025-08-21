@@ -551,6 +551,10 @@ const callDeepseek = async (message: string, model: string) => {
   }
 };
 
+// APILLM Configuration
+const APILLM_BASE_URL = "https://api.apillm.com";
+const APILLM_CHAT_ENDPOINT = `${APILLM_BASE_URL}/chat/completions`;
+
 const callApillm = async (message: string, model: string) => {
   console.log('🚀 Chamando APILLM com modelo:', model);
   
@@ -584,9 +588,9 @@ const callApillm = async (message: string, model: string) => {
   console.log('📤 Payload da requisição APILLM:', JSON.stringify(requestPayload, null, 2));
 
   try {
-    console.log('🌐 Fazendo requisição para https://api.apillm.com/chat/completions');
+    console.log('🌐 Fazendo requisição para endpoint:', APILLM_CHAT_ENDPOINT);
     
-    const response = await fetch('https://api.apillm.com/chat/completions', {
+    const response = await fetch(APILLM_CHAT_ENDPOINT, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
