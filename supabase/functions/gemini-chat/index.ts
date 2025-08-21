@@ -33,6 +33,13 @@ serve(async (req) => {
   try {
     const { message, model = 'gemini-2.0-flash-exp' } = await req.json();
     
+    console.log('Gemini Chat - Request received:', {
+      model,
+      messageLength: message?.length || 0,
+      messagePreview: message?.substring(0, 200) + '...',
+      hasMessage: !!message
+    });
+    
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
       throw new Error('GEMINI_API_KEY não configurada');

@@ -33,6 +33,13 @@ serve(async (req) => {
   try {
     const { message, model = 'gpt-5-2025-08-07' } = await req.json();
     
+    console.log('OpenAI Chat - Request received:', {
+      model,
+      messageLength: message?.length || 0,
+      messagePreview: message?.substring(0, 200) + '...',
+      hasMessage: !!message
+    });
+    
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
       throw new Error('OPENAI_API_KEY não configurada');

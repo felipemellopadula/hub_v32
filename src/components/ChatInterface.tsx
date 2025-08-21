@@ -49,6 +49,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       const result = await PdfProcessor.processPdf(file);
       
       if (result.success && result.content) {
+        console.log('PDF processado com sucesso:', {
+          fileName: file.name,
+          pageCount: result.pageCount,
+          contentLength: result.content.length,
+          contentPreview: result.content.substring(0, 200) + '...'
+        });
         setPdfContent(result.content);
         setFileName(file.name);
         setPdfPages(result.pageCount || 0);
@@ -84,6 +90,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   };
 
   const handleSendMessage = async () => {
+    console.log('handleSendMessage called:', {
+      inputValue: inputValue.trim(),
+      pdfContent: pdfContent ? `${pdfContent.length} chars` : 'none',
+      fileName,
+      pdfPages,
+      selectedModel
+    });
+    
     if ((!inputValue.trim() && !pdfContent) || !selectedModel) return;
 
     let messageContent = inputValue;
@@ -91,6 +105,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
 
     // Se há PDF anexado, criar prompts otimizados usando PdfProcessor
     if (pdfContent && pdfPages) {
+      console.log('PDF detected, creating optimized prompt');
       if (inputValue.toLowerCase().includes('resumo') || inputValue.toLowerCase().includes('resume') || !inputValue.trim()) {
         // Usar prompt de resumo automático
         messageContent = PdfProcessor.createSummaryPrompt(pdfContent, pdfPages);
@@ -100,6 +115,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         messageContent = PdfProcessor.createAnalysisPrompt(pdfContent, pdfPages, inputValue);
         displayMessage = `Análise sobre: ${inputValue}`;
       }
+      console.log('Final messageContent length:', messageContent.length);
+      console.log('Message preview:', messageContent.substring(0, 500) + '...');
     }
 
     const userMessage: Message = {
@@ -145,6 +162,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
 
       const functionName = getEdgeFunctionName(selectedModel);
       console.log(`Using edge function: ${functionName} for model: ${selectedModel}`);
+      console.log('Sending message to function:', {
+        messageLength: messageContent.length,
+        messagePreview: messageContent.substring(0, 300) + '...'
+      });
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {

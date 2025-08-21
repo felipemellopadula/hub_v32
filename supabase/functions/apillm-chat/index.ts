@@ -36,6 +36,13 @@ serve(async (req) => {
   try {
     const { message, model = 'llama-3.2-8b-instruct' } = await req.json();
     
+    console.log('APILLM Chat - Request received:', {
+      model,
+      messageLength: message?.length || 0,
+      messagePreview: message?.substring(0, 200) + '...',
+      hasMessage: !!message
+    });
+    
     const apillmApiKey = Deno.env.get('APILLM_API_KEY');
     if (!apillmApiKey) {
       throw new Error('APILLM_API_KEY não configurada');

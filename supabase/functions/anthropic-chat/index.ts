@@ -33,6 +33,13 @@ serve(async (req) => {
   try {
     const { message, model = 'claude-sonnet-4-20250514' } = await req.json();
     
+    console.log('Anthropic Chat - Request received:', {
+      model,
+      messageLength: message?.length || 0,
+      messagePreview: message?.substring(0, 200) + '...',
+      hasMessage: !!message
+    });
+    
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
       throw new Error('ANTHROPIC_API_KEY não configurada');
