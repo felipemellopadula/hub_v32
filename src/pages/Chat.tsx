@@ -519,9 +519,74 @@ const Chat = () => {
     if (event.target) event.target.value = '';
   };
   
-  const startRecording = async () => {};
-  const stopRecording = () => {};
-  const transcribeAudio = async (audioBlob: Blob) => {};
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        
+        // Limpar stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      toast({ title: "Gravação iniciada", description: "Fale agora..." });
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast({ title: "Erro", description: "Não foi possível acessar o microfone.", variant: "destructive" });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast({ title: "Gravação finalizada", description: "Processando áudio..." });
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+        
+        const { data, error } = await supabase.functions.invoke('voice-to-text', {
+          body: { audio: base64Audio }
+        });
+
+        if (error) {
+          console.error('Erro na transcrição:', error);
+          toast({ title: "Erro", description: "Falha ao transcrever áudio.", variant: "destructive" });
+          return;
+        }
+
+        if (data?.text) {
+          setInputValue(prev => prev + (prev ? ' ' : '') + data.text);
+          toast({ title: "Transcrição concluída", description: "Texto adicionado ao input." });
+        } else {
+          toast({ title: "Aviso", description: "Nenhum texto foi detectado no áudio.", variant: "destructive" });
+        }
+      };
+      
+      reader.readAsDataURL(audioBlob);
+    } catch (error) {
+      console.error('Erro ao transcrever áudio:', error);
+      toast({ title: "Erro", description: "Falha ao processar áudio.", variant: "destructive" });
+    }
+  };
 
   // --- RENDERIZAÇÃO ---
   if (loading) return <div className="h-screen bg-background flex items-center justify-center"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div></div>;
