@@ -1,4 +1,4 @@
-import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3, X } from "lucide-react";
+import { MessageCircle, ArrowLeft, Paperclip, Mic, Globe, Star, Trash2, Plus, ChevronDown, ChevronUp, Copy, Menu, ArrowUp, ArrowDown, MoreHorizontal, Edit3, Square } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
@@ -179,7 +179,7 @@ const Chat = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [stopGeneration, setStopGeneration] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -362,10 +362,7 @@ const Chat = () => {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setIsLoading(true);
-    
-    // Create abort controller for this request
-    const controller = new AbortController();
-    setAbortController(controller);
+    setStopGeneration(false);
     
     let convId = currentConversationId;
     if (!convId) {
@@ -449,6 +446,18 @@ const Chat = () => {
 
         let charIndex = 0;
         const typingInterval = setInterval(() => {
+            if (stopGeneration) {
+                clearInterval(typingInterval);
+                setMessages(prev => prev.map(msg => 
+                    msg.id === botMessageId 
+                    ? { ...msg, content: fullBotText.slice(0, charIndex), isStreaming: false } 
+                    : msg
+                ));
+                setIsLoading(false);
+                toast({ title: "Geração interrompida" });
+                return;
+            }
+            
             if (charIndex < fullBotText.length) {
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMessageId 
@@ -465,28 +474,19 @@ const Chat = () => {
                 
                 upsertConversation(finalMessages, convId);
                 setIsLoading(false);
-                setAbortController(null);
             }
         }, 25);
 
     } catch (error: any) {
         console.error('Error sending message:', error);
-        if (error.name !== 'AbortError') {
-          toast({ title: "Erro", description: "Não foi possível enviar a mensagem.", variant: "destructive" });
-        }
+        toast({ title: "Erro", description: "Não foi possível enviar a mensagem.", variant: "destructive" });
         setMessages(newMessages);
         setIsLoading(false);
-        setAbortController(null);
     }
   };
 
   const handleStopGeneration = () => {
-    if (abortController) {
-      abortController.abort();
-      setAbortController(null);
-      setIsLoading(false);
-      toast({ title: "Geração interrompida" });
-    }
+    setStopGeneration(true);
   };
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -754,7 +754,7 @@ const Chat = () => {
                      </TooltipTrigger><TooltipContent>{isRecording ? 'Parar gravação' : 'Gravar áudio'}</TooltipContent></Tooltip></TooltipProvider>
                      {isLoading ? (
                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                         <Button type="button" onClick={handleStopGeneration} size="icon" className="h-8 w-8 text-red-500 hover:text-red-600"><X className="h-4 w-4" /></Button>
+                         <Button type="button" onClick={handleStopGeneration} size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 bg-transparent border-0"><Square className="h-4 w-4" /></Button>
                        </TooltipTrigger><TooltipContent>Parar geração</TooltipContent></Tooltip></TooltipProvider>
                      ) : (
                        <Button type="submit" disabled={!inputValue.trim() && attachedFiles.length === 0} size="icon" className="h-8 w-8"><ArrowUp className="h-4 w-4" /></Button>
