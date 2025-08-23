@@ -232,305 +232,55 @@ const Chat = () => {
     );
   };
 
-  // Função para formatar a resposta da IA
+  // Função para formatar a resposta da IA - versão simplificada baseada no código fornecido
   const formatAIResponse = (text: string, model?: string) => {
     if (!text) return text;
     
-    const isClaudeModel = model?.includes('claude');
-    const isSynergyAI = model === 'synergy-ia';
-    const isChatGPT = model?.includes('gpt-') || model?.includes('o3') || model?.includes('o4');
+    // Remove # e * symbols
+    let cleanText = text.replace(/#+\s*/g, '').replace(/\*/g, '');
     
-    // Para modelos Claude: remover asteriscos e formatar títulos
-    if (isClaudeModel) {
-      // Split into lines and process each
-      const lines = text.split('\n');
-      const formattedLines = lines.map((line, index) => {
-        const trimmedLine = line.trim();
-        
-        // Remove linhas vazias ou com apenas símbolos soltos
-        if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === '#') {
-          return '';
-        }
-        
-        // Remove símbolos # dos títulos e marca como bold
-        if (trimmedLine.startsWith('#')) {
-          const titleText = trimmedLine.replace(/^#+\s*/, '');
-          return `**${titleText}**`;
-        }
-        
-        // Handle numbered lists - colocar número e título na mesma linha em bold
-        if (trimmedLine.match(/^\d+\./)) {
-          return `**${trimmedLine}**`;
-        }
-        
-        // Remove asteriscos mas detecta títulos para colocar em bold
-        let processedLine = trimmedLine.replace(/\*/g, '');
-        
-        // Detectar títulos e subtítulos para colocar em bold
-        const isTitleOrSubtitle = (
-          // Títulos específicos como "Objetos Mágicos" (duas palavras com maiúscula)
-          processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüé]*\s+[A-ZÁÊÇÕÜÉ][a-záêçõüé]*$/) ||
-          // Títulos de uma palavra com maiúscula
-          (processedLine.length < 50 && processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüé]*$/)) ||
-          // Linhas curtas e descritivas (títulos)
-          (processedLine.length < 80 && 
-           !processedLine.startsWith('•') && 
-           !processedLine.startsWith('-') && 
-           !processedLine.includes('.') && // Evita frases completas
-           !processedLine.includes(',') && // Evita listas
-           processedLine.match(/^[A-ZÁÊÇÕÜÉ]/)) ||
-          // Subtítulos com parênteses (ex: "(0 a 12 anos)")
-          processedLine.match(/^\([^)]+\)$/) ||
-          // Palavras-chave isoladas em maiúscula
-          processedLine.match(/^[A-ZÁÊÇÕÜÉ][A-ZÁÊÇÕÜÉ\s]+$/)
-        );
-        
-        if (isTitleOrSubtitle) {
-          return `**${processedLine}**`;
-        }
-        
-        return processedLine;
-      });
+    const lines = cleanText.split('\n');
+    const formattedLines = lines.map((line) => {
+      let trimmedLine = line.trim();
       
-      return formattedLines.filter(line => line !== '').join('\n');
-    }
-    
-    // Para SynergyAI: usar a mesma formatação do ChatGPT
-    if (isSynergyAI) {
-      // Split into lines and process each
-      const lines = text.split('\n');
-      const formattedLines = lines.map((line, index) => {
-        const trimmedLine = line.trim();
-        
-        // Remove linhas vazias ou com apenas símbolos soltos
-        if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === ':') {
-          return '';
-        }
-        
-        // Remove símbolos # dos títulos e marca como bold
-        if (trimmedLine.startsWith('#')) {
-          const titleText = trimmedLine.replace(/^#+\s*/, '');
-          return `**${titleText}**`;
-        }
-        
-        // Remove : no início de qualquer linha
-        let processedLine = trimmedLine;
-        if (processedLine.startsWith(':')) {
-          processedLine = processedLine.replace(/^:\s*/, '');
-        }
-        
-        // Remove dois pontos no final de títulos antes de fazer bold
-        if (processedLine.endsWith(':')) {
-          processedLine = processedLine.slice(0, -1);
-        }
-        
-        // Handle numbered lists primeiro - colocar número e título na mesma linha em bold
-        if (processedLine.match(/^\d+\./)) {
-          return `**${processedLine}**`;
-        }
-        
-        // Detectar títulos e subtítulos para colocar em bold
-        const isTitleOrSubtitle = (
-          // Linhas curtas e descritivas (títulos)
-          (processedLine.length < 80 && 
-           !processedLine.startsWith('•') && 
-           !processedLine.startsWith('-') && 
-           !processedLine.startsWith('*') && 
-           !processedLine.match(/^\d+\./) &&
-           !processedLine.includes('.') && // Evita frases completas
-           processedLine.match(/^[A-ZÁÊÇÕÜÉ][^.!?]*$/)) ||
-          // Subtítulos com parênteses (ex: "(0 a 12 anos)")
-          processedLine.match(/^\([^)]+\)$/) ||
-          // Palavras-chave isoladas em maiúscula
-          processedLine.match(/^[A-ZÁÊÇÕÜÉ][A-ZÁÊÇÕÜÉ\s]+$/) ||
-          // Títulos que começam com maiúscula e são relativamente curtos
-          (processedLine.length < 60 && 
-           processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüéA-ZÁÊÇÕÜÉ\s]*$/) &&
-           !processedLine.includes(',') && 
-           !processedLine.includes('e ') &&
-           !processedLine.includes('de ') &&
-           !processedLine.includes('da ') &&
-           !processedLine.includes('do '))
-        );
-        
-        if (isTitleOrSubtitle) {
-          return `**${processedLine}**`;
-        }
-        
-        // Handle bullet points
-        if (processedLine.startsWith('•') || processedLine.startsWith('-') || processedLine.startsWith('*')) {
-          return `• ${processedLine.replace(/^[•\-*]\s*/, '')}`;
-        }
-        
-        return processedLine;
-      });
-      
-      // Filtrar linhas vazias consecutivas
-      return formattedLines.filter(line => line.trim() !== '').join('\n');
-    }
-    
-    // Para outros modelos: formatação padrão
-    const lines = text.split('\n');
-    const formattedLines = lines.map((line, index) => {
-      const trimmedLine = line.trim();
-      
-      // Remove linhas vazias ou com apenas símbolos soltos (incluindo bullet points perdidos)
-      if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === ':') {
+      if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === ':' || trimmedLine === '#') {
         return '';
       }
       
-      // Remove símbolos # dos títulos e marca como bold
-      if (trimmedLine.startsWith('#')) {
-        const titleText = trimmedLine.replace(/^#+\s*/, '');
+      // Remove stray bullet points
+      trimmedLine = trimmedLine.replace(/\s•\s/g, ' ');
+      
+      // Handle numbered titles
+      if (trimmedLine.match(/^\d+[\.\-]\s+[A-Za-zÀ-ÿ]/)) {
+        return `**${trimmedLine}**`;
+      }
+      
+      // Handle titles ending with : or short descriptive lines
+      if (trimmedLine.endsWith(':') || (trimmedLine.length < 50 && !trimmedLine.startsWith('•') && !trimmedLine.startsWith('-') && trimmedLine.match(/^[A-Z][^.!?]*$/))) {
+        const titleText = trimmedLine.endsWith(':') ? trimmedLine.slice(0, -1) : trimmedLine;
         return `**${titleText}**`;
       }
       
-      // Para outros modelos que não Claude/SynergyAI: Remove : no início de linhas
-      let processedLine = trimmedLine;
-      
-      // Remove : no início de qualquer linha
-      if (processedLine.startsWith(':')) {
-        processedLine = processedLine.replace(/^:\s*/, '');
-      }
-      
-      // Remove dois pontos no final de títulos antes de fazer bold
-      if (processedLine.endsWith(':')) {
-        processedLine = processedLine.slice(0, -1);
-      }
-      
-      // Handle numbered lists primeiro - colocar número e título na mesma linha em bold
-      if (processedLine.match(/^\d+\./)) {
-        return `**${processedLine}**`;
-      }
-      
-      // Detectar títulos e subtítulos para colocar em bold
-      const isTitleOrSubtitle = (
-        // Linhas curtas e descritivas (títulos)
-        (processedLine.length < 80 && 
-         !processedLine.startsWith('•') && 
-         !processedLine.startsWith('-') && 
-         !processedLine.startsWith('*') && 
-         !processedLine.match(/^\d+\./) &&
-         !processedLine.includes('.') && // Evita frases completas
-         processedLine.match(/^[A-ZÁÊÇÕÜÉ][^.!?]*$/)) ||
-        // Subtítulos com parênteses (ex: "(0 a 12 anos)")
-        processedLine.match(/^\([^)]+\)$/) ||
-        // Palavras-chave isoladas em maiúscula
-        processedLine.match(/^[A-ZÁÊÇÕÜÉ][A-ZÁÊÇÕÜÉ\s]+$/) ||
-        // Títulos que começam com maiúscula e são relativamente curtos
-        (processedLine.length < 60 && 
-         processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüéA-ZÁÊÇÕÜÉ\s]*$/) &&
-         !processedLine.includes(',') && 
-         !processedLine.includes('e ') &&
-         !processedLine.includes('de ') &&
-         !processedLine.includes('da ') &&
-         !processedLine.includes('do '))
-      );
-      
-      if (isTitleOrSubtitle) {
-        return `**${processedLine}**`;
-      }
-      
       // Handle bullet points
-      if (processedLine.startsWith('•') || processedLine.startsWith('-') || processedLine.startsWith('*')) {
-        return `• ${processedLine.replace(/^[•\-*]\s*/, '')}`;
+      if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
+        return `• ${trimmedLine.replace(/^[•\-]\s*/, '')}`;
       }
       
-      return processedLine;
+      return line;
     });
     
-    // Filtrar linhas vazias consecutivas
-    return formattedLines.filter(line => line.trim() !== '').join('\n');
+    return formattedLines.filter(line => line !== '').join('\n');
   };
-
-  const renderFormattedText = (text: string, isUser: boolean, model?: string) => {
-    if (isUser) {
-      return text;
-    }
-    
-    const formattedText = formatAIResponse(text, model);
-    const parts = formattedText.split(/(\*\*.*?\*\*)/g);
-    
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        const boldText = part.slice(2, -2);
-        return (
-          <strong key={index} className="font-semibold text-foreground inline-block mt-4 first:mt-0 mb-2">
-            {boldText}
-          </strong>
-        );
-      }
-      
-      // Handle regular text with bullet points
-      const lines = part.split('\n');
-      return (
-        <span key={index}>
-          {lines.map((line, lineIndex) => {
-            if (line.trim().startsWith('•')) {
-              return (
-                <div key={lineIndex} className="flex items-start gap-2 ml-4 mb-1">
-                  <span className="text-muted-foreground mt-1">•</span>
-                  <span>{line.trim().replace(/^•\s*/, '')}</span>
-                </div>
-              );
-            }
-            
-            if (line.trim()) {
-              return (
-                <div key={lineIndex} className="mb-2 last:mb-0">
-                  {line}
-                </div>
-              );
-            }
-            
-            return <br key={lineIndex} />;
-          })}
-        </span>
-      );
-    });
-  };
-
   // --- LÓGICA DE NEGÓCIO ---
-  
   useEffect(() => {
     if (!loading && !user) navigate('/');
-  }, [user, loading, navigate]);
+  }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (user && !loading) {
-      (async () => {
-        const { data, error } = await supabase
-          .from('chat_conversations')
-          .select('*')
-          .order('updated_at', { ascending: false });
-        if (error) console.error('Erro ao carregar conversas:', error);
-        else if (data) setConversations(data as any);
-      })();
+    if (user) {
+      loadConversations();
     }
-  }, [user, loading]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
-
-  useEffect(() => {
-    const chatContainer = chatContainerRef.current;
-    if (!chatContainer) return;
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainer;
-      setShowScrollToBottom(scrollHeight - scrollTop - clientHeight > 100);
-    };
-    chatContainer.addEventListener('scroll', handleScroll);
-    return () => chatContainer.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Função para converter formato Word (extração do código fornecido)
-  const convertToWordFormat = (text: string) => {
-    if (!text) return text;
+  }, [user, loadConversations]);
     
     // Remove # and * symbols from the entire text
     let cleanText = text.replace(/#+\s*/g, '').replace(/\*/g, '');
