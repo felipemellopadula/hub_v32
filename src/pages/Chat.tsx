@@ -233,10 +233,94 @@ const Chat = () => {
   };
 
   // Função para formatar a resposta da IA
-  const formatAIResponse = (text: string) => {
+  const formatAIResponse = (text: string, model?: string) => {
     if (!text) return text;
     
-    // Split into lines and process each
+    const isClaudeModel = model?.includes('claude');
+    const isSynergyAI = model === 'synergy-ia';
+    const isChatGPT = model?.includes('gpt-') || model?.includes('o3') || model?.includes('o4');
+    
+    // Para modelos Claude: remover todos os asteriscos
+    if (isClaudeModel) {
+      const cleanedText = text.replace(/\*/g, '');
+      return cleanedText;
+    }
+    
+    // Para SynergyAI: usar a mesma formatação do ChatGPT
+    if (isSynergyAI) {
+      // Split into lines and process each
+      const lines = text.split('\n');
+      const formattedLines = lines.map((line, index) => {
+        const trimmedLine = line.trim();
+        
+        // Remove linhas vazias ou com apenas símbolos soltos
+        if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === ':') {
+          return '';
+        }
+        
+        // Remove símbolos # dos títulos e marca como bold
+        if (trimmedLine.startsWith('#')) {
+          const titleText = trimmedLine.replace(/^#+\s*/, '');
+          return `**${titleText}**`;
+        }
+        
+        // Remove : no início de qualquer linha
+        let processedLine = trimmedLine;
+        if (processedLine.startsWith(':')) {
+          processedLine = processedLine.replace(/^:\s*/, '');
+        }
+        
+        // Remove dois pontos no final de títulos antes de fazer bold
+        if (processedLine.endsWith(':')) {
+          processedLine = processedLine.slice(0, -1);
+        }
+        
+        // Handle numbered lists primeiro - colocar número e título na mesma linha em bold
+        if (processedLine.match(/^\d+\./)) {
+          return `**${processedLine}**`;
+        }
+        
+        // Detectar títulos e subtítulos para colocar em bold
+        const isTitleOrSubtitle = (
+          // Linhas curtas e descritivas (títulos)
+          (processedLine.length < 80 && 
+           !processedLine.startsWith('•') && 
+           !processedLine.startsWith('-') && 
+           !processedLine.startsWith('*') && 
+           !processedLine.match(/^\d+\./) &&
+           !processedLine.includes('.') && // Evita frases completas
+           processedLine.match(/^[A-ZÁÊÇÕÜÉ][^.!?]*$/)) ||
+          // Subtítulos com parênteses (ex: "(0 a 12 anos)")
+          processedLine.match(/^\([^)]+\)$/) ||
+          // Palavras-chave isoladas em maiúscula
+          processedLine.match(/^[A-ZÁÊÇÕÜÉ][A-ZÁÊÇÕÜÉ\s]+$/) ||
+          // Títulos que começam com maiúscula e são relativamente curtos
+          (processedLine.length < 60 && 
+           processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüéA-ZÁÊÇÕÜÉ\s]*$/) &&
+           !processedLine.includes(',') && 
+           !processedLine.includes('e ') &&
+           !processedLine.includes('de ') &&
+           !processedLine.includes('da ') &&
+           !processedLine.includes('do '))
+        );
+        
+        if (isTitleOrSubtitle) {
+          return `**${processedLine}**`;
+        }
+        
+        // Handle bullet points
+        if (processedLine.startsWith('•') || processedLine.startsWith('-') || processedLine.startsWith('*')) {
+          return `• ${processedLine.replace(/^[•\-*]\s*/, '')}`;
+        }
+        
+        return processedLine;
+      });
+      
+      // Filtrar linhas vazias consecutivas
+      return formattedLines.filter(line => line.trim() !== '').join('\n');
+    }
+    
+    // Para outros modelos: formatação padrão
     const lines = text.split('\n');
     const formattedLines = lines.map((line, index) => {
       const trimmedLine = line.trim();
@@ -252,7 +336,7 @@ const Chat = () => {
         return `**${titleText}**`;
       }
       
-      // Para SynergyAI: Remove : no início de linhas e dois pontos extras
+      // Para outros modelos que não Claude/SynergyAI: Remove : no início de linhas
       let processedLine = trimmedLine;
       
       // Remove : no início de qualquer linha
@@ -310,12 +394,12 @@ const Chat = () => {
     return formattedLines.filter(line => line.trim() !== '').join('\n');
   };
 
-  const renderFormattedText = (text: string, isUser: boolean) => {
+  const renderFormattedText = (text: string, isUser: boolean, model?: string) => {
     if (isUser) {
       return text;
     }
     
-    const formattedText = formatAIResponse(text);
+    const formattedText = formatAIResponse(text, model);
     const parts = formattedText.split(/(\*\*.*?\*\*)/g);
     
     return parts.map((part, index) => {
@@ -1056,7 +1140,7 @@ const Chat = () => {
                               </div>
                             )}
                              <div className="text-sm max-w-none break-words overflow-hidden">
-                              {renderFormattedText(message.content, false)}
+                              {renderFormattedText(message.content, false, message.model)}
                               {message.isStreaming && <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse" />}
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-border/50">
@@ -1095,7 +1179,7 @@ const Chat = () => {
                                 </div>
                               )}
                                <div className="text-sm max-w-none break-words overflow-hidden">
-                                 {renderFormattedText(message.content, true)}
+                                 {renderFormattedText(message.content, true, message.model)}
                                </div>
                             </div>
                           </div>
