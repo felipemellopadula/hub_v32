@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTokens } from "@/hooks/useTokens";
 import { supabase } from "@/integrations/supabase/client";
 import { PdfProcessor } from "@/utils/PdfProcessor";
+import { WordProcessor } from "@/utils/WordProcessor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
@@ -175,6 +176,7 @@ const Chat = () => {
   const [isWebSearchMode, setIsWebSearchMode] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [processedPdfs, setProcessedPdfs] = useState<Map<string, string>>(new Map());
+  const [processedWords, setProcessedWords] = useState<Map<string, string>>(new Map());
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
@@ -299,6 +301,7 @@ const Chat = () => {
     setInputValue('');
     setAttachedFiles([]);
     setProcessedPdfs(new Map());
+    setProcessedWords(new Map());
   };
 
   // --- INÍCIO DA MODIFICAÇÃO: TOAST REMOVIDO ---
@@ -374,23 +377,43 @@ const Chat = () => {
     try {
         const internalModel = selectedModel === 'synergy-ia' ? 'gpt-4o-mini' : selectedModel;
         
-        // Prepare message with PDF content if exists
+        // Prepare message with PDF and Word content if exists
         let messageWithPdf = currentInput;
         if (fileData.length > 0) {
           const pdfFiles = fileData.filter(f => f.type === 'application/pdf' && 'pdfContent' in f);
-          if (pdfFiles.length > 0) {
-            console.log('PDF files detected:', pdfFiles.map(f => ({ 
-              name: f.name, 
-              contentLength: ('pdfContent' in f) ? (f as any).pdfContent?.length || 0 : 0 
-            })));
+          const wordFiles = attachedFiles.filter(f => f.type.includes('word') || f.name.endsWith('.docx') || f.name.endsWith('.doc'));
+          
+          if (pdfFiles.length > 0 || wordFiles.length > 0) {
+            console.log('Files detected:', {
+              pdfs: pdfFiles.map(f => ({ 
+                name: f.name, 
+                contentLength: ('pdfContent' in f) ? (f as any).pdfContent?.length || 0 : 0 
+              })),
+              words: wordFiles.map(f => ({
+                name: f.name,
+                contentLength: processedWords.get(f.name)?.length || 0
+              }))
+            });
             
-            // Include PDF content in the message
-            const pdfContents = pdfFiles.map(pdf => 
-              `[Arquivo PDF: ${pdf.name}]\n\n${('pdfContent' in pdf) ? (pdf as any).pdfContent || 'Conteúdo não disponível' : 'Conteúdo não disponível'}`
-            ).join('\n\n---\n\n');
+            // Include file contents in the message
+            const contents = [];
             
-            messageWithPdf = `${currentInput}\n\n${pdfContents}`;
-            console.log('Final message length with PDF:', messageWithPdf.length);
+            if (pdfFiles.length > 0) {
+              const pdfContents = pdfFiles.map(pdf => 
+                `[Arquivo PDF: ${pdf.name}]\n\n${('pdfContent' in pdf) ? (pdf as any).pdfContent || 'Conteúdo não disponível' : 'Conteúdo não disponível'}`
+              );
+              contents.push(...pdfContents);
+            }
+            
+            if (wordFiles.length > 0) {
+              const wordContents = wordFiles.map(word => 
+                `[Arquivo Word: ${word.name}]\n\n${processedWords.get(word.name) || 'Conteúdo não disponível'}`
+              );
+              contents.push(...wordContents);
+            }
+            
+            messageWithPdf = `${currentInput}\n\n${contents.join('\n\n---\n\n')}`;
+            console.log('Final message length with files:', messageWithPdf.length);
           }
         }
         
@@ -513,6 +536,25 @@ const Chat = () => {
             } catch (error) {
                 console.error('PDF processing error:', error);
                 toast({ title: "Erro ao processar PDF", description: `Falha em ${file.name}.`, variant: "destructive" });
+            }
+        } else if (file.type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+            console.log('Processing Word:', file.name, 'Size:', file.size);
+            try {
+                const result = await WordProcessor.processWord(file);
+                if (result.success && result.content) {
+                    console.log('Word processed successfully:', {
+                      fileName: file.name,
+                      contentLength: result.content.length,
+                      contentPreview: result.content.substring(0, 200) + '...'
+                    });
+                     setProcessedWords(prev => new Map(prev).set(file.name, result.content || ''));
+                } else {
+                    console.error('Word processing failed:', result.error);
+                    toast({ title: "Erro ao processar Word", description: result.error || `Falha em ${file.name}.`, variant: "destructive" });
+                }
+            } catch (error) {
+                console.error('Word processing error:', error);
+                toast({ title: "Erro ao processar Word", description: `Falha em ${file.name}.`, variant: "destructive" });
             }
         }
     }
