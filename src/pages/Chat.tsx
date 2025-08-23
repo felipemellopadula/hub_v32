@@ -240,10 +240,60 @@ const Chat = () => {
     const isSynergyAI = model === 'synergy-ia';
     const isChatGPT = model?.includes('gpt-') || model?.includes('o3') || model?.includes('o4');
     
-    // Para modelos Claude: remover todos os asteriscos
+    // Para modelos Claude: remover asteriscos e formatar títulos
     if (isClaudeModel) {
-      const cleanedText = text.replace(/\*/g, '');
-      return cleanedText;
+      // Split into lines and process each
+      const lines = text.split('\n');
+      const formattedLines = lines.map((line, index) => {
+        const trimmedLine = line.trim();
+        
+        // Remove linhas vazias ou com apenas símbolos soltos
+        if (!trimmedLine || trimmedLine === '•' || trimmedLine === '-' || trimmedLine === '*' || trimmedLine === '#') {
+          return '';
+        }
+        
+        // Remove símbolos # dos títulos e marca como bold
+        if (trimmedLine.startsWith('#')) {
+          const titleText = trimmedLine.replace(/^#+\s*/, '');
+          return `**${titleText}**`;
+        }
+        
+        // Handle numbered lists - colocar número e título na mesma linha em bold
+        if (trimmedLine.match(/^\d+\./)) {
+          return `**${trimmedLine}**`;
+        }
+        
+        // Remove asteriscos mas detecta títulos para colocar em bold
+        let processedLine = trimmedLine.replace(/\*/g, '');
+        
+        // Detectar títulos e subtítulos para colocar em bold
+        const isTitleOrSubtitle = (
+          // Linhas curtas e descritivas (títulos)
+          (processedLine.length < 80 && 
+           !processedLine.startsWith('•') && 
+           !processedLine.startsWith('-') && 
+           !processedLine.includes('.') && // Evita frases completas
+           processedLine.match(/^[A-ZÁÊÇÕÜÉ][^.!?]*$/)) ||
+          // Subtítulos com parênteses (ex: "(0 a 12 anos)")
+          processedLine.match(/^\([^)]+\)$/) ||
+          // Palavras-chave isoladas em maiúscula
+          processedLine.match(/^[A-ZÁÊÇÕÜÉ][A-ZÁÊÇÕÜÉ\s]+$/) ||
+          // Títulos que começam com maiúscula e são relativamente curtos
+          (processedLine.length < 60 && 
+           processedLine.match(/^[A-ZÁÊÇÕÜÉ][a-záêçõüéA-ZÁÊÇÕÜÉ\s]*$/) &&
+           !processedLine.includes(',') && 
+           !processedLine.includes('(') &&
+           !processedLine.includes(')'))
+        );
+        
+        if (isTitleOrSubtitle) {
+          return `**${processedLine}**`;
+        }
+        
+        return processedLine;
+      });
+      
+      return formattedLines.filter(line => line !== '').join('\n');
     }
     
     // Para SynergyAI: usar a mesma formatação do ChatGPT
