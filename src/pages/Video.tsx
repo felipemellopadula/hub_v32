@@ -24,6 +24,57 @@ const FORMATS = ["mp4", "webm", "mov"];
 
 const MAX_VIDEOS = 12;
 
+// Function to check localStorage space and auto-clean if needed
+const ensureLocalStorageSpace = () => {
+  try {
+    // Test if we can write to localStorage by attempting to set a test item
+    const testKey = 'localStorage_test_key';
+    const testData = 'test';
+    localStorage.setItem(testKey, testData);
+    localStorage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    // localStorage is full, clean up old videos
+    try {
+      const stored = localStorage.getItem('savedVideos');
+      if (stored) {
+        const savedVideos = JSON.parse(stored);
+        // Keep only the 6 most recent videos (half of MAX_VIDEOS)
+        const reducedVideos = savedVideos.slice(0, 6);
+        localStorage.setItem('savedVideos', JSON.stringify(reducedVideos));
+        
+        // Try to clear other potential localStorage items that might be taking space
+        const keysToCheck = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key !== 'savedVideos' && key.startsWith('video_') || key.startsWith('temp_')) {
+            keysToCheck.push(key);
+          }
+        }
+        
+        // Remove temporary or old video-related items
+        keysToCheck.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+          } catch (err) {
+            // Ignore errors during cleanup
+          }
+        });
+        
+        return true;
+      }
+    } catch (cleanupError) {
+      // If all else fails, clear savedVideos completely
+      try {
+        localStorage.removeItem('savedVideos');
+      } catch (err) {
+        // Ignore final cleanup errors
+      }
+    }
+    return false;
+  }
+};
+
 const SavedVideo = ({ url }: { url: string }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -113,7 +164,26 @@ const VideoPage = () => {
     if (videoUrl) {
       setSavedVideos(prev => {
         const newVideos = [videoUrl, ...prev.filter(v => v !== videoUrl)].slice(0, MAX_VIDEOS);
-        localStorage.setItem('savedVideos', JSON.stringify(newVideos));
+        
+        // Ensure localStorage has space before saving
+        ensureLocalStorageSpace();
+        
+        try {
+          localStorage.setItem('savedVideos', JSON.stringify(newVideos));
+        } catch (e) {
+          // If still failing, try to clean up more aggressively
+          ensureLocalStorageSpace();
+          try {
+            // Try with fewer videos
+            const reducedVideos = newVideos.slice(0, 4);
+            localStorage.setItem('savedVideos', JSON.stringify(reducedVideos));
+            return reducedVideos;
+          } catch (secondError) {
+            // Return at least the current video if localStorage is completely unusable
+            return [videoUrl];
+          }
+        }
+        
         return newVideos;
       });
     }
@@ -145,6 +215,10 @@ const VideoPage = () => {
     const setter = isStart ? setUploadingStart : setUploadingEnd;
     const urlSetter = isStart ? setFrameStartUrl : setFrameEndUrl;
     setter(true);
+    
+    // Ensure localStorage has space before starting upload operations
+    ensureLocalStorageSpace();
+    
     try {
       const { data, error } = await supabase.storage.from('images').upload(`${Date.now()}-${file.name}`, file);
       if (error) throw error;
