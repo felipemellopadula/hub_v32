@@ -181,6 +181,7 @@ const Chat = () => {
   const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -281,6 +282,30 @@ const Chat = () => {
       // Carregar conversas será implementado se necessário
     }
   }, [user]);
+
+  // Effect para detectar scroll e mostrar/esconder botão
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    if (!chatContainer) return;
+
+    const handleScroll = () => {
+      checkIfNearBottom();
+    };
+
+    chatContainer.addEventListener('scroll', handleScroll);
+    
+    // Verificar posição inicial
+    checkIfNearBottom();
+
+    return () => {
+      chatContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Auto-scroll quando há uma nova mensagem ou durante streaming
+  useEffect(() => {
+    autoScrollToBottom();
+  }, [messages]);
     
   const convertToWordFormat = (text: string) => {
     if (!text) return text;
@@ -371,6 +396,25 @@ const Chat = () => {
   // Função para scroll para o fim
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Função para verificar se está próximo do final
+  const checkIfNearBottom = () => {
+    if (!chatContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const threshold = 100; // 100px do final
+    const nearBottom = scrollHeight - scrollTop - clientHeight < threshold;
+    
+    setIsNearBottom(nearBottom);
+    setShowScrollToBottom(!nearBottom);
+  };
+
+  // Auto-scroll durante o streaming da resposta
+  const autoScrollToBottom = () => {
+    if (isNearBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
@@ -715,12 +759,17 @@ const Chat = () => {
         typingIntervalRef.current = setInterval(() => {
             if (charIndex < fullBotText.length) {
                 const nextIndex = Math.min(charIndex + chunkSize, fullBotText.length);
-                setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId 
-                    ? { ...msg, content: fullBotText.slice(0, nextIndex) } 
-                    : msg
-                ));
-                charIndex = nextIndex;
+                 setMessages(prev => prev.map(msg => 
+                     msg.id === botMessageId 
+                     ? { ...msg, content: fullBotText.slice(0, nextIndex) } 
+                     : msg
+                 ));
+                 charIndex = nextIndex;
+                 
+                 // Auto-scroll durante o streaming se o usuário estiver próximo do final
+                 if (isNearBottom) {
+                   setTimeout(() => autoScrollToBottom(), 10);
+                 }
             } else {
                 if (typingIntervalRef.current) {
                     clearInterval(typingIntervalRef.current);
@@ -1076,7 +1125,16 @@ const Chat = () => {
           </div>
           
           {showScrollToBottom && (
-            <Button onClick={scrollToBottom} variant="outline" size="icon" className="absolute bottom-24 right-6 h-10 w-10 rounded-full shadow-lg z-20">
+            <Button 
+              onClick={() => {
+                scrollToBottom();
+                setShowScrollToBottom(false);
+                setIsNearBottom(true);
+              }} 
+              variant="outline" 
+              size="icon" 
+              className="absolute bottom-24 right-6 h-10 w-10 rounded-full shadow-lg bg-background hover:bg-muted border-border z-20 transition-all duration-200"
+            >
               <ArrowDown className="h-4 w-4" />
             </Button>
           )}
