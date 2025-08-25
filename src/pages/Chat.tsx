@@ -281,9 +281,42 @@ const Chat = () => {
     if (!loading && !user) navigate('/');
   }, [loading, user, navigate]);
 
+  // Função para carregar conversas do usuário
+  const loadConversations = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+      
+      if (error) {
+        console.error('Erro ao carregar conversas:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar suas conversas.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Garantir que messages é sempre um array
+      const formattedConversations = (data || []).map(conv => ({
+        ...conv,
+        messages: Array.isArray(conv.messages) ? conv.messages : []
+      }));
+      
+      setConversations(formattedConversations);
+    } catch (error) {
+      console.error('Erro ao carregar conversas:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      // Carregar conversas será implementado se necessário
+      loadConversations();
     }
   }, [user]);
 
@@ -531,7 +564,12 @@ const Chat = () => {
       if (!newConvId || newConvId.startsWith('temp_')) {
         const { data, error } = await supabase
           .from('chat_conversations')
-          .insert({ user_id: user!.id, title: deriveTitle(finalMessages), messages: serial })
+          .insert({ 
+            user_id: user!.id, 
+            title: deriveTitle(finalMessages), 
+            messages: serial,
+            is_favorite: false
+          })
           .select('*').single();
         if (error) throw error;
         
@@ -554,6 +592,7 @@ const Chat = () => {
           .eq('id', newConvId)
           .select('*').single();
         if (error) throw error;
+        // Mover conversa atualizada para o topo da lista
         setConversations(prev => [{ ...data, messages: Array.isArray(data.messages) ? data.messages : [] }, ...prev.filter(c => c.id !== data.id)]);
       }
     } catch (e) { console.error('Erro ao salvar conversa:', e); }
