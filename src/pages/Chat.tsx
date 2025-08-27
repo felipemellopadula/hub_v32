@@ -200,16 +200,32 @@ const Chat = () => {
     const isPdf = fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
     const isWord = fileType.includes('word') || fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc');
 
+    console.log('renderFileIcon called:', { fileName, fileType, fileUrl, isImage });
+
     return (
-      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border max-w-xs">
+      <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg border max-w-xs">
         <div className="flex-shrink-0">
           {isImage && fileUrl ? (
-            <div className="w-12 h-12 rounded-md overflow-hidden border">
+            <div className="w-16 h-16 rounded-md overflow-hidden border-2 border-white/20">
               <img 
                 src={fileUrl} 
                 alt={fileName}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image load error:', e);
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', fileUrl);
+                }}
               />
+            </div>
+          ) : isImage ? (
+            <div className="w-16 h-16 rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center border">
+              <Image className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+            </div>
+          ) : isImage ? (
+            <div className="w-16 h-16 rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center border">
+              <Image className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             </div>
           ) : isPdf ? (
             <div className="w-12 h-12 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center border">
