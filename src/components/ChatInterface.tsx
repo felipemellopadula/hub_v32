@@ -145,15 +145,18 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     console.log('hasImages:', hasImages);
     console.log('attachedFiles:', attachedFiles);
     console.log('selectedModel:', selectedModel);
-    console.log('Vision models include?:', ['OpenAI GPT-4o', 'Anthropic Claude', 'Google Gemini', 'xAI Grok'].includes(selectedModel));
     
-    console.log('Vision models check. Available vision models: OpenAI, Anthropic, Google, xAI');
+    // Lista de modelos que suportam visão
+    const visionModels = [
+      'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', // OpenAI
+      'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', // Anthropic  
+      'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', // Google
+      'grok-4-0709', 'grok-3', 'grok-3-mini' // xAI
+    ];
     
-    // Check if selected model supports vision (image analysis)
-    const isVisionModel = ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', // OpenAI
-                          'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', // Anthropic  
-                          'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', // Google
-                          'grok-4-0709', 'grok-3', 'grok-3-mini'].includes(selectedModel); // xAI
+    const isVisionModel = visionModels.includes(selectedModel);
+    console.log('isVisionModel:', isVisionModel);
+    console.log('Will use image analysis?', hasImages && isVisionModel);
     
     if (hasImages && isVisionModel) {
       // Use image analysis function for vision models
