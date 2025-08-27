@@ -417,9 +417,13 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                   {message.files && message.files.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {message.files.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 bg-black/10 px-2 py-1 rounded text-xs">
-                          <Image className="h-3 w-3" />
-                          <span className="truncate max-w-[200px]">{file.name}</span>
+                        <div key={index} className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded text-xs border border-white/20">
+                          {file.type.startsWith('image/') ? (
+                            <Image className="h-3 w-3 text-white/80" />
+                          ) : (
+                            <Paperclip className="h-3 w-3 text-white/80" />
+                          )}
+                          <span className="truncate max-w-[200px] text-white/90">{file.name}</span>
                         </div>
                       ))}
                     </div>
@@ -491,12 +495,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                   : "Selecione um modelo primeiro"
               }
               disabled={!selectedModel || isProcessingFile}
-              onKeyPress={(e) => e.key === 'Enter' && !isProcessingFile && handleSendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !isProcessingFile && (!inputValue.trim() && !hasAttachedFile && !attachedFiles.length ? false : handleSendMessage())}
               className="flex-1 bg-background border-border"
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={(!inputValue.trim() && !hasAttachedFile) || !selectedModel || isLoading || isProcessingFile}
+              disabled={(!inputValue.trim() && !hasAttachedFile && !attachedFiles.length) || !selectedModel || isLoading || isProcessingFile}
               className="bg-primary hover:bg-primary-glow text-primary-foreground"
             >
               <Send className="h-4 w-4" />
