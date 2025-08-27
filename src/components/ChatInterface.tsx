@@ -130,6 +130,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   };
 
   const handleSendMessage = async () => {
+    console.log('=== HANDLE SEND MESSAGE START ===');
     console.log('handleSendMessage called:', {
       inputValue: inputValue.trim(),
       fileContent: fileContent ? `${fileContent.length} chars` : 'none',
@@ -139,7 +140,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       selectedModel
     });
     
-    if ((!inputValue.trim() && !fileContent && !attachedFiles.length) || !selectedModel) return;
+    if ((!inputValue.trim() && !fileContent && !attachedFiles.length) || !selectedModel) {
+      console.log('Exiting early - missing input or model');
+      return;
+    }
 
     // Check if we have images and should use image analysis
     const hasImages = attachedFiles.some(file => file.type.startsWith('image/'));
@@ -147,6 +151,9 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     let messageContent = inputValue;
     let displayMessage = inputValue || (hasImages ? `Análise da imagem: ${fileName}` : `Análise do arquivo: ${fileName}`);
     console.log('=== IMAGE ANALYSIS CHECK ===');
+    console.log('hasImages:', hasImages);
+    console.log('attachedFiles details:', attachedFiles.map(f => ({ name: f.name, type: f.type })));
+    console.log('selectedModel:', selectedModel);
     console.log('hasImages:', hasImages);
     console.log('attachedFiles:', attachedFiles);
     console.log('selectedModel:', selectedModel);
