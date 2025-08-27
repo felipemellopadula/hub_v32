@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModelSelector } from "./ModelSelector";
-import { Send, Bot, User, Paperclip } from "lucide-react";
+import { Send, Bot, User, Paperclip, Image } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PdfProcessor } from "@/utils/PdfProcessor";
 import { WordProcessor } from "@/utils/WordProcessor";
@@ -17,6 +17,11 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   model?: string;
+  files?: Array<{
+    name: string;
+    type: string;
+    url: string;
+  }>;
 }
 
 interface ChatInterfaceProps {
@@ -136,11 +141,11 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     
     if ((!inputValue.trim() && !fileContent && !attachedFiles.length) || !selectedModel) return;
 
-    let messageContent = inputValue;
-    let displayMessage = inputValue || `Análise do arquivo: ${fileName}`;
-
     // Check if we have images and should use image analysis
     const hasImages = attachedFiles.some(file => file.type.startsWith('image/'));
+    
+    let messageContent = inputValue;
+    let displayMessage = inputValue || (hasImages ? `Análise da imagem: ${fileName}` : `Análise do arquivo: ${fileName}`);
     console.log('=== IMAGE ANALYSIS CHECK ===');
     console.log('hasImages:', hasImages);
     console.log('attachedFiles:', attachedFiles);
@@ -168,6 +173,11 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           content: displayMessage,
           sender: 'user',
           timestamp: new Date(),
+          files: [{
+            name: imageFile.name,
+            type: imageFile.type,
+            url: URL.createObjectURL(imageFile)
+          }]
         };
 
         setMessages(prev => [...prev, userMessage]);
@@ -395,6 +405,16 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                   }`}
                 >
                   <p className="text-sm">{message.content}</p>
+                  {message.files && message.files.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {message.files.map((file, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-black/10 px-2 py-1 rounded text-xs">
+                          <Image className="h-3 w-3" />
+                          <span className="truncate max-w-[200px]">{file.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {message.model && (
                     <p className="text-xs opacity-70 mt-1">
                       Modelo: {message.model}
