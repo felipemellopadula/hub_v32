@@ -22,13 +22,6 @@ const DURATIONS = [5, 10];
 
 const FORMATS = ["mp4", "webm", "mov"];
 
-const VIDEO_MODELS = [
-  { id: "bytedance:1@1", name: "ByteDance (Padrão)", description: "Modelo rápido e eficiente" },
-  { id: "klingai:5@3", name: "Kling AI", description: "Alta qualidade, melhor movimento" },
-  { id: "minimax:hailuo@2", name: "Minimax Hailuo", description: "Boa para cenas complexas" },
-  { id: "google:veo-3@fast", name: "Google Veo 3", description: "Modelo do Google, rápido" },
-];
-
 const MAX_VIDEOS = 12;
 
 // Function to check localStorage space and auto-clean if needed
@@ -144,7 +137,6 @@ const VideoPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<string>("bytedance:1@1");
   const [resolution, setResolution] = useState<string>("16:9-480p");
   const [duration, setDuration] = useState<number>(5);
   const [outputFormat, setOutputFormat] = useState<string>("mp4");
@@ -204,6 +196,7 @@ const VideoPage = () => {
   }, []);
 
   const res = useMemo(() => RESOLUTIONS.find(r => r.id === resolution)!, [resolution]);
+  const modelId = "bytedance:1@1", "klingai:5@3", "google:3@1";
 
   const uploadImage = async (file: File, isStart: boolean) => {
     const setter = isStart ? setUploadingStart : setUploadingEnd;
@@ -289,7 +282,7 @@ const VideoPage = () => {
     try {
       const payload = {
         action: 'start',
-        modelId: model,
+        modelId,
         positivePrompt: prompt,
         width: res.w,
         height: res.h,
@@ -429,22 +422,6 @@ const VideoPage = () => {
               <div>
                 <Label htmlFor="prompt">Descrição (prompt)</Label>
                 <Textarea id="prompt" placeholder="Descreva a cena, movimentos de câmera, estilo..." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-              </div>
-              <div>
-                <Label>Modelo de IA</Label>
-                <Select value={model} onValueChange={setModel}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
-                  <SelectContent>
-                    {VIDEO_MODELS.map(m => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <div className="text-left">
-                          <div className="font-medium">{m.name}</div>
-                          <div className="text-xs text-muted-foreground">{m.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
