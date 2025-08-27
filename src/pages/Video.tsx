@@ -196,7 +196,7 @@ const VideoPage = () => {
   }, []);
 
   const res = useMemo(() => RESOLUTIONS.find(r => r.id === resolution)!, [resolution]);
-  const modelId = "bytedance:1@1", "klingai:5@3", "google:3@1";
+  const [selectedModel, setSelectedModel] = useState("bytedance:1@1");
 
   const uploadImage = async (file: File, isStart: boolean) => {
     const setter = isStart ? setUploadingStart : setUploadingEnd;
@@ -282,7 +282,7 @@ const VideoPage = () => {
     try {
       const payload = {
         action: 'start',
-        modelId,
+        modelId: selectedModel,
         positivePrompt: prompt,
         width: res.w,
         height: res.h,
@@ -422,6 +422,38 @@ const VideoPage = () => {
               <div>
                 <Label htmlFor="prompt">Descrição (prompt)</Label>
                 <Textarea id="prompt" placeholder="Descreva a cena, movimentos de câmera, estilo..." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+              </div>
+              <div>
+                <Label>Modelo de IA</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bytedance:1@1">
+                      <div>
+                        <div className="font-medium">ByteDance (Padrão)</div>
+                        <div className="text-xs text-muted-foreground">Modelo rápido e eficiente para vídeos gerais</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="klingai:5@3">
+                      <div>
+                        <div className="font-medium">Kling AI</div>
+                        <div className="text-xs text-muted-foreground">Alta qualidade para animações complexas</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="minimax:1@1">
+                      <div>
+                        <div className="font-medium">Minimax Hailuo</div>
+                        <div className="text-xs text-muted-foreground">Especializado em realismo e detalhes</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="google:3@1">
+                      <div>
+                        <div className="font-medium">Google Veo 3</div>
+                        <div className="text-xs text-muted-foreground">Modelo avançado do Google para vídeos</div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
