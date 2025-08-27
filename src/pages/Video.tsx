@@ -436,20 +436,20 @@ const VideoPage = () => {
                     </SelectItem>
                     <SelectItem value="klingai:5@3">
                       <div>
-                        <div className="font-medium">Kling AI</div>
+                        <div className="font-medium">KlingAI V2.0 Master</div>
                         <div className="text-xs text-muted-foreground">Alta qualidade para animações complexas</div>
                       </div>
                     </SelectItem>
-                    <SelectItem value="minimax:1@1">
+                    <SelectItem value="minimax:3@1">
                       <div>
-                        <div className="font-medium">Minimax Hailuo</div>
+                        <div className="font-medium">MiniMax Hailuo 02</div>
                         <div className="text-xs text-muted-foreground">Especializado em realismo e detalhes</div>
                       </div>
                     </SelectItem>
                     <SelectItem value="google:3@1">
                       <div>
-                        <div className="font-medium">Google Veo 3</div>
-                        <div className="text-xs text-muted-foreground">Modelo avançado do Google para vídeos</div>
+                        <div className="font-medium">Veo 3.0 Fast</div>
+                        <div className="text-xs text-muted-foreground">Modelo rápido do Google para vídeos</div>
                       </div>
                     </SelectItem>
                   </SelectContent>
