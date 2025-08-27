@@ -688,7 +688,26 @@ const VideoPage = () => {
             <CardContent className="pt-6">
               {videoUrl ? (
                 <div className="space-y-4">
-                  <video controls autoPlay className="w-full rounded-md border border-border aspect-video" src={videoUrl} key={videoUrl} />
+                  <video 
+                    controls 
+                    autoPlay 
+                    muted
+                    playsInline
+                    preload="metadata"
+                    crossOrigin="anonymous"
+                    className="w-full rounded-md border border-border aspect-video" 
+                    src={videoUrl} 
+                    key={videoUrl}
+                    onError={(e) => {
+                      console.log('Video error:', e);
+                      // Fallback: reload without crossOrigin if it fails
+                      const video = e.currentTarget;
+                      if (video.crossOrigin) {
+                        video.crossOrigin = null;
+                        video.load();
+                      }
+                    }}
+                  />
                   <div className="flex gap-3 flex-wrap">
                     <Button onClick={() => handleDownload(videoUrl)}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
                     <Button variant="outline" onClick={() => handleShare(videoUrl, prompt)}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
