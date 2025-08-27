@@ -761,12 +761,12 @@ const Chat = () => {
               console.log('originalModel:', originalModel);
               console.log('internalModel:', internalModel);
               
-              // Check if model supports vision
+              // Check if model supports vision (SynergyIA = gpt-4o-mini, que NÃO suporta visão)
               const visionModels = [
-                'synergy-ia', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini',
-                'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022',
-                'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
-                'grok-4-0709', 'grok-3', 'grok-3-mini'
+                'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', // OpenAI vision models
+                'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', // Anthropic  
+                'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', // Google
+                'grok-4-0709', 'grok-3', 'grok-3-mini' // xAI
               ];
               
               const isVisionModel = visionModels.includes(originalModel); // Use originalModel instead of internalModel
