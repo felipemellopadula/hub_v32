@@ -121,9 +121,9 @@ async function analyzeWithOpenAI(imageBase64: string, prompt: string, analysisTy
 }
 
 async function analyzeWithClaude(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
-  const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
+  const CLAUDE_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
   if (!CLAUDE_API_KEY) {
-    throw new Error('CLAUDE_API_KEY is not configured. Please add it to use Claude for image analysis.');
+    throw new Error('ANTHROPIC_API_KEY is not configured. Please add it to use Claude for image analysis.');
   }
 
   const systemPrompts = {
@@ -217,9 +217,9 @@ async function analyzeWithGemini(imageBase64: string, prompt: string, analysisTy
 }
 
 async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
-  const GROK_API_KEY = Deno.env.get('GROK_API_KEY');
+  const GROK_API_KEY = Deno.env.get('XAI_API_KEY');
   if (!GROK_API_KEY) {
-    throw new Error('GROK_API_KEY is not configured. Please add it to use Grok for image analysis.');
+    throw new Error('XAI_API_KEY is not configured. Please add it to use Grok for image analysis.');
   }
 
   const systemPrompts = {
