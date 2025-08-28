@@ -13,6 +13,21 @@ import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Max
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfile } from "@/components/UserProfile";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface SavedVideoData {
+  id: string;
+  video_url: string;
+  prompt: string;
+  model: string;
+  resolution: string;
+  duration: number;
+  aspect_ratio: string;
+  initial_frame_url?: string;
+  final_frame_url?: string;
+  format: string;
+  created_at: string;
+}
 
 /**
  * Modelos suportados e suas capacidades (conforme docs Runware).
@@ -22,21 +37,18 @@ type Resolution = { id: string; label: string; w: number; h: number };
 
 const MODELS = [
   { id: "bytedance:1@1", label: "ByteDance Seedance 1.0 Lite", provider: "bytedance" as const },
-  { id: "google:3@1", label: "Googke Veo 3 Fast", provider: "google" as const },
-  { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const }, // Código solicitado pelo cliente
+  { id: "google:3@1", label: "Google Veo 3 Fast", provider: "google" as const },
+  { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
-  // ByteDance Seedance Lite (várias opções 16:9 do provedor)
   "bytedance:1@1": [
     { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p (864×480)", w: 864, h: 480 },
     { id: "16:9-704p", label: "16:9 (Wide / Landscape) - 1248×704", w: 1248, h: 704 },
   ],
-  // Veo 3 Fast requer 1280×720
   "google:3@1": [
     { id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 },
   ],
-  // KlingAI 2.1 Master suporta 1080p
   "klingai:5@3": [
     { id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 },
   ],
@@ -44,69 +56,32 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
   "bytedance:1@1": [5, 10],
-  "google:3@1": [8], // fixo a 8s
+  "google:3@1": [8],
   "klingai:5@3": [5, 10],
 };
 
-// suporte a frame final (last) por modelo
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
   "bytedance:1@1": true,
-  "google:3@1": false, // Veo 3 só primeiro frame
-  "klingai:5@3": false, // Kling Master: só primeiro frame
+  "google:3@1": false,
+  "klingai:5@3": false,
 };
 
-// áudio nativo disponível apenas no Veo 3
 const SUPPORTS_AUDIO: Record<string, boolean> = {
   "bytedance:1@1": false,
   "google:3@1": true,
   "klingai:5@3": false,
 };
 
-const FORMATS = ["mp4", "webm", "mov"]; // mov será normalizado p/ mp4 ao enviar
-
+const FORMATS = ["mp4", "webm", "mov"];
 const MAX_VIDEOS = 12;
 
-/** Checagem/Limpeza de localStorage (mantida do seu código) */
-const ensureLocalStorageSpace = () => {
-  try {
-    const testKey = "localStorage_test_key";
-    const testData = "test";
-    localStorage.setItem(testKey, testData);
-    localStorage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    try {
-      const stored = localStorage.getItem("savedVideos");
-      if (stored) {
-        const savedVideos = JSON.parse(stored);
-        const reducedVideos = savedVideos.slice(0, 6);
-        localStorage.setItem("savedVideos", JSON.stringify(reducedVideos));
-
-        const keysToCheck: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key !== "savedVideos" && (key.startsWith("video_") || key.startsWith("temp_"))) {
-            keysToCheck.push(key);
-          }
-        }
-        keysToCheck.forEach((key) => {
-          try {
-            localStorage.removeItem(key);
-          } catch {}
-        });
-
-        return true;
-      }
-    } catch {
-      try {
-        localStorage.removeItem("savedVideos");
-      } catch {}
-    }
-    return false;
-  }
-};
-
-const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) => void }) => {
+const SavedVideo = ({ 
+  video, 
+  onDelete 
+}: { 
+  video: SavedVideoData; 
+  onDelete: (id: string) => void 
+}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -120,7 +95,7 @@ const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) =>
 
   const handleDownload = () => {
     const a = document.createElement("a");
-    a.href = url;
+    a.href = video.video_url;
     a.download = "synergy-video.mp4";
     document.body.appendChild(a);
     a.click();
@@ -135,21 +110,20 @@ const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) =>
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(url);
+    onDelete(video.id);
   };
 
   return (
     <div className="relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer">
       <video
         ref={videoRef}
-        src={url}
+        src={video.video_url}
         className="w-full h-full object-cover"
         loop
         muted
         playsInline
         onClick={togglePlay}
       />
-      {/* Botão de excluir no canto superior direito */}
       <Button
         variant="destructive"
         size="icon"
@@ -158,7 +132,6 @@ const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) =>
       >
         <Trash2 className="h-4 w-4" />
       </Button>
-      {/* Controles de reprodução no centro */}
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
         <div className="flex gap-2">
           <Button variant="ghost" size="icon" className="bg-background/50" onClick={togglePlay}>
@@ -179,71 +152,160 @@ const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) =>
 const VideoPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // NOVO: seleção de modelo
   const [modelId, setModelId] = useState<string>("bytedance:1@1");
-
   const [prompt, setPrompt] = useState("");
   const [resolution, setResolution] = useState<string>("16:9-480p");
   const [duration, setDuration] = useState<number>(5);
   const [outputFormat, setOutputFormat] = useState<string>("mp4");
-
-  // ByteDance only
   const [cameraFixed, setCameraFixed] = useState<boolean>(false);
-  // Veo 3 only
   const [generateAudio, setGenerateAudio] = useState<boolean>(false);
-
   const [frameStartUrl, setFrameStartUrl] = useState("");
   const [frameEndUrl, setFrameEndUrl] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskUUID, setTaskUUID] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const [uploadingStart, setUploadingStart] = useState(false);
   const [uploadingEnd, setUploadingEnd] = useState(false);
-  const [savedVideos, setSavedVideos] = useState<string[]>([]);
+  const [savedVideos, setSavedVideos] = useState<SavedVideoData[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareData, setShareData] = useState<{ url: string; title: string; text: string }>({ url: "", title: "", text: "" });
   const [isDragOverStart, setIsDragOverStart] = useState(false);
   const [isDragOverEnd, setIsDragOverEnd] = useState(false);
+  const [loadingVideos, setLoadingVideos] = useState(true);
 
-  // Listas dinâmicas conforme modelo
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
   const allowedDurations = useMemo<number[]>(() => DURATIONS_BY_MODEL[modelId] || [5], [modelId]);
   const supportsLastFrame = SUPPORTS_LAST_FRAME[modelId];
   const supportsAudio = SUPPORTS_AUDIO[modelId];
 
-  // Resolve objeto da resolução atual (com fallback ao primeiro válido)
   const res = useMemo<Resolution>(() => {
     const found = allowedResolutions.find((r) => r.id === resolution);
     return found || allowedResolutions[0];
   }, [allowedResolutions, resolution]);
 
+  // Carregar vídeos salvos do Supabase
+  const loadSavedVideos = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_videos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(MAX_VIDEOS);
+
+      if (error) throw error;
+      setSavedVideos(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar vídeos:', error);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
+  // Salvar vídeo no Supabase
+  const saveVideoToDatabase = async (videoUrl: string) => {
+    if (!user) return;
+
+    try {
+      // Upload do vídeo para o storage
+      const videoResponse = await fetch(videoUrl);
+      const videoBlob = await videoResponse.blob();
+      const fileName = `${user.id}/${Date.now()}.mp4`;
+      
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('user-videos')
+        .upload(fileName, videoBlob);
+
+      if (storageError) throw storageError;
+
+      // Obter URL pública
+      const { data: publicData } = supabase.storage
+        .from('user-videos')
+        .getPublicUrl(storageData.path);
+
+      // Salvar metadados no banco
+      const { error: dbError } = await supabase
+        .from('user_videos')
+        .insert({
+          user_id: user.id,
+          video_url: publicData.publicUrl,
+          prompt,
+          model: modelId,
+          resolution,
+          duration,
+          aspect_ratio: res.id,
+          initial_frame_url: frameStartUrl || null,
+          final_frame_url: frameEndUrl || null,
+          format: outputFormat
+        });
+
+      if (dbError) throw dbError;
+
+      // Recarregar lista de vídeos
+      loadSavedVideos();
+      
+    } catch (error) {
+      console.error('Erro ao salvar vídeo:', error);
+    }
+  };
+
+  // Deletar vídeo do Supabase
+  const deleteVideo = async (videoId: string) => {
+    if (!user) return;
+
+    try {
+      // Buscar dados do vídeo para obter o path do storage
+      const { data: videoData, error: fetchError } = await supabase
+        .from('user_videos')
+        .select('video_url')
+        .eq('id', videoId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Extrair path do storage da URL
+      const url = new URL(videoData.video_url);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts.slice(-2).join('/'); // user_id/timestamp.mp4
+
+      // Deletar do storage
+      await supabase.storage
+        .from('user-videos')
+        .remove([fileName]);
+
+      // Deletar do banco
+      const { error: deleteError } = await supabase
+        .from('user_videos')
+        .delete()
+        .eq('id', videoId);
+
+      if (deleteError) throw deleteError;
+
+      // Atualizar lista local
+      setSavedVideos(prev => prev.filter(v => v.id !== videoId));
+
+    } catch (error) {
+      console.error('Erro ao deletar vídeo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível deletar o vídeo.",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
-    const stored = localStorage.getItem("savedVideos");
-    if (stored) setSavedVideos(JSON.parse(stored));
-  }, []);
+    loadSavedVideos();
+  }, [user]);
 
   useEffect(() => {
     if (videoUrl) {
-      setSavedVideos((prev) => {
-        const newVideos = [videoUrl, ...prev.filter((v) => v !== videoUrl)].slice(0, MAX_VIDEOS);
-        ensureLocalStorageSpace();
-        try {
-          localStorage.setItem("savedVideos", JSON.stringify(newVideos));
-        } catch {
-          ensureLocalStorageSpace();
-          try {
-            const reducedVideos = newVideos.slice(0, 4);
-            localStorage.setItem("savedVideos", JSON.stringify(reducedVideos));
-            return reducedVideos;
-          } catch {
-            return [videoUrl];
-          }
-        }
-        return newVideos;
-      });
+      saveVideoToDatabase(videoUrl);
     }
   }, [videoUrl]);
 
@@ -266,7 +328,6 @@ const VideoPage = () => {
     link.href = `${window.location.origin}/video`;
   }, []);
 
-  // Quando mudar o modelo, garantimos que resolução/duração atuais são válidas.
   useEffect(() => {
     const resList = RESOLUTIONS_BY_MODEL[modelId];
     if (resList && !resList.some((r) => r.id === resolution)) {
@@ -276,15 +337,13 @@ const VideoPage = () => {
     if (durList && !durList.includes(duration)) {
       setDuration(durList[0]);
     }
-    // Se o modelo não suportar frame final, limpamos a URL final (opcional)
     if (!SUPPORTS_LAST_FRAME[modelId] && frameEndUrl) {
       setFrameEndUrl("");
     }
-    // Veo 3: áudio default false (ajuste aqui se quiser default true)
     if (!SUPPORTS_AUDIO[modelId] && generateAudio) {
       setGenerateAudio(false);
     }
-  }, [modelId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modelId]);
 
   const uploadImage = async (file: File, isStart: boolean) => {
     const setter = isStart ? setUploadingStart : setUploadingEnd;
@@ -292,43 +351,22 @@ const VideoPage = () => {
     setter(true);
 
     try {
-      // Import cleanup functions
-      const { prepareStorageForUpload } = await import("@/utils/imageStore");
+      const { data, error } = await supabase.storage
+        .from("video-refs")
+        .upload(`${Date.now()}-${file.name}`, file);
       
-      // Proactive cleanup before upload
-      await prepareStorageForUpload();
-      ensureLocalStorageSpace();
-
-      const { data, error } = await supabase.storage.from("images").upload(`${Date.now()}-${file.name}`, file);
       if (error) throw error;
-      const { data: publicData } = supabase.storage.from("images").getPublicUrl(data.path);
+      
+      const { data: publicData } = supabase.storage
+        .from("video-refs")
+        .getPublicUrl(data.path);
+      
       urlSetter(publicData.publicUrl);
     } catch (e: any) {
       console.error('Upload error:', e);
-      
-      // If upload fails due to storage issues, try cleanup and retry once
-      if (e.message?.includes('storage') || e.message?.includes('quota') || e.message?.includes('space')) {
-        try {
-          const { prepareStorageForUpload } = await import("@/utils/imageStore");
-          await prepareStorageForUpload();
-          ensureLocalStorageSpace();
-          
-          // Retry upload after cleanup
-          const { data, error } = await supabase.storage.from("images").upload(`${Date.now()}-retry-${file.name}`, file);
-          if (error) throw error;
-          const { data: publicData } = supabase.storage.from("images").getPublicUrl(data.path);
-          urlSetter(publicData.publicUrl);
-          
-          toast({ title: "Upload realizado", description: "Imagem carregada após limpeza automática." });
-          return;
-        } catch (retryError) {
-          console.error('Retry upload failed:', retryError);
-        }
-      }
-      
       toast({ 
         title: "Erro no upload", 
-        description: "Tente novamente. Se persistir, limpe o cache do navegador.", 
+        description: "Tente novamente.", 
         variant: "destructive" 
       });
     } finally {
@@ -385,10 +423,8 @@ const VideoPage = () => {
     setVideoUrl(null);
     setTaskUUID(null);
 
-    // Normalização do formato (MOV => MP4 para evitar erro nos provedores)
     const normalizedFormat = outputFormat === "mov" ? "mp4" : outputFormat;
 
-    // providerSettings corretos por modelo
     const providerSettings: Record<string, any> = {};
     if (modelId.startsWith("bytedance")) {
       providerSettings.bytedance = { cameraFixed };
@@ -399,7 +435,7 @@ const VideoPage = () => {
     try {
       const payload: any = {
         action: "start",
-        modelId, // seu Edge Function usa 'modelId' (mantido)
+        modelId,
         positivePrompt: prompt,
         width: res.w,
         height: res.h,
@@ -411,11 +447,9 @@ const VideoPage = () => {
         providerSettings,
         deliveryMethod: "async",
         frameStartUrl: frameStartUrl || undefined,
-        // apenas modelos que suportam frame final (ByteDance)
         frameEndUrl: supportsLastFrame ? (frameEndUrl || undefined) : undefined,
       };
 
-      // Aviso gentil sobre MOV convertido
       if (outputFormat === "mov") {
         toast({
           title: "Formato ajustado",
@@ -496,7 +530,7 @@ const VideoPage = () => {
     } catch {
       toast({
         title: "Não foi possível baixar automaticamente",
-        description: "Abrindo em nova aba. Use “Salvar como...” para baixar.",
+        description: "Abrindo em nova aba. Use 'Salvar como...' para baixar.",
       });
       window.open(url, "_blank", "noopener,noreferrer");
     }
@@ -560,7 +594,6 @@ const VideoPage = () => {
           {/* Painel de controles */}
           <Card className="order-2 lg:col-span-1 lg:row-span-2">
             <CardContent className="space-y-6 pt-6">
-              {/* NOVO: Seletor de Modelo */}
               <div>
                 <Label>Modelo de Vídeo</Label>
                 <Select value={modelId} onValueChange={(v) => setModelId(v)}>
@@ -623,7 +656,6 @@ const VideoPage = () => {
                   </Select>
                 </div>
 
-                {/* Controles específicos por provedor */}
                 {modelId.startsWith("bytedance") && (
                   <div className="flex items-center gap-2 pt-2">
                     <Switch id="camera-fixed" checked={cameraFixed} onCheckedChange={setCameraFixed} />
@@ -746,7 +778,6 @@ const VideoPage = () => {
                     key={videoUrl}
                     onError={(e) => {
                       console.log('Video error:', e);
-                      // Fallback: reload without crossOrigin if it fails
                       const video = e.currentTarget;
                       if (video.crossOrigin) {
                         video.crossOrigin = null;
@@ -785,17 +816,15 @@ const VideoPage = () => {
           {/* Histórico */}
           <div className="order-3 lg:col-span-2">
             <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
-            {savedVideos.length > 0 ? (
+            {loadingVideos ? (
+              <p className="text-muted-foreground">Carregando vídeos...</p>
+            ) : savedVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {savedVideos.map((url, index) => (
+                {savedVideos.map((video) => (
                   <SavedVideo 
-                    key={index} 
-                    url={url} 
-                    onDelete={(urlToDelete) => {
-                      const updatedVideos = savedVideos.filter(v => v !== urlToDelete);
-                      setSavedVideos(updatedVideos);
-                      localStorage.setItem("savedVideos", JSON.stringify(updatedVideos));
-                    }}
+                    key={video.id} 
+                    video={video} 
+                    onDelete={deleteVideo}
                   />
                 ))}
               </div>
