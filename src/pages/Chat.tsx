@@ -564,7 +564,6 @@ const Chat = () => {
       }
 
       // Encontrar a mensagem do usuário que originou essa resposta do bot
-      // A mensagem do usuário é sempre a anterior à resposta do bot na sequência
       const botMessageIndex = messages.findIndex(m => m.id === messageId);
       const immediateUserMessage = botMessageIndex > 0 ? messages[botMessageIndex - 1] : null;
       
@@ -1373,21 +1372,17 @@ Por favor, forneça uma resposta abrangente que integre informações de todos o
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await transcribeAudio(audioBlob);
-        
         // Limpar stream
         stream.getTracks().forEach(track => track.stop());
       };
-
       mediaRecorder.start();
       setIsRecording(true);
       toast({ title: "Gravação iniciada", description: "Fale agora..." });
@@ -1428,7 +1423,6 @@ Por favor, forneça uma resposta abrangente que integre informações de todos o
           toast({ title: "Aviso", description: "Nenhum texto foi detectado no áudio.", variant: "destructive" });
         }
       };
-      
       reader.readAsDataURL(audioBlob);
     } catch (error) {
       console.error('Erro ao transcrever áudio:', error);
@@ -1525,7 +1519,8 @@ Por favor, forneça uma resposta abrangente que integre informações de todos o
                   </div>
                 </div>
               ) : (
-                messages.map((message) => (
+                /** >>> alteração aqui: capturamos também o index do map <<< */
+                messages.map((message, index) => (
                   <div key={message.id} className={`flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : ''}`}>
                     
                     {message.sender === 'bot' ? (
@@ -1584,8 +1579,8 @@ Por favor, forneça uma resposta abrangente que integre informações de todos o
                                
                                   {/* Botões de comparação - só mostrar se não há anexos na mensagem anterior do usuário */}
                                   {(() => {
-                                    // Encontrar a mensagem do usuário que originou esta resposta
-                                    const messageIndex = messages.findIndex(m => m.id === message.id);
+                                    // >>> alteração: usar o index do map para pegar a mensagem anterior com segurança
+                                    const messageIndex = index;
                                     const immediateUserMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
                                     const hasAttachments = immediateUserMessage?.files && immediateUserMessage.files.length > 0;
                                     
