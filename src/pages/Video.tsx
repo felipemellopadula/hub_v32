@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Maximize, X, ArrowLeft } from "lucide-react";
+import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Maximize, X, ArrowLeft, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfile } from "@/components/UserProfile";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -106,7 +106,7 @@ const ensureLocalStorageSpace = () => {
   }
 };
 
-const SavedVideo = ({ url }: { url: string }) => {
+const SavedVideo = ({ url, onDelete }: { url: string; onDelete: (url: string) => void }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -133,6 +133,13 @@ const SavedVideo = ({ url }: { url: string }) => {
     }
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Tem certeza que deseja excluir este vídeo?")) {
+      onDelete(url);
+    }
+  };
+
   return (
     <div className="relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer">
       <video
@@ -144,6 +151,16 @@ const SavedVideo = ({ url }: { url: string }) => {
         playsInline
         onClick={togglePlay}
       />
+      {/* Botão de excluir no canto superior direito */}
+      <Button
+        variant="destructive"
+        size="icon"
+        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+        onClick={handleDelete}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      {/* Controles de reprodução no centro */}
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
         <div className="flex gap-2">
           <Button variant="ghost" size="icon" className="bg-background/50" onClick={togglePlay}>
@@ -773,7 +790,19 @@ const VideoPage = () => {
             {savedVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {savedVideos.map((url, index) => (
-                  <SavedVideo key={index} url={url} />
+                  <SavedVideo 
+                    key={index} 
+                    url={url} 
+                    onDelete={(urlToDelete) => {
+                      const updatedVideos = savedVideos.filter(v => v !== urlToDelete);
+                      setSavedVideos(updatedVideos);
+                      localStorage.setItem("savedVideos", JSON.stringify(updatedVideos));
+                      toast({
+                        title: "Vídeo excluído",
+                        description: "O vídeo foi removido do histórico.",
+                      });
+                    }}
+                  />
                 ))}
               </div>
             ) : (
