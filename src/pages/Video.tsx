@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfile } from "@/components/UserProfile";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import imageCompression from 'browser-image-compression';
 
 interface SavedVideoData {
   id: string;
@@ -80,9 +81,10 @@ const SavedVideo = ({
   onDelete 
 }: { 
   video: SavedVideoData; 
-  onDelete: (id: string) => void 
+  onDelete: (id: string, optimistic?: boolean) => void 
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const togglePlay = () => {
@@ -108,13 +110,21 @@ const SavedVideo = ({
     }
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(video.id);
+    setIsDeleting(true);
+    
+    // Optimistic update - remove da UI imediatamente
+    onDelete(video.id, true);
+    
+    // Delete real em background
+    setTimeout(() => {
+      onDelete(video.id, false);
+    }, 0);
   };
 
   return (
-    <div className="relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer">
+    <div className={`relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer transition-opacity ${isDeleting ? 'opacity-50' : ''}`}>
       <video
         ref={videoRef}
         src={video.video_url}
@@ -129,8 +139,9 @@ const SavedVideo = ({
         size="icon"
         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
         onClick={handleDelete}
+        disabled={isDeleting}
       >
-        <Trash2 className="h-4 w-4" />
+        {isDeleting ? <RotateCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
       </Button>
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
         <div className="flex gap-2">
@@ -254,9 +265,15 @@ const VideoPage = () => {
     }
   };
 
-  // Deletar vídeo do Supabase
-  const deleteVideo = async (videoId: string) => {
+  // Deletar vídeo do Supabase - OTIMIZADO
+  const deleteVideo = async (videoId: string, optimistic: boolean = false) => {
     if (!user) return;
+
+    if (optimistic) {
+      // Optimistic update - remove da UI imediatamente
+      setSavedVideos(prev => prev.filter(v => v.id !== videoId));
+      return;
+    }
 
     try {
       // Buscar dados do vídeo para obter o path do storage
@@ -273,24 +290,29 @@ const VideoPage = () => {
       const pathParts = url.pathname.split('/');
       const fileName = pathParts.slice(-2).join('/'); // user_id/timestamp.mp4
 
-      // Deletar do storage
-      await supabase.storage
-        .from('user-videos')
-        .remove([fileName]);
+      // Executar operações em paralelo
+      const [storageResult, dbResult] = await Promise.allSettled([
+        supabase.storage.from('user-videos').remove([fileName]),
+        supabase.from('user_videos').delete().eq('id', videoId)
+      ]);
 
-      // Deletar do banco
-      const { error: deleteError } = await supabase
-        .from('user_videos')
-        .delete()
-        .eq('id', videoId);
+      // Verificar se houve erros
+      if (dbResult.status === 'rejected') {
+        throw dbResult.reason;
+      }
 
-      if (deleteError) throw deleteError;
-
-      // Atualizar lista local
-      setSavedVideos(prev => prev.filter(v => v.id !== videoId));
+      // Se chegou até aqui, sucesso
+      toast({
+        title: "Sucesso",
+        description: "Vídeo deletado com sucesso.",
+      });
 
     } catch (error) {
       console.error('Erro ao deletar vídeo:', error);
+      
+      // Reverter optimistic update em caso de erro
+      loadSavedVideos();
+      
       toast({
         title: "Erro",
         description: "Não foi possível deletar o vídeo.",
@@ -345,6 +367,7 @@ const VideoPage = () => {
     }
   }, [modelId]);
 
+  // Upload de imagem OTIMIZADO com compressão
   const uploadImage = async (file: File, isStart: boolean) => {
     const setter = isStart ? setUploadingStart : setUploadingEnd;
     const urlSetter = isStart ? setFrameStartUrl : setFrameEndUrl;
@@ -357,18 +380,27 @@ const VideoPage = () => {
         throw new Error('Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.');
       }
 
-      // Validar tamanho (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Arquivo muito grande. Máximo 10MB.');
+      // Validar tamanho original (max 50MB antes da compressão)
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('Arquivo muito grande. Máximo 50MB.');
       }
 
-      // Criar nome de arquivo seguro (sem caracteres especiais)
-      const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const safeFileName = `${user?.id || 'temp'}_${Date.now()}.${fileExtension}`;
+      // Comprimir imagem para upload mais rápido
+      const compressionOptions = {
+        maxSizeMB: 2, // Máximo 2MB após compressão
+        maxWidthOrHeight: 1920, // Máximo 1920px
+        useWebWorker: true,
+        fileType: 'image/webp' as any, // Força WebP para melhor compressão
+      };
+
+      const compressedFile = await imageCompression(file, compressionOptions);
+      
+      // Criar nome de arquivo seguro
+      const safeFileName = `${user?.id || 'temp'}_${Date.now()}.webp`;
 
       const { data, error } = await supabase.storage
         .from("video-refs")
-        .upload(safeFileName, file, {
+        .upload(safeFileName, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });
@@ -385,6 +417,12 @@ const VideoPage = () => {
       }
 
       urlSetter(publicData.publicUrl);
+      
+      toast({
+        title: "Upload concluído",
+        description: `Imagem ${isStart ? 'inicial' : 'final'} carregada com sucesso.`,
+      });
+      
     } catch (e: any) {
       console.error('Upload error:', e);
       toast({ 
@@ -495,7 +533,6 @@ const VideoPage = () => {
         description: e?.message || "Não foi possível iniciar a geração",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -515,6 +552,8 @@ const VideoPage = () => {
         const videoURL = statusItem?.videoURL || statusItem?.url;
         if (videoURL) {
           setVideoUrl(videoURL);
+          setIsSubmitting(false);
+          setTaskUUID(null);
           toast({ title: "Vídeo pronto", description: "Seu vídeo foi gerado com sucesso." });
           return;
         }
@@ -590,6 +629,9 @@ const VideoPage = () => {
     setShareOpen(true);
   };
 
+  // Verificar se está processando para desabilitar botão
+  const isProcessing = isSubmitting || taskUUID !== null;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
@@ -619,7 +661,7 @@ const VideoPage = () => {
             <CardContent className="space-y-6 pt-6">
               <div>
                 <Label>Modelo de Vídeo</Label>
-                <Select value={modelId} onValueChange={(v) => setModelId(v)}>
+                <Select value={modelId} onValueChange={(v) => setModelId(v)} disabled={isProcessing}>
                   <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
                   <SelectContent>
                     {MODELS.map((m) => (
@@ -638,13 +680,14 @@ const VideoPage = () => {
                   placeholder="Descreva a cena, movimentos de câmera, estilo..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
+                  disabled={isProcessing}
                 />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Resolução</Label>
-                  <Select value={res?.id} onValueChange={setResolution}>
+                  <Select value={res?.id} onValueChange={setResolution} disabled={isProcessing}>
                     <SelectTrigger><SelectValue placeholder="Selecione a resolução" /></SelectTrigger>
                     <SelectContent>
                       {allowedResolutions.map((r) => (
@@ -655,7 +698,7 @@ const VideoPage = () => {
                 </div>
                 <div>
                   <Label>Duração</Label>
-                  <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
+                  <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))} disabled={isProcessing}>
                     <SelectTrigger><SelectValue placeholder="Duração (s)" /></SelectTrigger>
                     <SelectContent>
                       {allowedDurations.map((d) => (
@@ -669,7 +712,7 @@ const VideoPage = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Formato</Label>
-                  <Select value={outputFormat} onValueChange={setOutputFormat}>
+                  <Select value={outputFormat} onValueChange={setOutputFormat} disabled={isProcessing}>
                     <SelectTrigger><SelectValue placeholder="Selecione o formato" /></SelectTrigger>
                     <SelectContent>
                       {FORMATS.map((f) => (
@@ -681,14 +724,14 @@ const VideoPage = () => {
 
                 {modelId.startsWith("bytedance") && (
                   <div className="flex items-center gap-2 pt-2">
-                    <Switch id="camera-fixed" checked={cameraFixed} onCheckedChange={setCameraFixed} />
+                    <Switch id="camera-fixed" checked={cameraFixed} onCheckedChange={setCameraFixed} disabled={isProcessing} />
                     <Label htmlFor="camera-fixed">Camera Fixed (ByteDance)</Label>
                   </div>
                 )}
 
                 {modelId.startsWith("google") && (
                   <div className="flex items-center gap-2 pt-2">
-                    <Switch id="veo-audio" checked={generateAudio} onCheckedChange={setGenerateAudio} />
+                    <Switch id="veo-audio" checked={generateAudio} onCheckedChange={setGenerateAudio} disabled={isProcessing} />
                     <Label htmlFor="veo-audio">Incluir áudio (Veo 3)</Label>
                   </div>
                 )}
@@ -699,18 +742,18 @@ const VideoPage = () => {
                   <Label className="mb-2">Frame Inicial (opcional)</Label>
                   <label
                     htmlFor="start-upload"
-                    className={`border border-border rounded-md p-4 text-center cursor-pointer hover:bg-accent flex flex-col items-center justify-center h-28 transition-colors ${isDragOverStart ? "bg-accent border-primary border-dashed" : ""}`}
-                    onDragEnter={(e) => handleDragEnter(e, true)}
-                    onDragLeave={(e) => handleDragLeave(e, true)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, true)}
+                    className={`border border-border rounded-md p-4 text-center ${!isProcessing ? 'cursor-pointer hover:bg-accent' : 'opacity-60 cursor-not-allowed'} flex flex-col items-center justify-center h-28 transition-colors ${isDragOverStart ? "bg-accent border-primary border-dashed" : ""}`}
+                    onDragEnter={(e) => !isProcessing && handleDragEnter(e, true)}
+                    onDragLeave={(e) => !isProcessing && handleDragLeave(e, true)}
+                    onDragOver={(e) => !isProcessing && handleDragOver(e)}
+                    onDrop={(e) => !isProcessing && handleDrop(e, true)}
                   >
                     <Upload className="h-6 w-6 mb-1 text-muted-foreground" />
                     <span className="text-sm">{isDragOverStart ? "Solte a imagem aqui" : "Carregar ou Arrastar Imagem"}</span>
                   </label>
-                  <Input type="file" accept="image/*" className="hidden" id="start-upload" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], true)} />
-                  <Input placeholder="Ou cole a URL aqui" value={frameStartUrl} onChange={(e) => setFrameStartUrl(e.target.value)} className="mt-2" />
-                  {uploadingStart && <p className="text-sm text-muted-foreground mt-1">Enviando...</p>}
+                  <Input type="file" accept="image/*" className="hidden" id="start-upload" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], true)} disabled={isProcessing} />
+                  <Input placeholder="Ou cole a URL aqui" value={frameStartUrl} onChange={(e) => setFrameStartUrl(e.target.value)} className="mt-2" disabled={isProcessing} />
+                  {uploadingStart && <p className="text-sm text-muted-foreground mt-1">Comprimindo e enviando...</p>}
                   {frameStartUrl && (
                     <div className="mt-2 inline-block relative">
                       <img
@@ -726,6 +769,7 @@ const VideoPage = () => {
                         className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background/80 hover:bg-accent"
                         onClick={() => setFrameStartUrl("")}
                         aria-label="Remover frame inicial"
+                        disabled={isProcessing}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -742,18 +786,18 @@ const VideoPage = () => {
                   </div>
                   <label
                     htmlFor="end-upload"
-                    className={`border border-border rounded-md p-4 text-center ${supportsLastFrame ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"} flex flex-col items-center justify-center h-28 transition-colors ${isDragOverEnd ? "bg-accent border-primary border-dashed" : ""}`}
-                    onDragEnter={(e) => supportsLastFrame && handleDragEnter(e, false)}
-                    onDragLeave={(e) => supportsLastFrame && handleDragLeave(e, false)}
-                    onDragOver={(e) => supportsLastFrame && handleDragOver(e)}
-                    onDrop={(e) => supportsLastFrame && handleDrop(e, false)}
+                    className={`border border-border rounded-md p-4 text-center ${supportsLastFrame && !isProcessing ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"} flex flex-col items-center justify-center h-28 transition-colors ${isDragOverEnd ? "bg-accent border-primary border-dashed" : ""}`}
+                    onDragEnter={(e) => supportsLastFrame && !isProcessing && handleDragEnter(e, false)}
+                    onDragLeave={(e) => supportsLastFrame && !isProcessing && handleDragLeave(e, false)}
+                    onDragOver={(e) => supportsLastFrame && !isProcessing && handleDragOver(e)}
+                    onDrop={(e) => supportsLastFrame && !isProcessing && handleDrop(e, false)}
                   >
                     <Upload className="h-6 w-6 mb-1 text-muted-foreground" />
                     <span className="text-sm">{isDragOverEnd ? "Solte a imagem aqui" : "Carregar ou Arrastar Imagem"}</span>
                   </label>
-                  <Input type="file" accept="image/*" className="hidden" id="end-upload" disabled={!supportsLastFrame} onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], false)} />
-                  <Input placeholder="Ou cole a URL aqui" value={frameEndUrl} onChange={(e) => setFrameEndUrl(e.target.value)} className="mt-2" disabled={!supportsLastFrame} />
-                  {uploadingEnd && <p className="text-sm text-muted-foreground mt-1">Enviando...</p>}
+                  <Input type="file" accept="image/*" className="hidden" id="end-upload" disabled={!supportsLastFrame || isProcessing} onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], false)} />
+                  <Input placeholder="Ou cole a URL aqui" value={frameEndUrl} onChange={(e) => setFrameEndUrl(e.target.value)} className="mt-2" disabled={!supportsLastFrame || isProcessing} />
+                  {uploadingEnd && <p className="text-sm text-muted-foreground mt-1">Comprimindo e enviando...</p>}
                   {supportsLastFrame && frameEndUrl && (
                     <div className="mt-2 inline-block relative">
                       <img
@@ -769,6 +813,7 @@ const VideoPage = () => {
                         className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background/80 hover:bg-accent"
                         onClick={() => setFrameEndUrl("")}
                         aria-label="Remover frame final"
+                        disabled={isProcessing}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -777,9 +822,9 @@ const VideoPage = () => {
                 </div>
               </div>
 
-              <Button className="w-full" onClick={startGeneration} disabled={isSubmitting || !prompt}>
-                {isSubmitting ? <RotateCcw className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Gerar Vídeo
+              <Button className="w-full" onClick={startGeneration} disabled={isProcessing || !prompt}>
+                {isProcessing ? <RotateCcw className="h-4 w-4 mr-2 animate-spin" /> : null}
+                {isProcessing ? "Gerando..." : "Gerar Vídeo"}
               </Button>
             </CardContent>
           </Card>
@@ -823,6 +868,7 @@ const VideoPage = () => {
                   <div>
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
                     <p>Processando seu vídeo...</p>
+                    <p className="text-sm mt-1">Isso pode levar alguns minutos</p>
                   </div>
                 </div>
               ) : (
@@ -840,7 +886,10 @@ const VideoPage = () => {
           <div className="order-3 lg:col-span-2">
             <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
             {loadingVideos ? (
-              <p className="text-muted-foreground">Carregando vídeos...</p>
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <p className="text-muted-foreground">Carregando vídeos...</p>
+              </div>
             ) : savedVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {savedVideos.map((video) => (
@@ -868,14 +917,16 @@ const VideoPage = () => {
                 <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://t.me/share/url?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">Telegram</a>
                 <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`} target="_blank" rel="noreferrer">Facebook</a>
                 <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">X</a>
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareData.url)}`} target="_blank" rel="noreferrer">LinkedIn</a>
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(shareData.text + "\n" + shareData.url)}`}>Email</a>
-                <button
-                  className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
-                  onClick={async () => { await navigator.clipboard.writeText(shareData.url); setShareOpen(false); }}
+                <Button
+                  variant="outline"
+                  className="text-sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareData.url);
+                    toast({ title: "Link copiado", description: "O link foi copiado para a área de transferência." });
+                  }}
                 >
-                  Copiar link
-                </button>
+                  Copiar Link
+                </Button>
               </div>
             </div>
           </DialogContent>
