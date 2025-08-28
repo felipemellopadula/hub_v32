@@ -1582,21 +1582,32 @@ Por favor, forneça uma resposta abrangente que integre informações de todos o
                                  </Tooltip>
                                </TooltipProvider>
                                
-                                 {/* Botões de comparação - só mostrar se não há anexos na mensagem anterior do usuário */}
-                                 {(() => {
-                                   // Encontrar a mensagem do usuário que originou esta resposta
-                                   const messageIndex = messages.findIndex(m => m.id === message.id);
-                                   const immediateUserMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
-                                   const hasAttachments = immediateUserMessage?.files && immediateUserMessage.files.length > 0;
+                                  {/* Botões de comparação - só mostrar se não há anexos na mensagem anterior do usuário */}
+                                  {(() => {
+                                    // Encontrar a mensagem do usuário que originou esta resposta
+                                    const messageIndex = messages.findIndex(m => m.id === message.id);
+                                    const immediateUserMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
+                                    const hasAttachments = immediateUserMessage?.files && immediateUserMessage.files.length > 0;
+                                    
+                                    // Debug logs
+                                    console.log('Debug comparação:', {
+                                      messageId: message.id,
+                                      messageIndex,
+                                      immediateUserMessage: immediateUserMessage,
+                                      hasAttachments,
+                                      senderType: immediateUserMessage?.sender
+                                    });
+                                    
+                                    // Só mostrar botões se não há anexos
+                                    if (hasAttachments || !immediateUserMessage || immediateUserMessage.sender !== 'user') {
+                                      console.log('Não mostrando botões - condição falhou');
+                                      return null;
+                                    }
                                    
-                                   // Só mostrar botões se não há anexos
-                                   if (hasAttachments || !immediateUserMessage || immediateUserMessage.sender !== 'user') {
-                                     return null;
-                                   }
-                                   
-                                   return (
-                                     <div className="flex items-center gap-1">
-                                       {['gemini-2.5-flash', 'claude-opus-4-20250514', 'grok-4'].map((model) => {
+                                    console.log('Renderizando botões de comparação');
+                                    return (
+                                      <div className="flex items-center gap-1">
+                                        {['gemini-2.5-flash', 'claude-opus-4-20250514', 'grok-4'].map((model) => {
                                          const isComparing = comparingModels[message.id]?.includes(model);
                                          const userMessage = immediateUserMessage.content;
                                          
