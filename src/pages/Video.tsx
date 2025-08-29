@@ -1,4 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// Video.tsx — versão otimizada para carregamento MUITO mais rápido
+// Principais otimizações, mantendo todas as funcionalidades do ByteDance:
+// 1) **Somente ByteDance visível** no seletor de modelos (Veo e Kling foram comentados para não renderizar).
+// 2) **Lazy-load** de componentes pesados (ThemeToggle, UserProfile, Dialog, ícones abaixo da dobra).
+// 3) **Mini-virtualização de thumbs**: os cards do histórico só montam o <video> quando entram no viewport (IntersectionObserver).
+// 4) <video> em thumbs com **preload="none"** e **poster** (usa frame inicial se existir) para reduzir rede antes do hover/scroll.
+// 5) Upload de referências com **compressão WebP** (já existia), mantendo feedback e validações.
+// 6) Polling com **backoff exponencial** e limpeza confiável de timeouts.
+// 7) Pequenos ajustes de UI e re-render (memo/useCallback/useMemo/startTransition) para manter a interface fluida.
+
+// --- IMPORTS (acima da dobra apenas o essencial) ---
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+  startTransition,
+  memo,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,13 +30,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Link2, Share2, VideoIcon, RotateCcw, Upload, Play, Pause, Maximize, X, ArrowLeft, Trash2 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfile } from "@/components/UserProfile";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { VideoIcon, ArrowLeft } from "lucide-react"; // ícones do topo (acima da dobra)
+import imageCompression from "browser-image-compression";
 import { useAuth } from "@/contexts/AuthContext";
-import imageCompression from 'browser-image-compression';
 
+// Lazy (reduz bundle inicial)
+const ThemeToggleLazy = lazy(() => import("@/components/ThemeToggle").then(m => ({ default: m.ThemeToggle })));
+const UserProfileLazy = lazy(() => import("@/components/UserProfile").then(m => ({ default: m.UserProfile })));
+
+// Lazy dos ícones abaixo da dobra
+const DownloadIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Download })));
+const Link2Icon = lazy(() => import("lucide-react").then(m => ({ default: m.Link2 })));
+const Share2Icon = lazy(() => import("lucide-react").then(m => ({ default: m.Share2 })));
+const RotateCcwIcon = lazy(() => import("lucide-react").then(m => ({ default: m.RotateCcw })));
+const UploadIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Upload })));
+const PlayIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Play })));
+const PauseIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Pause })));
+const MaximizeIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Maximize })));
+const XIcon = lazy(() => import("lucide-react").then(m => ({ default: m.X })));
+const Trash2Icon = lazy(() => import("lucide-react").then(m => ({ default: m.Trash2 })));
+
+// Dialog em lazy para carregar apenas ao abrir o compartilhamento
+const DialogLazy = lazy(async () => {
+  const m = await import("@/components/ui/dialog");
+  return { default: m.Dialog };
+});
+const DialogContentLazy = lazy(async () => {
+  const m = await import("@/components/ui/dialog");
+  return { default: m.DialogContent };
+});
+
+// --- TIPOS ---
 interface SavedVideoData {
   id: string;
   video_url: string;
@@ -30,16 +75,17 @@ interface SavedVideoData {
   created_at: string;
 }
 
-/**
- * Modelos suportados e suas capacidades (conforme docs Runware).
- * ATENÇÃO: 'klingai:5@3' é "KlingAI 2.1 Master" nos docs oficiais (algumas fontes chamam de 2.0 Master).
- */
 type Resolution = { id: string; label: string; w: number; h: number };
+
+// --- MODELOS ---
+// IMPORTANTE: por pedido, Veo e Kling **comentados** para não renderizarem ao usuário.
+// Mantenho os objetos auxiliares também comentados, caso sejam reativados depois.
 
 const MODELS = [
   { id: "bytedance:1@1", label: "ByteDance Seedance 1.0 Lite", provider: "bytedance" as const },
-  { id: "google:3@1", label: "Google Veo 3 Fast", provider: "google" as const },
-  { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const },
+
+  // { id: "google:3@1", label: "Google Veo 3 Fast", provider: "google" as const },
+  // { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
@@ -47,131 +93,215 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p (864×480)", w: 864, h: 480 },
     { id: "16:9-704p", label: "16:9 (Wide / Landscape) - 1248×704", w: 1248, h: 704 },
   ],
-  "google:3@1": [
-    { id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 },
-  ],
-  "klingai:5@3": [
-    { id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 },
-  ],
+  // "google:3@1": [{ id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 }],
+  // "klingai:5@3": [{ id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 }],
 };
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
   "bytedance:1@1": [5, 10],
-  "google:3@1": [8],
-  "klingai:5@3": [5, 10],
+  // "google:3@1": [8],
+  // "klingai:5@3": [5, 10],
 };
 
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
   "bytedance:1@1": true,
-  "google:3@1": false,
-  "klingai:5@3": false,
+  // "google:3@1": false,
+  // "klingai:5@3": false,
 };
 
 const SUPPORTS_AUDIO: Record<string, boolean> = {
   "bytedance:1@1": false,
-  "google:3@1": true,
-  "klingai:5@3": false,
+  // "google:3@1": true,
+  // "klingai:5@3": false,
 };
 
 const FORMATS = ["mp4", "webm", "mov"];
 const MAX_VIDEOS = 12;
 
-const SavedVideo = ({ 
-  video, 
-  onDelete 
-}: { 
-  video: SavedVideoData; 
-  onDelete: (id: string, optimistic?: boolean) => void 
-}) => {
+// --- HOOK util: observar quando entra em viewport (para lazy-mount de vídeos do histórico) ---
+function useInViewport<T extends HTMLElement>(rootMargin: string = "200px") {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let io: IntersectionObserver | null = null;
+    try {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            setInView(true);
+            io?.disconnect();
+          }
+        },
+        { rootMargin }
+      );
+      io.observe(el);
+    } catch {
+      setInView(true);
+    }
+    return () => io?.disconnect();
+  }, [rootMargin]);
+
+  return { ref, inView } as const;
+}
+
+// --- THUMBNAIL de VÍDEO LAZY (para o histórico) ---
+const LazyThumbVideo: React.FC<{
+  src: string;
+  poster?: string;
+  onTogglePlay: (el: HTMLVideoElement) => void;
+  className?: string;
+}> = memo(({ src, poster, onTogglePlay, className }) => {
+  const { ref, inView } = useInViewport<HTMLDivElement>("200px");
+  const vRef = useRef<HTMLVideoElement | null>(null);
+
+  return (
+    <div ref={ref} className={className} style={{ contentVisibility: "auto" as any, containIntrinsicSize: "180px" }}>
+      {/* Monta o <video> somente quando entra na viewport */}
+      {inView ? (
+        <video
+          ref={vRef}
+          src={src}
+          className="w-full h-full object-cover"
+          loop
+          muted
+          playsInline
+          preload="none"       // evita baixar antes de aparecer
+          poster={poster}      // usa frame inicial se houver
+          onClick={() => vRef.current && onTogglePlay(vRef.current)}
+        />
+      ) : (
+        <div className="w-full h-full bg-muted animate-pulse" />
+      )}
+    </div>
+  );
+});
+LazyThumbVideo.displayName = "LazyThumbVideo";
+
+// --- CARD de VÍDEO SALVO (histórico) ---
+const SavedVideo = memo(function SavedVideo({
+  video,
+  onDelete,
+}: {
+  video: SavedVideoData;
+  onDelete: (id: string, optimistic?: boolean) => void;
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) videoRef.current.pause();
-      else videoRef.current.play();
-      setIsPlaying(!isPlaying);
-    }
-  };
+  const togglePlay = useCallback((el: HTMLVideoElement) => {
+    if (!el) return;
+    if (isPlaying) el.pause();
+    else el.play();
+    setIsPlaying((s) => !s);
+  }, [isPlaying]);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     const a = document.createElement("a");
     a.href = video.video_url;
     a.download = "synergy-video.mp4";
     document.body.appendChild(a);
     a.click();
     a.remove();
-  };
+  }, [video.video_url]);
 
-  const goFullscreen = () => {
-    if (videoRef.current?.requestFullscreen) {
-      videoRef.current.requestFullscreen();
-    }
-  };
+  const goFullscreen = useCallback(() => {
+    // ao clicar no botão; encontra o <video> mais próximo
+    const container = document.getElementById(`vid-${video.id}`);
+    const el = container?.querySelector("video") as HTMLVideoElement | null;
+    if (el?.requestFullscreen) el.requestFullscreen();
+  }, [video.id]);
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDeleting(true);
-    
-    // Optimistic update - remove da UI imediatamente
-    onDelete(video.id, true);
-    
-    // Delete real em background
-    setTimeout(() => {
-      onDelete(video.id, false);
-    }, 0);
-  };
+  const handleDelete = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsDeleting(true);
+      onDelete(video.id, true);  // optimistic
+      setTimeout(() => onDelete(video.id, false), 0); // operação real
+    },
+    [onDelete, video.id]
+  );
 
   return (
-    <div className={`relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer transition-opacity ${isDeleting ? 'opacity-50' : ''}`}>
-      <video
-        ref={videoRef}
+    <div
+      id={`vid-${video.id}`}
+      className={`relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer transition-opacity ${isDeleting ? "opacity-50" : ""}`}
+    >
+      <LazyThumbVideo
         src={video.video_url}
-        className="w-full h-full object-cover"
-        loop
-        muted
-        playsInline
-        onClick={togglePlay}
+        poster={video.initial_frame_url}
+        onTogglePlay={togglePlay}
+        className="w-full h-full"
       />
+
+      {/* Botão deletar */}
       <Button
         variant="destructive"
         size="icon"
         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
         onClick={handleDelete}
         disabled={isDeleting}
+        aria-label="Excluir vídeo"
       >
-        {isDeleting ? <RotateCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        <Suspense fallback={<div className="h-4 w-4 rounded-full bg-muted" />}>
+          {isDeleting ? <RotateCcwIcon className="h-4 w-4 animate-spin" /> : <Trash2Icon className="h-4 w-4" />}
+        </Suspense>
       </Button>
+
+      {/* Overlay de ações */}
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
         <div className="flex gap-2">
-          <Button variant="ghost" size="icon" className="bg-background/50" onClick={togglePlay}>
-            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          <Button variant="ghost" size="icon" className="bg-background/50" onClick={goFullscreen} aria-label="Tela cheia">
+            <Suspense fallback={<div className="h-5 w-5 rounded bg-muted" />}>
+              <MaximizeIcon className="h-5 w-5" />
+            </Suspense>
           </Button>
-          <Button variant="ghost" size="icon" className="bg-background/50" onClick={goFullscreen}>
-            <Maximize className="h-5 w-5" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/50"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Procura o <video> dentro do card para dar play/pause
+              const el = (e.currentTarget.closest(`#vid-${video.id}`)?.querySelector("video") ?? null) as HTMLVideoElement | null;
+              if (el) togglePlay(el);
+            }}
+            aria-label={isPlaying ? "Pausar" : "Reproduzir"}
+          >
+            <Suspense fallback={<div className="h-5 w-5 rounded bg-muted" />}>
+              {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+            </Suspense>
           </Button>
-          <Button variant="ghost" size="icon" className="bg-background/50" onClick={handleDownload}>
-            <Download className="h-5 w-5" />
+
+          <Button variant="ghost" size="icon" className="bg-background/50" onClick={handleDownload} aria-label="Baixar">
+            <Suspense fallback={<div className="h-5 w-5 rounded bg-muted" />}>
+              <DownloadIcon className="h-5 w-5" />
+            </Suspense>
           </Button>
         </div>
       </div>
     </div>
   );
-};
+});
 
-const VideoPage = () => {
+// --- PÁGINA PRINCIPAL ---
+const VideoPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [modelId, setModelId] = useState<string>("bytedance:1@1");
+  // Estado principal
+  const [modelId, setModelId] = useState<string>("bytedance:1@1"); // Apenas ByteDance
   const [prompt, setPrompt] = useState("");
   const [resolution, setResolution] = useState<string>("16:9-480p");
   const [duration, setDuration] = useState<number>(5);
   const [outputFormat, setOutputFormat] = useState<string>("mp4");
   const [cameraFixed, setCameraFixed] = useState<boolean>(false);
-  const [generateAudio, setGenerateAudio] = useState<boolean>(false);
+  const [generateAudio] = useState<boolean>(false); // off (Veo comentado)
   const [frameStartUrl, setFrameStartUrl] = useState("");
   const [frameEndUrl, setFrameEndUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -187,6 +317,7 @@ const VideoPage = () => {
   const [isDragOverEnd, setIsDragOverEnd] = useState(false);
   const [loadingVideos, setLoadingVideos] = useState(true);
 
+  // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
   const allowedDurations = useMemo<number[]>(() => DURATIONS_BY_MODEL[modelId] || [5], [modelId]);
   const supportsLastFrame = SUPPORTS_LAST_FRAME[modelId];
@@ -197,52 +328,47 @@ const VideoPage = () => {
     return found || allowedResolutions[0];
   }, [allowedResolutions, resolution]);
 
-  // Carregar vídeos salvos do Supabase
-  const loadSavedVideos = async () => {
+  // Carrega vídeos salvos (com startTransition para não travar UI)
+  const loadSavedVideos = useCallback(async () => {
     if (!user) return;
-    
     try {
       const { data, error } = await supabase
-        .from('user_videos')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("user_videos")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
         .limit(MAX_VIDEOS);
 
       if (error) throw error;
-      setSavedVideos(data || []);
+
+      startTransition(() => {
+        setSavedVideos(data || []);
+      });
     } catch (error) {
-      console.error('Erro ao carregar vídeos:', error);
+      console.error("Erro ao carregar vídeos:", error);
     } finally {
       setLoadingVideos(false);
     }
-  };
+  }, [user]);
 
-  // Salvar vídeo no Supabase
-  const saveVideoToDatabase = async (videoUrl: string) => {
-    if (!user) return;
+  // Salvar vídeo (upload->url pública->metadados)
+  const saveVideoToDatabase = useCallback(
+    async (url: string) => {
+      if (!user) return;
+      try {
+        const videoResponse = await fetch(url);
+        const videoBlob = await videoResponse.blob();
+        const fileName = `${user.id}/${Date.now()}.mp4`;
 
-    try {
-      // Upload do vídeo para o storage
-      const videoResponse = await fetch(videoUrl);
-      const videoBlob = await videoResponse.blob();
-      const fileName = `${user.id}/${Date.now()}.mp4`;
-      
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('user-videos')
-        .upload(fileName, videoBlob);
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from("user-videos")
+          .upload(fileName, videoBlob, { cacheControl: "3600" });
 
-      if (storageError) throw storageError;
+        if (storageError) throw storageError;
 
-      // Obter URL pública
-      const { data: publicData } = supabase.storage
-        .from('user-videos')
-        .getPublicUrl(storageData.path);
+        const { data: publicData } = supabase.storage.from("user-videos").getPublicUrl(storageData.path);
 
-      // Salvar metadados no banco
-      const { error: dbError } = await supabase
-        .from('user_videos')
-        .insert({
+        const { error: dbError } = await supabase.from("user_videos").insert({
           user_id: user.id,
           video_url: publicData.publicUrl,
           prompt,
@@ -252,88 +378,71 @@ const VideoPage = () => {
           aspect_ratio: res.id,
           initial_frame_url: frameStartUrl || null,
           final_frame_url: frameEndUrl || null,
-          format: outputFormat
+          format: outputFormat,
         });
 
-      if (dbError) throw dbError;
+        if (dbError) throw dbError;
 
-      // Recarregar lista de vídeos
-      loadSavedVideos();
-      
-    } catch (error) {
-      console.error('Erro ao salvar vídeo:', error);
-    }
-  };
+        loadSavedVideos();
+      } catch (error) {
+        console.error("Erro ao salvar vídeo:", error);
+      }
+    },
+    [user, prompt, modelId, resolution, duration, res.id, frameStartUrl, frameEndUrl, outputFormat, loadSavedVideos]
+  );
 
-  // Deletar vídeo do Supabase - OTIMIZADO
-  const deleteVideo = async (videoId: string, optimistic: boolean = false) => {
-    if (!user) return;
+  // Deletar vídeo (optimistic + remoção real)
+  const deleteVideo = useCallback(
+    async (videoId: string, optimistic: boolean = false) => {
+      if (!user) return;
 
-    if (optimistic) {
-      // Optimistic update - remove da UI imediatamente
-      setSavedVideos(prev => prev.filter(v => v.id !== videoId));
-      return;
-    }
-
-    try {
-      // Buscar dados do vídeo para obter o path do storage
-      const { data: videoData, error: fetchError } = await supabase
-        .from('user_videos')
-        .select('video_url')
-        .eq('id', videoId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Extrair path do storage da URL
-      const url = new URL(videoData.video_url);
-      const pathParts = url.pathname.split('/');
-      const fileName = pathParts.slice(-2).join('/'); // user_id/timestamp.mp4
-
-      // Executar operações em paralelo
-      const [storageResult, dbResult] = await Promise.allSettled([
-        supabase.storage.from('user-videos').remove([fileName]),
-        supabase.from('user_videos').delete().eq('id', videoId)
-      ]);
-
-      // Verificar se houve erros
-      if (dbResult.status === 'rejected') {
-        throw dbResult.reason;
+      if (optimistic) {
+        setSavedVideos((prev) => prev.filter((v) => v.id !== videoId));
+        return;
       }
 
-      // Se chegou até aqui, sucesso
-      toast({
-        title: "Sucesso",
-        description: "Vídeo deletado com sucesso.",
-      });
+      try {
+        const { data: videoData, error: fetchError } = await supabase
+          .from("user_videos")
+          .select("video_url")
+          .eq("id", videoId)
+          .single();
+        if (fetchError) throw fetchError;
 
-    } catch (error) {
-      console.error('Erro ao deletar vídeo:', error);
-      
-      // Reverter optimistic update em caso de erro
-      loadSavedVideos();
-      
-      toast({
-        title: "Erro",
-        description: "Não foi possível deletar o vídeo.",
-        variant: "destructive"
-      });
-    }
-  };
+        const url = new URL(videoData.video_url);
+        const pathParts = url.pathname.split("/");
+        const fileName = pathParts.slice(-2).join("/"); // user_id/timestamp.mp4
 
+        const [storageResult, dbResult] = await Promise.allSettled([
+          supabase.storage.from("user-videos").remove([fileName]),
+          supabase.from("user_videos").delete().eq("id", videoId),
+        ]);
+
+        if (dbResult.status === "rejected") throw dbResult.reason;
+
+        toast({ title: "Sucesso", description: "Vídeo deletado com sucesso." });
+      } catch (error) {
+        console.error("Erro ao deletar vídeo:", error);
+        loadSavedVideos(); // reverte UI
+        toast({ title: "Erro", description: "Não foi possível deletar o vídeo.", variant: "destructive" });
+      }
+    },
+    [user, toast, loadSavedVideos]
+  );
+
+  // Efeitos
   useEffect(() => {
     loadSavedVideos();
-  }, [user]);
+  }, [user, loadSavedVideos]);
 
   useEffect(() => {
-    if (videoUrl) {
-      saveVideoToDatabase(videoUrl);
-    }
-  }, [videoUrl]);
+    if (videoUrl) saveVideoToDatabase(videoUrl);
+  }, [videoUrl, saveVideoToDatabase]);
 
   useEffect(() => {
     document.title = "Gerar Vídeo com IA | Synergy AI";
-    const desc = "Crie vídeos com ByteDance, Veo 3 Fast e KlingAI Master. Escolha resolução, duração e referências.";
+    const desc =
+      "Crie vídeos com ByteDance (Seedance). Defina resolução, duração e quadros de referência. Rápido e simples.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement("meta");
@@ -363,86 +472,66 @@ const VideoPage = () => {
       setFrameEndUrl("");
     }
     if (!SUPPORTS_AUDIO[modelId] && generateAudio) {
-      setGenerateAudio(false);
+      // apenas por consistência; Veo está desativado
+      // setGenerateAudio(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelId]);
 
-  // Upload de imagem OTIMIZADO com compressão
-  const uploadImage = async (file: File, isStart: boolean) => {
-    const setter = isStart ? setUploadingStart : setUploadingEnd;
-    const urlSetter = isStart ? setFrameStartUrl : setFrameEndUrl;
-    setter(true);
+  // Upload de imagem com compressão
+  const uploadImage = useCallback(
+    async (file: File, isStart: boolean) => {
+      const setter = isStart ? setUploadingStart : setUploadingEnd;
+      const urlSetter = isStart ? setFrameStartUrl : setFrameEndUrl;
+      setter(true);
 
-    try {
-      // Validar tipo de arquivo
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        throw new Error('Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.');
-      }
+      try {
+        const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        if (!validTypes.includes(file.type)) throw new Error("Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.");
+        if (file.size > 50 * 1024 * 1024) throw new Error("Arquivo muito grande. Máximo 50MB.");
 
-      // Validar tamanho original (max 50MB antes da compressão)
-      if (file.size > 50 * 1024 * 1024) {
-        throw new Error('Arquivo muito grande. Máximo 50MB.');
-      }
+        const compressionOptions = {
+          maxSizeMB: 2,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          fileType: "image/webp" as any,
+        };
 
-      // Comprimir imagem para upload mais rápido
-      const compressionOptions = {
-        maxSizeMB: 2, // Máximo 2MB após compressão
-        maxWidthOrHeight: 1920, // Máximo 1920px
-        useWebWorker: true,
-        fileType: 'image/webp' as any, // Força WebP para melhor compressão
-      };
+        const compressedFile = await imageCompression(file, compressionOptions);
+        const safeFileName = `${user?.id || "temp"}_${Date.now()}.webp`;
 
-      const compressedFile = await imageCompression(file, compressionOptions);
-      
-      // Criar nome de arquivo seguro
-      const safeFileName = `${user?.id || 'temp'}_${Date.now()}.webp`;
-
-      const { data, error } = await supabase.storage
-        .from("video-refs")
-        .upload(safeFileName, compressedFile, {
-          cacheControl: '3600',
-          upsert: true
+        const { data, error } = await supabase.storage.from("video-refs").upload(safeFileName, compressedFile, {
+          cacheControl: "3600",
+          upsert: true,
         });
-      
-      if (error) throw error;
-      
-      const { data: publicData } = supabase.storage
-        .from("video-refs")
-        .getPublicUrl(data.path);
-      
-      // Verificar se a URL é válida
-      if (!publicData.publicUrl) {
-        throw new Error('Falha ao gerar URL pública');
+        if (error) throw error;
+
+        const { data: publicData } = supabase.storage.from("video-refs").getPublicUrl(data.path);
+        if (!publicData.publicUrl) throw new Error("Falha ao gerar URL pública");
+
+        urlSetter(publicData.publicUrl);
+        toast({ title: "Upload concluído", description: `Imagem ${isStart ? "inicial" : "final"} carregada com sucesso.` });
+      } catch (e: any) {
+        console.error("Upload error:", e);
+        toast({
+          title: "Erro no upload",
+          description: e.message || "Tente novamente com uma imagem diferente.",
+          variant: "destructive",
+        });
+      } finally {
+        setter(false);
       }
+    },
+    [toast, user?.id]
+  );
 
-      urlSetter(publicData.publicUrl);
-      
-      toast({
-        title: "Upload concluído",
-        description: `Imagem ${isStart ? 'inicial' : 'final'} carregada com sucesso.`,
-      });
-      
-    } catch (e: any) {
-      console.error('Upload error:', e);
-      toast({ 
-        title: "Erro no upload", 
-        description: e.message || "Tente novamente com uma imagem diferente.", 
-        variant: "destructive" 
-      });
-    } finally {
-      setter(false);
-    }
-  };
-
-  const handleDragEnter = (e: React.DragEvent, isStart: boolean) => {
+  const handleDragEnter = useCallback((e: React.DragEvent, isStart: boolean) => {
     e.preventDefault();
     e.stopPropagation();
     if (isStart) setIsDragOverStart(true);
     else setIsDragOverEnd(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent, isStart: boolean) => {
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent, isStart: boolean) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -451,93 +540,33 @@ const VideoPage = () => {
       if (isStart) setIsDragOverStart(false);
       else setIsDragOverEnd(false);
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
+  }, []);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  };
+  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent, isStart: boolean) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isStart) setIsDragOverStart(false);
+      else setIsDragOverEnd(false);
 
-  const handleDrop = (e: React.DragEvent, isStart: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (isStart) setIsDragOverStart(false);
-    else setIsDragOverEnd(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find((file) => file.type.startsWith("image/"));
-
-    if (imageFile) {
-      uploadImage(imageFile, isStart);
-    } else {
-      toast({
-        title: "Tipo de arquivo inválido",
-        description: "Por favor, arraste apenas arquivos de imagem.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const startGeneration = async () => {
-    setIsSubmitting(true);
-    setVideoUrl(null);
-    setTaskUUID(null);
-
-    const normalizedFormat = outputFormat === "mov" ? "mp4" : outputFormat;
-
-    const providerSettings: Record<string, any> = {};
-    if (modelId.startsWith("bytedance")) {
-      providerSettings.bytedance = { cameraFixed };
-    } else if (modelId.startsWith("google")) {
-      providerSettings.google = { generateAudio };
-    }
-
-    try {
-      const payload: any = {
-        action: "start",
-        modelId,
-        positivePrompt: prompt,
-        width: res.w,
-        height: res.h,
-        duration,
-        fps: 24,
-        outputFormat: normalizedFormat,
-        numberResults: 1,
-        includeCost: true,
-        providerSettings,
-        deliveryMethod: "async",
-        frameStartUrl: frameStartUrl || undefined,
-        frameEndUrl: supportsLastFrame ? (frameEndUrl || undefined) : undefined,
-      };
-
-      if (outputFormat === "mov") {
+      const files = Array.from(e.dataTransfer.files);
+      const imageFile = files.find((f) => f.type.startsWith("image/"));
+      if (imageFile) uploadImage(imageFile, isStart);
+      else
         toast({
-          title: "Formato ajustado",
-          description: "MOV não é suportado pelo provedor. Usando MP4 automaticamente.",
+          title: "Tipo de arquivo inválido",
+          description: "Por favor, arraste apenas arquivos de imagem.",
+          variant: "destructive",
         });
-      }
+    },
+    [toast, uploadImage]
+  );
 
-      const { data, error } = await supabase.functions.invoke("runware-video", { body: payload });
-      if (error) throw error;
-      if (!data?.taskUUID) throw new Error(data?.error || "Falha ao iniciar geração");
-      setTaskUUID(data.taskUUID);
-      toast({
-        title: "Geração iniciada",
-        description: "Estamos processando seu vídeo. Isso pode levar alguns minutos.",
-      });
-      beginPolling(data.taskUUID);
-    } catch (e: any) {
-      toast({
-        title: "Erro",
-        description: e?.message || "Não foi possível iniciar a geração",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-    }
-  };
-
-  const beginPolling = (uuid: string) => {
+  // Geração
+  const beginPolling = useCallback((uuid: string) => {
     if (pollRef.current) {
       window.clearTimeout(pollRef.current);
       pollRef.current = null;
@@ -564,8 +593,8 @@ const VideoPage = () => {
         pollRef.current = window.setTimeout(() => poll(attempt + 1), delay) as unknown as number;
       }
     };
-    pollRef.current = window.setTimeout(() => poll(0), 2000) as unknown as number;
-  };
+    pollRef.current = window.setTimeout(() => poll(0), 1200) as unknown as number;
+  }, [toast]);
 
   useEffect(
     () => () => {
@@ -574,70 +603,139 @@ const VideoPage = () => {
     []
   );
 
-  const handleDownload = async (url: string) => {
-    try {
-      const res = await fetch(url, { mode: "cors", credentials: "omit" });
-      if (!res.ok) throw new Error("Falha ao baixar o vídeo");
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
+  const startGeneration = useCallback(async () => {
+    setIsSubmitting(true);
+    setVideoUrl(null);
+    setTaskUUID(null);
 
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = `synergy-video-${Date.now()}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    const normalizedFormat = outputFormat === "mov" ? "mp4" : outputFormat;
 
-      URL.revokeObjectURL(objectUrl);
-    } catch {
-      toast({
-        title: "Não foi possível baixar automaticamente",
-        description: "Abrindo em nova aba. Use 'Salvar como...' para baixar.",
-      });
-      window.open(url, "_blank", "noopener,noreferrer");
+    const providerSettings: Record<string, any> = {};
+    if (modelId.startsWith("bytedance")) {
+      providerSettings.bytedance = { cameraFixed };
     }
-  };
-
-  const handleShare = async (url: string, promptText: string) => {
-    const title = "Vídeo Gerado por IA";
-    const text = (promptText || "Veja este vídeo que criei!").slice(0, 280);
+    // if (modelId.startsWith("google")) providerSettings.google = { generateAudio }; // Veo desativado
 
     try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url });
-        return;
+      const payload: any = {
+        action: "start",
+        modelId,
+        positivePrompt: prompt,
+        width: res.w,
+        height: res.h,
+        duration,
+        fps: 24,
+        outputFormat: normalizedFormat,
+        numberResults: 1,
+        includeCost: true,
+        providerSettings,
+        deliveryMethod: "async",
+        frameStartUrl: frameStartUrl || undefined,
+        frameEndUrl: supportsLastFrame ? frameEndUrl || undefined : undefined,
+      };
+
+      if (outputFormat === "mov") {
+        toast({ title: "Formato ajustado", description: "MOV não é suportado pelo provedor. Usando MP4 automaticamente." });
       }
 
-      const res = await fetch(url, { mode: "cors", credentials: "omit" });
-      if (res.ok) {
+      const { data, error } = await supabase.functions.invoke("runware-video", { body: payload });
+      if (error) throw error;
+      if (!data?.taskUUID) throw new Error(data?.error || "Falha ao iniciar geração");
+
+      setTaskUUID(data.taskUUID);
+      toast({ title: "Geração iniciada", description: "Estamos processando seu vídeo. Isso pode levar alguns minutos." });
+      beginPolling(data.taskUUID);
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message || "Não foi possível iniciar a geração", variant: "destructive" });
+      setIsSubmitting(false);
+    }
+  }, [
+    beginPolling,
+    cameraFixed,
+    modelId,
+    outputFormat,
+    prompt,
+    res.h,
+    res.w,
+    supportsLastFrame,
+    toast,
+    duration,
+    frameEndUrl,
+    frameStartUrl,
+  ]);
+
+  const handleDownload = useCallback(
+    async (url: string) => {
+      try {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error("Falha ao baixar o vídeo");
         const blob = await res.blob();
-        const extGuess = (blob.type?.split("/")?.[1] || "").split(";")[0] || (outputFormat || "mp4");
-        const file = new File([blob], `synergy-video-${Date.now()}.${extGuess}`, {
-          type: blob.type || `video/${outputFormat || "mp4"}`,
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = `synergy-video-${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch {
+        toast({
+          title: "Não foi possível baixar automaticamente",
+          description: "Abrindo em nova aba. Use 'Salvar como...' para baixar.",
         });
-        const canShareFiles = (navigator as any).canShare?.({ files: [file] });
-        if (canShareFiles && (navigator as any).share) {
-          await (navigator as any).share({ title, text, files: [file] });
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    [toast]
+  );
+
+  const handleShare = useCallback(
+    async (url: string, promptText: string) => {
+      const title = "Vídeo Gerado por IA";
+      const text = (promptText || "Veja este vídeo que criei!").slice(0, 280);
+      try {
+        if (navigator.share) {
+          await navigator.share({ title, text, url });
           return;
         }
+        // Compartilhamento com arquivo (suportado em alguns navegadores)
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (res.ok) {
+          const blob = await res.blob();
+          const extGuess = (blob.type?.split("/")?.[1] || "").split(";")[0] || (outputFormat || "mp4");
+          const file = new File([blob], `synergy-video-${Date.now()}.${extGuess}`, {
+            type: blob.type || `video/${outputFormat || "mp4"}`,
+          });
+          const canShareFiles = (navigator as any).canShare?.({ files: [file] });
+          if (canShareFiles && (navigator as any).share) {
+            await (navigator as any).share({ title, text, files: [file] });
+            return;
+          }
+        }
+      } catch {
+        // fallback ao modal abaixo
       }
-    } catch {
-      // fallback
-    }
+      setShareData({ url, title, text });
+      setShareOpen(true);
+    },
+    [outputFormat]
+  );
 
-    setShareData({ url, title, text });
-    setShareOpen(true);
-  };
-
-  // Verificar se está processando para desabilitar botão
   const isProcessing = isSubmitting || taskUUID !== null;
 
+  // --- RENDER ---
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
         <div className="container mx-auto px-4 pt-1 pb-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="flex items-center gap-2 hover:bg-muted">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 hover:bg-muted"
+            >
               <ArrowLeft className="h-4 w-4" />
               Voltar
             </Button>
@@ -648,27 +746,40 @@ const VideoPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <UserProfile />
-            <ThemeToggle />
+            <Suspense fallback={<div className="h-6 w-6 rounded-full bg-muted" />}>
+              <UserProfileLazy />
+            </Suspense>
+            <Suspense fallback={<div className="h-6 w-10 rounded bg-muted" />}>
+              <ThemeToggleLazy />
+            </Suspense>
           </div>
         </div>
       </header>
 
+      {/* Main */}
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Painel de controles */}
-          <Card className="order-2 lg:col-span-1 lg:row-span-2">
+          {/* Painel de controle */}
+          <Card className="order-2 lg:col-span-1 lg:row-span-2" style={{ contentVisibility: "auto" as any, containIntrinsicSize: "900px" }}>
             <CardContent className="space-y-6 pt-6">
               <div>
                 <Label>Modelo de Vídeo</Label>
-                <Select value={modelId} onValueChange={(v) => setModelId(v)} disabled={isProcessing}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
+                <Select value={modelId} onValueChange={setModelId} disabled={isProcessing}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o modelo" />
+                  </SelectTrigger>
                   <SelectContent>
+                    {/* Somente ByteDance visível */}
                     {MODELS.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.label} — <code className="text-xs">{m.id}</code>
                       </SelectItem>
                     ))}
+                    {/*
+                    // Mantidos apenas em comentário por enquanto:
+                    <SelectItem value="google:3@1">Google Veo 3 Fast — <code className="text-xs">google:3@1</code></SelectItem>
+                    <SelectItem value="klingai:5@3">KlingAI 2.1 Master — <code className="text-xs">klingai:5@3</code></SelectItem>
+                    */}
                   </SelectContent>
                 </Select>
               </div>
@@ -688,10 +799,14 @@ const VideoPage = () => {
                 <div>
                   <Label>Resolução</Label>
                   <Select value={res?.id} onValueChange={setResolution} disabled={isProcessing}>
-                    <SelectTrigger><SelectValue placeholder="Selecione a resolução" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a resolução" />
+                    </SelectTrigger>
                     <SelectContent>
                       {allowedResolutions.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -699,10 +814,14 @@ const VideoPage = () => {
                 <div>
                   <Label>Duração</Label>
                   <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))} disabled={isProcessing}>
-                    <SelectTrigger><SelectValue placeholder="Duração (s)" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Duração (s)" />
+                    </SelectTrigger>
                     <SelectContent>
                       {allowedDurations.map((d) => (
-                        <SelectItem key={d} value={String(d)}>{d} segundos</SelectItem>
+                        <SelectItem key={d} value={String(d)}>
+                          {d} segundos
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -713,46 +832,77 @@ const VideoPage = () => {
                 <div>
                   <Label>Formato</Label>
                   <Select value={outputFormat} onValueChange={setOutputFormat} disabled={isProcessing}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o formato" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o formato" />
+                    </SelectTrigger>
                     <SelectContent>
                       {FORMATS.map((f) => (
-                        <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>
+                        <SelectItem key={f} value={f}>
+                          {f.toUpperCase()}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Opções específicas por modelo */}
                 {modelId.startsWith("bytedance") && (
                   <div className="flex items-center gap-2 pt-2">
-                    <Switch id="camera-fixed" checked={cameraFixed} onCheckedChange={setCameraFixed} disabled={isProcessing} />
+                    <Switch
+                      id="camera-fixed"
+                      checked={cameraFixed}
+                      onCheckedChange={setCameraFixed}
+                      disabled={isProcessing}
+                    />
                     <Label htmlFor="camera-fixed">Camera Fixed (ByteDance)</Label>
                   </div>
                 )}
 
+                {/* Veo comentado
                 {modelId.startsWith("google") && (
                   <div className="flex items-center gap-2 pt-2">
                     <Switch id="veo-audio" checked={generateAudio} onCheckedChange={setGenerateAudio} disabled={isProcessing} />
                     <Label htmlFor="veo-audio">Incluir áudio (Veo 3)</Label>
                   </div>
-                )}
+                )} */}
               </div>
 
+              {/* Frames de referência */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <Label className="mb-2">Frame Inicial (opcional)</Label>
                   <label
                     htmlFor="start-upload"
-                    className={`border border-border rounded-md p-4 text-center ${!isProcessing ? 'cursor-pointer hover:bg-accent' : 'opacity-60 cursor-not-allowed'} flex flex-col items-center justify-center h-28 transition-colors ${isDragOverStart ? "bg-accent border-primary border-dashed" : ""}`}
+                    className={`border border-border rounded-md p-4 text-center ${
+                      !isProcessing ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"
+                    } flex flex-col items-center justify-center h-28 transition-colors ${
+                      isDragOverStart ? "bg-accent border-primary border-dashed" : ""
+                    }`}
                     onDragEnter={(e) => !isProcessing && handleDragEnter(e, true)}
                     onDragLeave={(e) => !isProcessing && handleDragLeave(e, true)}
                     onDragOver={(e) => !isProcessing && handleDragOver(e)}
                     onDrop={(e) => !isProcessing && handleDrop(e, true)}
                   >
-                    <Upload className="h-6 w-6 mb-1 text-muted-foreground" />
+                    <Suspense fallback={<div className="h-6 w-6 rounded bg-muted mb-1" />}>
+                      <UploadIcon className="h-6 w-6 mb-1 text-muted-foreground" />
+                    </Suspense>
                     <span className="text-sm">{isDragOverStart ? "Solte a imagem aqui" : "Carregar ou Arrastar Imagem"}</span>
                   </label>
-                  <Input type="file" accept="image/*" className="hidden" id="start-upload" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], true)} disabled={isProcessing} />
-                  <Input placeholder="Ou cole a URL aqui" value={frameStartUrl} onChange={(e) => setFrameStartUrl(e.target.value)} className="mt-2" disabled={isProcessing} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="start-upload"
+                    onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], true)}
+                    disabled={isProcessing}
+                  />
+                  <Input
+                    placeholder="Ou cole a URL aqui"
+                    value={frameStartUrl}
+                    onChange={(e) => setFrameStartUrl(e.target.value)}
+                    className="mt-2"
+                    disabled={isProcessing}
+                  />
                   {uploadingStart && <p className="text-sm text-muted-foreground mt-1">Comprimindo e enviando...</p>}
                   {frameStartUrl && (
                     <div className="mt-2 inline-block relative">
@@ -761,6 +911,7 @@ const VideoPage = () => {
                         alt="Prévia do frame inicial"
                         className="w-16 h-16 rounded border border-border object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                       <Button
                         type="button"
@@ -771,7 +922,9 @@ const VideoPage = () => {
                         aria-label="Remover frame inicial"
                         disabled={isProcessing}
                       >
-                        <X className="h-4 w-4" />
+                        <Suspense fallback={<div className="h-4 w-4 rounded bg-muted" />}>
+                          <XIcon className="h-4 w-4" />
+                        </Suspense>
                       </Button>
                     </div>
                   )}
@@ -786,17 +939,36 @@ const VideoPage = () => {
                   </div>
                   <label
                     htmlFor="end-upload"
-                    className={`border border-border rounded-md p-4 text-center ${supportsLastFrame && !isProcessing ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"} flex flex-col items-center justify-center h-28 transition-colors ${isDragOverEnd ? "bg-accent border-primary border-dashed" : ""}`}
+                    className={`border border-border rounded-md p-4 text-center ${
+                      supportsLastFrame && !isProcessing ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"
+                    } flex flex-col items-center justify-center h-28 transition-colors ${
+                      isDragOverEnd ? "bg-accent border-primary border-dashed" : ""
+                    }`}
                     onDragEnter={(e) => supportsLastFrame && !isProcessing && handleDragEnter(e, false)}
                     onDragLeave={(e) => supportsLastFrame && !isProcessing && handleDragLeave(e, false)}
                     onDragOver={(e) => supportsLastFrame && !isProcessing && handleDragOver(e)}
                     onDrop={(e) => supportsLastFrame && !isProcessing && handleDrop(e, false)}
                   >
-                    <Upload className="h-6 w-6 mb-1 text-muted-foreground" />
+                    <Suspense fallback={<div className="h-6 w-6 rounded bg-muted mb-1" />}>
+                      <UploadIcon className="h-6 w-6 mb-1 text-muted-foreground" />
+                    </Suspense>
                     <span className="text-sm">{isDragOverEnd ? "Solte a imagem aqui" : "Carregar ou Arrastar Imagem"}</span>
                   </label>
-                  <Input type="file" accept="image/*" className="hidden" id="end-upload" disabled={!supportsLastFrame || isProcessing} onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], false)} />
-                  <Input placeholder="Ou cole a URL aqui" value={frameEndUrl} onChange={(e) => setFrameEndUrl(e.target.value)} className="mt-2" disabled={!supportsLastFrame || isProcessing} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="end-upload"
+                    disabled={!supportsLastFrame || isProcessing}
+                    onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], false)}
+                  />
+                  <Input
+                    placeholder="Ou cole a URL aqui"
+                    value={frameEndUrl}
+                    onChange={(e) => setFrameEndUrl(e.target.value)}
+                    className="mt-2"
+                    disabled={!supportsLastFrame || isProcessing}
+                  />
                   {uploadingEnd && <p className="text-sm text-muted-foreground mt-1">Comprimindo e enviando...</p>}
                   {supportsLastFrame && frameEndUrl && (
                     <div className="mt-2 inline-block relative">
@@ -805,6 +977,7 @@ const VideoPage = () => {
                         alt="Prévia do frame final"
                         className="w-16 h-16 rounded border border-border object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                       <Button
                         type="button"
@@ -815,7 +988,9 @@ const VideoPage = () => {
                         aria-label="Remover frame final"
                         disabled={isProcessing}
                       >
-                        <X className="h-4 w-4" />
+                        <Suspense fallback={<div className="h-4 w-4 rounded bg-muted" />}>
+                          <XIcon className="h-4 w-4" />
+                        </Suspense>
                       </Button>
                     </div>
                   )}
@@ -823,42 +998,63 @@ const VideoPage = () => {
               </div>
 
               <Button className="w-full" onClick={startGeneration} disabled={isProcessing || !prompt}>
-                {isProcessing ? <RotateCcw className="h-4 w-4 mr-2 animate-spin" /> : null}
-                {isProcessing ? "Gerando..." : "Gerar Vídeo"}
+                {isProcessing ? (
+                  <span className="inline-flex items-center">
+                    <span className="mr-2 inline-grid place-items-center">
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                    </span>
+                    Gerando...
+                  </span>
+                ) : (
+                  "Gerar Vídeo"
+                )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Player / Output */}
+          {/* Player / Resultado */}
           <Card className="order-1 lg:col-span-2">
             <CardContent className="pt-6">
               {videoUrl ? (
                 <div className="space-y-4">
-                  <video 
-                    controls 
-                    autoPlay 
+                  <video
+                    controls
+                    autoPlay
                     muted
                     playsInline
                     preload="metadata"
                     crossOrigin="anonymous"
-                    className="w-full rounded-md border border-border aspect-video" 
-                    src={videoUrl} 
+                    className="w-full rounded-md border border-border aspect-video"
+                    src={videoUrl}
                     key={videoUrl}
                     onError={(e) => {
-                      console.log('Video error:', e);
+                      // fallback simples
                       const video = e.currentTarget;
                       if (video.crossOrigin) {
-                        video.crossOrigin = null;
+                        (video as any).crossOrigin = null;
                         video.load();
                       }
                     }}
                   />
                   <div className="flex gap-3 flex-wrap">
-                    <Button onClick={() => handleDownload(videoUrl)}><Download className="h-4 w-4 mr-2" /> Baixar</Button>
-                    <Button variant="outline" onClick={() => handleShare(videoUrl, prompt)}><Share2 className="h-4 w-4 mr-2" /> Compartilhar</Button>
+                    <Button onClick={() => handleDownload(videoUrl)}>
+                      <Suspense fallback={<div className="h-4 w-4 rounded bg-muted mr-2" />}>
+                        <DownloadIcon className="h-4 w-4 mr-2" />
+                      </Suspense>
+                      Baixar
+                    </Button>
+                    <Button variant="outline" onClick={() => handleShare(videoUrl, prompt)}>
+                      <Suspense fallback={<div className="h-4 w-4 rounded bg-muted mr-2" />}>
+                        <Share2Icon className="h-4 w-4 mr-2" />
+                      </Suspense>
+                      Compartilhar
+                    </Button>
                     <Button variant="outline" asChild>
                       <a href={videoUrl} target="_blank" rel="noreferrer">
-                        <Link2 className="h-4 w-4 mr-2" /> Abrir em nova aba
+                        <Suspense fallback={<div className="h-4 w-4 rounded bg-muted mr-2" />}>
+                          <Link2Icon className="h-4 w-4 mr-2" />
+                        </Suspense>
+                        Abrir em nova aba
                       </a>
                     </Button>
                   </div>
@@ -882,8 +1078,8 @@ const VideoPage = () => {
             </CardContent>
           </Card>
 
-          {/* Histórico */}
-          <div className="order-3 lg:col-span-2">
+          {/* Histórico (com mini-virtualização via content-visibility + lazy thumbs) */}
+          <div className="order-3 lg:col-span-2" style={{ contentVisibility: "auto" as any, containIntrinsicSize: "500px" }}>
             <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
             {loadingVideos ? (
               <div className="flex items-center gap-2">
@@ -893,11 +1089,7 @@ const VideoPage = () => {
             ) : savedVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {savedVideos.map((video) => (
-                  <SavedVideo 
-                    key={video.id} 
-                    video={video} 
-                    onDelete={deleteVideo}
-                  />
+                  <SavedVideo key={video.id} video={video} onDelete={deleteVideo} />
                 ))}
               </div>
             ) : (
@@ -906,31 +1098,69 @@ const VideoPage = () => {
           </div>
         </div>
 
-        {/* Modal de Compartilhamento */}
-        <Dialog open={shareOpen} onOpenChange={setShareOpen}>
-          <DialogContent className="max-w-lg">
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Compartilhar</h3>
-              <p className="text-sm text-muted-foreground">Escolha uma opção para compartilhar seu vídeo.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareData.text + " " + shareData.url)}`} target="_blank" rel="noreferrer">WhatsApp</a>
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://t.me/share/url?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">Telegram</a>
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`} target="_blank" rel="noreferrer">Facebook</a>
-                <a className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`} target="_blank" rel="noreferrer">X</a>
-                <Button
-                  variant="outline"
-                  className="text-sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareData.url);
-                    toast({ title: "Link copiado", description: "O link foi copiado para a área de transferência." });
-                  }}
-                >
-                  Copiar Link
-                </Button>
+        {/* Modal de Compartilhamento (lazy) */}
+        <Suspense
+          fallback={
+            shareOpen ? (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            ) : null
+          }
+        >
+          <DialogLazy open={shareOpen} onOpenChange={setShareOpen}>
+            <DialogContentLazy className="max-w-lg">
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Compartilhar</h3>
+                <p className="text-sm text-muted-foreground">Escolha uma opção para compartilhar seu vídeo.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <a
+                    className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareData.text + " " + shareData.url)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    WhatsApp
+                  </a>
+                  <a
+                    className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
+                    href={`https://t.me/share/url?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Telegram
+                  </a>
+                  <a
+                    className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Facebook
+                  </a>
+                  <a
+                    className="inline-flex items-center justify-center rounded-md border border-input px-3 py-2 text-sm hover:bg-accent"
+                    href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareData.url)}&text=${encodeURIComponent(shareData.text)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    X
+                  </a>
+                  <Button
+                    variant="outline"
+                    className="text-sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareData.url);
+                      toast({ title: "Link copiado", description: "O link foi copiado para a área de transferência." });
+                    }}
+                  >
+                    Copiar Link
+                  </Button>
+                </div>
+              </div>
+            </DialogContentLazy>
+          </DialogLazy>
+        </Suspense>
       </main>
     </div>
   );
