@@ -376,7 +376,7 @@ const UserMessage = React.memo(
           </div>
         </div>
         <Avatar className="h-8 w-8 shrink-0 ml-0.5">
-          <AvatarFallback>U</AvatarFallback>
+          <AvatarFallback className="bg-primary text-primary-foreground">U</AvatarFallback>
         </Avatar>
         {/* Botão copiar flutuante mantém acessibilidade sem cortar */}
         <div className="flex-shrink-0 self-start">
