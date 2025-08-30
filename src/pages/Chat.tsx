@@ -349,7 +349,7 @@ const UserMessage = React.memo(
   }) => {
     return (
       <>
-        {/* Wrapper do lado esquerdo cresce, mas a bubble alinha à direita */}
+        {/* Bubble da mensagem do usuário */}
         <div className="flex-1 min-w-0 flex justify-end">
           <div className="inline-block w-full sm:w-auto sm:max-w-[90%] rounded-lg px-4 py-3 bg-primary text-primary-foreground">
             <div className="space-y-3">
@@ -378,7 +378,7 @@ const UserMessage = React.memo(
         <Avatar className="h-8 w-8 shrink-0 ml-0.5">
           <AvatarFallback className="bg-muted text-foreground">U</AvatarFallback>
         </Avatar>
-        {/* Botão copiar flutuante mantém acessibilidade sem cortar */}
+        {/* Botão copiar */}
         <div className="flex-shrink-0 self-start">
           <TooltipProvider>
             <Tooltip>
