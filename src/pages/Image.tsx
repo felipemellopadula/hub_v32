@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Image as ImageIcon, Share2, ZoomIn, Loader2, X, ArrowLeft } from "lucide-react";
+import { Download, Image as ImageIcon, Share2, ZoomIn, Loader2, X, ArrowLeft, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfile } from "@/components/UserProfile";
-import { downloadImage, shareImage, GeneratedImage, dataURIToBlob } from "@/utils/imageUtils";
+import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -31,20 +31,30 @@ const MODELS = [
 
 const MAX_IMAGES_TO_FETCH = 10;
 
+interface DatabaseImage {
+  id: string;
+  user_id: string;
+  prompt: string | null;
+  image_path: string;
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  created_at: string;
+}
+
 const ImagePage = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [prompt, setPrompt] = useState("");
     const [model, setModel] = useState(MODELS[0].id);
     const [quality, setQuality] = useState(QUALITY_SETTINGS[0].id);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [images, setImages] = useState<GeneratedImage[]>([]);
-    // --- NOVO ESTADO PARA CONTROLAR O CARREGAMENTO INICIAL ---
+    const [images, setImages] = useState<DatabaseImage[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-    // Pré-visualização de anexo
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    
     // Habilita anexo apenas para GPT
     const canAttachImage = useMemo(() => model === "openai:1@1", [model]);
 
@@ -70,56 +80,29 @@ const ImagePage = () => {
 
     const selectedQualityInfo = useMemo(() => QUALITY_SETTINGS.find(q => q.id === quality)!, [quality]);
 
-
-    // --- LÓGICA DE BUSCA DE HISTÓRICO CORRIGIDA ---
-    useEffect(() => {
-        const fetchUserImages = async () => {
-            // Primeiro, espera a confirmação da sessão do usuário
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            // Se não houver sessão (usuário não logado), para o carregamento e não mostra erro.
-            if (!session?.user) {
-                console.log("Usuário não logado. O histórico não será carregado.");
-                setIsLoadingHistory(false);
-                return;
-            }
-
-            // Agora que temos certeza que o usuário existe, buscamos os dados.
+    // Carrega imagens salvas
+    const loadSavedImages = useCallback(async () => {
+        if (!user) return;
+        try {
             const { data, error } = await supabase
                 .from('user_images')
-                .select('id, prompt, image_path, created_at, width, height')
-                .eq('user_id', session.user.id)
+                .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(MAX_IMAGES_TO_FETCH);
 
-            if (error) {
-                console.warn("Falha ao buscar histórico (mostrando estado vazio):", error?.message);
-                // Não mostrar erro ao usuário; manter experiência silenciosa
-                setImages([]);
-            } else if (data) {
-                const formattedImages = data.map((dbImg) => {
-                    const { data: pub } = supabase.storage.from('images').getPublicUrl(dbImg.image_path);
-                    return {
-                        id: dbImg.id,
-                        prompt: dbImg.prompt || '',
-                        originalPrompt: dbImg.prompt || '',
-                        detailedPrompt: dbImg.prompt || '',
-                        url: pub.publicUrl,
-                        timestamp: dbImg.created_at,
-                        quality: 'standard',
-                        width: dbImg.width || 1024,
-                        height: dbImg.height || 1024,
-                        model: MODELS[0].id,
-                    } as GeneratedImage;
-                });
-                setImages(formattedImages);
-            }
-            // Finaliza o estado de carregamento
+            if (error) throw error;
+            setImages(data || []);
+        } catch (error) {
+            console.error("Erro ao carregar imagens:", error);
+        } finally {
             setIsLoadingHistory(false);
-        };
+        }
+    }, [user]);
 
-        fetchUserImages();
-    }, [toast]);
+    useEffect(() => {
+        loadSavedImages();
+    }, [loadSavedImages]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
@@ -134,7 +117,6 @@ const ImagePage = () => {
             toast({ title: "Escreva um prompt", variant: "destructive" });
             return;
         }
-        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             toast({ title: "Acesso Negado", description: "Você precisa estar logado para gerar imagens.", variant: "destructive" });
             return;
@@ -153,51 +135,24 @@ const ImagePage = () => {
                 inputImageBase64 = (reader.result as string).split(',')[1];
             }
 
-            const body: any = { model, positivePrompt: prompt, width: selectedQualityInfo.width, height: selectedQualityInfo.height, numberResults: 1, outputFormat: "PNG", ...(inputImageBase64 && model === "openai:1@1" ? { inputImage: inputImageBase64 } : {}), };
+            const body: any = { 
+                model, 
+                positivePrompt: prompt, 
+                width: selectedQualityInfo.width, 
+                height: selectedQualityInfo.height, 
+                numberResults: 1, 
+                outputFormat: "PNG", 
+                ...(inputImageBase64 && model === "openai:1@1" ? { inputImage: inputImageBase64 } : {}), 
+            };
+            
             const { data: apiData, error: apiError } = await supabase.functions.invoke('generate-image', { body });
             if (apiError) throw apiError;
             
-            const imageDataURI = `data:image/${apiData?.format || 'webp'};base64,${apiData?.image}`;
             if (!apiData?.image) throw new Error("A API não retornou uma imagem.");
-
-            setIsSaving(true);
             
-            const imageBlob = dataURIToBlob(imageDataURI);
-            const fileName = `${user.id}/${Date.now()}.png`;
+            // Salvar imagem no storage e database
+            await saveImageToDatabase(apiData.image, apiData.format || 'png');
             
-            const { error: uploadError } = await supabase.storage.from('images').upload(fileName, imageBlob);
-            if (uploadError) throw uploadError;
-
-            const { data: pub } = supabase.storage.from('images').getPublicUrl(fileName);
-
-            const { data: insertData, error: insertError } = await supabase
-                .from('user_images')
-                .insert({
-                    user_id: user.id,
-                    prompt,
-                    image_path: fileName,
-                    width: selectedQualityInfo.width,
-                    height: selectedQualityInfo.height,
-                    format: apiData?.format || 'png',
-                })
-                .select()
-                .single();
-            if (insertError) throw insertError;
-
-            const newImageForState: GeneratedImage = {
-                id: insertData.id,
-                prompt: insertData.prompt || prompt,
-                originalPrompt: insertData.prompt || prompt,
-                detailedPrompt: insertData.prompt || prompt,
-                url: pub.publicUrl,
-                timestamp: insertData.created_at,
-                quality,
-                width: insertData.width || selectedQualityInfo.width,
-                height: insertData.height || selectedQualityInfo.height,
-                model,
-            };
-
-            setImages(prev => [newImageForState, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
             toast({ title: 'Imagem gerada e salva!', variant: "default" });
 
         } catch (e: any) {
@@ -205,12 +160,107 @@ const ImagePage = () => {
             toast({ title: 'Erro', description: e.message || 'Tente novamente.', variant: "destructive" });
         } finally {
             setIsGenerating(false);
-            setIsSaving(false);
         }
     };
 
-    const handleDownload = (img: GeneratedImage) => downloadImage(img, toast);
-    const handleShare = (img: GeneratedImage) => shareImage(img, toast);
+    // Salvar imagem no storage e database
+    const saveImageToDatabase = useCallback(async (imageBase64: string, format: string) => {
+        if (!user) return;
+        try {
+            const imageDataURI = `data:image/${format};base64,${imageBase64}`;
+            const imageResponse = await fetch(imageDataURI);
+            const imageBlob = await imageResponse.blob();
+            const fileName = `${user.id}/${Date.now()}.${format}`;
+            
+            const { data: storageData, error: storageError } = await supabase.storage
+                .from('images')
+                .upload(fileName, imageBlob, { cacheControl: '3600' });
+            
+            if (storageError) throw storageError;
+            
+            const { error: dbError } = await supabase
+                .from('user_images')
+                .insert({
+                    user_id: user.id,
+                    prompt,
+                    image_path: storageData.path,
+                    width: selectedQualityInfo.width,
+                    height: selectedQualityInfo.height,
+                    format,
+                });
+            
+            if (dbError) throw dbError;
+            
+            loadSavedImages();
+        } catch (error) {
+            console.error("Erro ao salvar imagem:", error);
+        }
+    }, [user, prompt, selectedQualityInfo, loadSavedImages]);
+
+    // Deletar imagem
+    const deleteImage = useCallback(async (imageId: string, imagePath: string) => {
+        if (!user) return;
+        
+        // Otimistic update
+        setImages(prev => prev.filter(img => img.id !== imageId));
+        
+        try {
+            // Deletar do storage
+            const { error: storageError } = await supabase.storage
+                .from('images')
+                .remove([imagePath]);
+            
+            if (storageError) throw storageError;
+            
+            // Deletar do database
+            const { error: dbError } = await supabase
+                .from('user_images')
+                .delete()
+                .eq('id', imageId)
+                .eq('user_id', user.id);
+            
+            if (dbError) throw dbError;
+            
+            toast({ title: 'Imagem deletada', variant: "default" });
+        } catch (error) {
+            console.error("Erro ao deletar imagem:", error);
+            toast({ title: 'Erro ao deletar', description: 'Tente novamente.', variant: "destructive" });
+            // Reverter otimistic update em caso de erro
+            loadSavedImages();
+        }
+    }, [user, toast, loadSavedImages]);
+
+    const downloadImage = (image: DatabaseImage) => {
+        const { data: publicData } = supabase.storage.from('images').getPublicUrl(image.image_path);
+        const link = document.createElement('a');
+        link.href = publicData.publicUrl;
+        link.download = `imagem-${image.id}.${image.format || 'png'}`;
+        link.click();
+    };
+
+    const shareImage = async (image: DatabaseImage) => {
+        const { data: publicData } = supabase.storage.from('images').getPublicUrl(image.image_path);
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Imagem gerada por IA',
+                    text: image.prompt || 'Confira esta imagem gerada por IA',
+                    url: publicData.publicUrl,
+                });
+            } catch (error) {
+                console.log('Erro ao compartilhar:', error);
+            }
+        } else {
+            await navigator.clipboard.writeText(publicData.publicUrl);
+            toast({ title: 'Link copiado!', description: 'O link da imagem foi copiado para a área de transferência.' });
+        }
+    };
+
+    const getImageUrl = (image: DatabaseImage) => {
+        const { data: publicData } = supabase.storage.from('images').getPublicUrl(image.image_path);
+        return publicData.publicUrl;
+    };
 
     return (
         <div className="min-h-screen bg-background" role="main">
@@ -317,9 +367,9 @@ const ImagePage = () => {
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <Button onClick={generate} disabled={isGenerating || isSaving} className="w-full sm:w-auto">
-                                    {(isGenerating || isSaving) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {isGenerating ? 'Gerando...' : isSaving ? 'Salvando...' : 'Gerar Imagem'}
+                                <Button onClick={generate} disabled={isGenerating} className="w-full sm:w-auto">
+                                    {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {isGenerating ? 'Gerando...' : 'Gerar Imagem'}
                                 </Button>
                             </div>
                         </CardContent>
@@ -337,31 +387,54 @@ const ImagePage = () => {
                             ) : images.length > 0 ? (
                                 <div className="w-full">
                                     <div className="aspect-square relative">
-                                        <img src={images[0].url} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-full object-cover" loading="eager" />
+                                        <img src={getImageUrl(images[0])} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-full object-cover" loading="eager" />
                                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent hidden sm:flex items-center justify-between gap-2">
-                                            <Button variant="outline" className="gap-2 flex-1 bg-background/80" onClick={() => handleDownload(images[0])}><Download className="h-4 w-4" /> Baixar</Button>
-                                            <Button variant="outline" className="gap-2 flex-1 bg-background/80" onClick={() => handleShare(images[0])}><Share2 className="h-4 w-4" /> Compartilhar</Button>
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="outline" className="gap-2 flex-1 bg-background/80"><ZoomIn className="h-4 w-4" /> Ampliar</Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="max-w-4xl">
-                                                    <img src={images[0].url} alt={`Imagem ampliada: ${images[0].prompt}`} className="w-full h-auto" />
-                                                </DialogContent>
-                                            </Dialog>
+                                            <p className="text-white text-sm truncate flex-1 mr-2">{images[0].prompt}</p>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="secondary" onClick={() => downloadImage(images[0])} className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => shareImage(images[0])} className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                    <Share2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => deleteImage(images[0].id, images[0].image_path)} className="bg-red-500/20 hover:bg-red-500/30 text-white border-red-500/20">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                            <ZoomIn className="h-4 w-4" />
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-4xl">
+                                                        <img src={getImageUrl(images[0])} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-auto" />
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="sm:hidden flex flex-col items-stretch gap-2 p-4 border-t">
-                                        <Button variant="outline" className="gap-2 w-full" onClick={() => handleDownload(images[0])}><Download className="h-4 w-4" /> Baixar</Button>
-                                        <Button variant="outline" className="gap-2 w-full" onClick={() => handleShare(images[0])}><Share2 className="h-4 w-4" /> Compartilhar</Button>
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="outline" className="gap-2 w-full"><ZoomIn className="h-4 w-4" /> Ampliar</Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-4xl">
-                                                <img src={images[0].url} alt={`Imagem ampliada: ${images[0].prompt}`} className="w-full h-auto" />
-                                            </DialogContent>
-                                        </Dialog>
+                                        <div className="absolute bottom-4 left-4 right-4 sm:hidden">
+                                            <div className="flex gap-2 justify-center">
+                                                <Button size="sm" variant="secondary" onClick={() => downloadImage(images[0])} className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => shareImage(images[0])} className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                    <Share2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => deleteImage(images[0].id, images[0].image_path)} className="bg-red-500/20 hover:bg-red-500/30 text-white border-red-500/20">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                                                            <ZoomIn className="h-4 w-4" />
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-4xl">
+                                                        <img src={getImageUrl(images[0])} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-auto" />
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -380,25 +453,72 @@ const ImagePage = () => {
                     </div>
 
                     <div className="lg:col-span-2">
-                        <div className="grid grid-cols-3 gap-3">
-                            {Array.from({ length: 9 }).map((_, index) => {
-                                const img = images[index + 1];
-                                if (img) {
-                                    return (
-                                        <Dialog key={img.id}>
-                                            <Card className="relative group overflow-hidden rounded-lg aspect-square">
-                                                <DialogTrigger asChild><img src={img.url} alt={`Imagem gerada: ${img.prompt}`} className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105" loading="lazy" /></DialogTrigger>
-                                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDownload(img); }}><Download className="h-4 w-4" /></Button>
-                                                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={(e) => { e.stopPropagation(); handleShare(img); }}><Share2 className="h-4 w-4" /></Button>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-lg font-semibold text-foreground">Imagens anteriores</h2>
+                                <span className="text-sm text-muted-foreground">
+                                    {isLoadingHistory ? "Carregando..." : `${images.length} de ${MAX_IMAGES_TO_FETCH}`}
+                                </span>
+                            </div>
+
+                            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                                {isLoadingHistory ? (
+                                    Array.from({ length: 3 }).map((_, index) => (
+                                        <Card key={index} className="p-4">
+                                            <div className="flex gap-4">
+                                                <div className="w-16 h-16 bg-muted rounded-md animate-pulse" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-4 bg-muted rounded animate-pulse" />
+                                                    <div className="h-3 bg-muted rounded w-2/3 animate-pulse" />
                                                 </div>
-                                            </Card>
-                                            <DialogContent className="max-w-4xl"><img src={img.url} alt={`Imagem ampliada: ${img.prompt}`} className="w-full h-auto" /></DialogContent>
-                                        </Dialog>
-                                    );
-                                }
-                                return ( <Card key={`placeholder-${index}`} className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20" /> );
-                            })}
+                                            </div>
+                                        </Card>
+                                    ))
+                                ) : images.length > 1 ? (
+                                    images.slice(1, MAX_IMAGES_TO_FETCH).map((img) => (
+                                        <Card key={img.id} className="overflow-hidden group hover:shadow-md transition-shadow">
+                                            <div className="flex gap-4 p-4">
+                                                <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                                                    <img src={getImageUrl(img)} alt={`Miniatura: ${img.prompt}`} className="w-full h-full object-cover" loading="lazy" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground line-clamp-2 mb-1">{img.prompt}</p>
+                                                    <p className="text-xs text-muted-foreground mb-2">
+                                                        {new Date(img.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                    <div className="flex gap-1">
+                                                        <Button size="sm" variant="ghost" onClick={() => downloadImage(img)} className="h-7 px-2">
+                                                            <Download className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => shareImage(img)} className="h-7 px-2">
+                                                            <Share2 className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => deleteImage(img.id, img.image_path)} className="h-7 px-2 text-red-500 hover:text-red-600">
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                        <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <Button size="sm" variant="ghost" className="h-7 px-2">
+                                                                    <ZoomIn className="h-3 w-3" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="max-w-4xl">
+                                                                <img src={getImageUrl(img)} alt={`Imagem gerada: ${img.prompt}`} className="w-full h-auto" />
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <Card className="p-6 text-center">
+                                        <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                        <p className="text-muted-foreground">Nenhuma imagem anterior encontrada</p>
+                                        <p className="text-sm text-muted-foreground mt-1">Suas próximas gerações aparecerão aqui</p>
+                                    </Card>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
