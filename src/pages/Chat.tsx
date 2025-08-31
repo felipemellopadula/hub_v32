@@ -1389,82 +1389,86 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const reasoning =
           typeof data.response === "string" ? "" : data.response?.reasoning;
 
-        // Desativa loading e cria placeholder já com primeiro chunk
+        // Desativa loading primeiro
         setIsLoading(false);
         
         const botMessageId = (Date.now() + 1).toString();
         const chunkSize = Math.max(20, Math.ceil(fullBotText.length / 50));
-        const firstChunk = fullBotText.slice(0, chunkSize);
         
-        const placeholderBotMessage: Message = {
-          id: botMessageId,
-          content: firstChunk, // Já começa com conteúdo
-          sender: "bot",
-          timestamp: new Date(),
-          model: selectedModel,
-          reasoning: reasoning || undefined,
-          isStreaming: true,
-        };
+        // Pequeno delay antes de mostrar o box com conteúdo
+        setTimeout(() => {
+          const firstChunk = fullBotText.slice(0, chunkSize);
+          
+          const placeholderBotMessage: Message = {
+            id: botMessageId,
+            content: firstChunk,
+            sender: "bot",
+            timestamp: new Date(),
+            model: selectedModel,
+            reasoning: reasoning || undefined,
+            isStreaming: true,
+          };
 
-        setMessages((prev) => [...prev, placeholderBotMessage]);
-        setIsStreamingResponse(true);
+          setMessages((prev) => [...prev, placeholderBotMessage]);
+          setIsStreamingResponse(true);
 
-        // Continua streaming do resto do texto
-        let index = chunkSize;
-        const total = fullBotText.length;
-        
-        if (index < total) {
-          const typingIntervalId = setInterval(() => {
-            if (index < total) {
-              const nextIndex = Math.min(index + chunkSize, total);
-              const partial = fullBotText.slice(0, nextIndex);
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === botMessageId ? { ...msg, content: partial } : msg
-                )
-              );
-              index = nextIndex;
-            } else {
-              clearInterval(typingIntervalId);
+          // Continua streaming do resto do texto
+          let index = chunkSize;
+          const total = fullBotText.length;
+          
+          if (index < total) {
+            const typingIntervalId = setInterval(() => {
+              if (index < total) {
+                const nextIndex = Math.min(index + chunkSize, total);
+                const partial = fullBotText.slice(0, nextIndex);
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === botMessageId ? { ...msg, content: partial } : msg
+                  )
+                );
+                index = nextIndex;
+              } else {
+                clearInterval(typingIntervalId);
+                const finalBotMessage: Message = {
+                  ...placeholderBotMessage,
+                  content: fullBotText,
+                  isStreaming: false,
+                };
+                const finalMessages = [...newMessages, finalBotMessage];
+
+                startTransition(() => {
+                  setMessages(finalMessages);
+                  setIsStreamingResponse(false);
+                });
+
+                setTimeout(() => {
+                  if (isNearBottom && messagesEndRef.current) {
+                    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+                  }
+                }, 80);
+
+                upsertConversation(finalMessages, convId);
+              }
+            }, 1);
+          } else {
+            // Texto muito curto, finaliza imediatamente
+            setTimeout(() => {
               const finalBotMessage: Message = {
                 ...placeholderBotMessage,
                 content: fullBotText,
                 isStreaming: false,
               };
               const finalMessages = [...newMessages, finalBotMessage];
-
+              
               startTransition(() => {
                 setMessages(finalMessages);
                 setIsStreamingResponse(false);
               });
-
-              setTimeout(() => {
-                if (isNearBottom && messagesEndRef.current) {
-                  messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-                }
-              }, 80);
-
+              
               upsertConversation(finalMessages, convId);
-            }
-          }, 1);
-        } else {
-          // Texto muito curto, finaliza imediatamente
-          setTimeout(() => {
-            const finalBotMessage: Message = {
-              ...placeholderBotMessage,
-              content: fullBotText,
-              isStreaming: false,
-            };
-            const finalMessages = [...newMessages, finalBotMessage];
-            
-            startTransition(() => {
-              setMessages(finalMessages);
-              setIsStreamingResponse(false);
-            });
-            
-            upsertConversation(finalMessages, convId);
-          }, 50);
-        }
+            }, 50);
+          }
+        }, 100);
       } catch (error: any) {
         console.error("Error sending message:", error);
         toast({
