@@ -435,36 +435,9 @@ const BotMessage = React.memo(
     const [isTyping, setIsTyping] = useState(false);
 
     useEffect(() => {
-      if (message.content && !message.isStreaming) {
-        setIsTyping(true);
-        setDisplayedContent("");
-        
-        let index = 0;
-        const text = message.content;
-        
-        // Digitação ultra rápida com chunks grandes
-        const chunkSize = Math.max(10, Math.ceil(text.length / 30)); // Pelo menos 10 caracteres por vez
-        
-        const typeInterval = setInterval(() => {
-          if (index < text.length) {
-            const nextIndex = Math.min(index + chunkSize, text.length);
-            setDisplayedContent(text.slice(0, nextIndex));
-            index = nextIndex;
-          } else {
-            setIsTyping(false);
-            clearInterval(typeInterval);
-            // Auto-scroll quando terminar a digitação
-            setTimeout(() => {
-              scrollToBottom();
-            }, 100);
-          }
-        }, 1); // Ultra rápido - vários caracteres por ms
-        
-        return () => clearInterval(typeInterval);
-      } else if (message.isStreaming) {
-        setDisplayedContent(message.content);
-        setIsTyping(false);
-      }
+      // Apenas exibe o conteúdo diretamente - o streaming é gerenciado no componente principal
+      setDisplayedContent(message.content);
+      setIsTyping(message.isStreaming);
     }, [message.content, message.isStreaming]);
 
     // Não renderizar se não há conteúdo para mostrar
@@ -1416,7 +1389,9 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const reasoning =
           typeof data.response === "string" ? "" : data.response?.reasoning;
 
-        // Placeholder de streaming
+        // Primeiro desativa loading (três pontinhos) e adiciona placeholder vazio
+        setIsLoading(false);
+        
         const botMessageId = (Date.now() + 1).toString();
         const placeholderBotMessage: Message = {
           id: botMessageId,
@@ -1431,11 +1406,13 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         setMessages((prev) => [...prev, placeholderBotMessage]);
         setIsStreamingResponse(true);
 
-        // Streaming via rAF (menos updates)
+        // Streaming ultra rápido com setInterval
         let index = 0;
         const total = fullBotText.length;
-        const updatesCount = Math.min(32, Math.max(12, Math.ceil(total / 500)));
-        const chunkSize = Math.max(Math.ceil(total / updatesCount), 50);
+        // Chunk muito grande para digitação ultra rápida
+        const chunkSize = Math.max(20, Math.ceil(total / 50)); // Pelo menos 20 chars por vez, máximo 50 updates
+        
+        let typingIntervalId: NodeJS.Timeout;
 
         const step = () => {
           if (index < total) {
@@ -1447,12 +1424,8 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               )
             );
             index = nextIndex;
-            streamingRafRef.current = requestAnimationFrame(step);
           } else {
-            if (streamingRafRef.current) {
-              cancelAnimationFrame(streamingRafRef.current);
-              streamingRafRef.current = null;
-            }
+            clearInterval(typingIntervalId);
             const finalBotMessage: Message = {
               ...placeholderBotMessage,
               content: fullBotText,
@@ -1472,11 +1445,11 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             }, 80);
 
             upsertConversation(finalMessages, convId);
-            setIsLoading(false);
+            // isLoading já foi desativado antes do streaming
           }
         };
 
-        streamingRafRef.current = requestAnimationFrame(step);
+        typingIntervalId = setInterval(step, 1); // Ultra rápido - 1ms interval
       } catch (error: any) {
         console.error("Error sending message:", error);
         toast({
