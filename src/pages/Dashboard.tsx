@@ -35,7 +35,15 @@ const Dashboard = () => {
   }
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      // Redirecionamento imediato para garantir que o usuário seja deslogado rapidamente
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Fallback: redirecionar mesmo se houver erro
+      navigate('/', { replace: true });
+    }
   };
 
   const features = [

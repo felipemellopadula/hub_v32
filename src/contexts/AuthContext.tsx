@@ -296,13 +296,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Sign out from Supabase first - this will trigger onAuthStateChange
+      // Limpar estado imediatamente para feedback visual rápido
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      // Sign out from Supabase
       await supabase.auth.signOut();
-      // The onAuthStateChange will handle the redirect and state clearing
+      
+      // Redirecionamento imediato
+      window.location.replace('/');
     } catch (error) {
       console.error('Error signing out:', error);
+      // Limpar estado mesmo em caso de erro
+      setUser(null);
+      setSession(null);
+      setProfile(null);
       // Fallback redirect on error
-      window.location.href = '/';
+      window.location.replace('/');
     }
   };
 
