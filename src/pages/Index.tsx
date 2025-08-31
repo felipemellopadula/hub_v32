@@ -72,10 +72,8 @@ const ZapIcon = lazy(() =>
   import("lucide-react").then((m) => ({ default: m.Zap }))
 );
 
-// Modal já era lazy; mantemos e ainda fazemos prefetch por interação
-const AuthModal = lazy(() =>
-  import("@/components/AuthModal").then((m) => ({ default: m.AuthModal }))
-);
+// Import direto do AuthModal para evitar problemas de contexto
+import { AuthModal } from "@/components/AuthModal";
 
 // --------- Helpers de performance ---------
 
@@ -250,10 +248,6 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefetch do modal de auth ao focar/hover no botão (zero impacto se já carregado)
-  const prefetchAuthModal = useCallback(() => {
-    import("@/components/AuthModal");
-  }, []);
 
   if (loading) {
     return (
@@ -320,8 +314,6 @@ const Index = () => {
               ) : (
                 <Button
                   onClick={() => setShowAuthModal(true)}
-                  onMouseEnter={prefetchAuthModal}
-                  onFocus={prefetchAuthModal}
                   size="sm"
                   className="text-xs sm:text-sm"
                 >
@@ -779,8 +771,6 @@ const Index = () => {
                         variant="outline"
                         className="mt-6"
                         onClick={() => setShowAuthModal(true)}
-                        onMouseEnter={prefetchAuthModal}
-                        onFocus={prefetchAuthModal}
                       >
                         Começar agora
                       </Button>
@@ -815,8 +805,6 @@ const Index = () => {
                       <Button
                         className="mt-6"
                         onClick={() => setShowAuthModal(true)}
-                        onMouseEnter={prefetchAuthModal}
-                        onFocus={prefetchAuthModal}
                       >
                         Começar agora
                       </Button>
@@ -843,8 +831,6 @@ const Index = () => {
                         variant="outline"
                         className="mt-6"
                         onClick={() => setShowAuthModal(true)}
-                        onMouseEnter={prefetchAuthModal}
-                        onFocus={prefetchAuthModal}
                       >
                         Começar agora
                       </Button>
@@ -949,20 +935,12 @@ const Index = () => {
         </main>
       </div>
 
-      {/* AuthModal (lazy) */}
+      {/* AuthModal */}
       {showAuthModal && (
-        <Suspense
-          fallback={
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            </div>
-          }
-        >
-          <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-          />
-        </Suspense>
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+        />
       )}
     </div>
   );
