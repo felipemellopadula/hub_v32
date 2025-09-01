@@ -76,6 +76,7 @@ const ImagePage = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [images, setImages] = useState<DatabaseImage[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -471,8 +472,8 @@ const ImagePage = () => {
                                 </div>
                             ) : images.length > 0 ? (
                                 <div className="w-full">
-                                    <div className="aspect-square relative">
-                                        <img src={getImageUrl(images[0])} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-full object-cover" loading="eager" />
+                                    <div className="aspect-square relative cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
+                                        <img src={getImageUrl(images[0])} alt={`Imagem gerada: ${images[0].prompt}`} className="w-full h-full object-cover hover:opacity-95 transition-opacity" loading="eager" />
                                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent hidden sm:flex items-center justify-between gap-2">
                                             <p className="text-white text-sm truncate flex-1 mr-2">{images[0].prompt}</p>
                                             <div className="flex gap-2">
@@ -535,6 +536,25 @@ const ImagePage = () => {
                                 </div>
                             )}
                         </Card>
+
+                        {/* Modal de ampliação da imagem principal */}
+                        <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+                            <DialogContent className="max-w-7xl max-h-[90vh] p-0">
+                                <div className="relative">
+                                    <img 
+                                        src={images.length > 0 ? getImageUrl(images[0]) : ''} 
+                                        alt={images.length > 0 ? `Imagem gerada: ${images[0].prompt}` : ''} 
+                                        className="w-full h-auto max-h-[85vh] object-contain" 
+                                    />
+                                    <button
+                                        onClick={() => setIsImageModalOpen(false)}
+                                        className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                     </div>
 
                     <div className="lg:col-span-2">
