@@ -62,8 +62,8 @@ const ThemeToggleLazy = lazy(() =>
 const UserProfileLazy = lazy(() =>
   import("@/components/UserProfile").then((m) => ({ default: m.UserProfile }))
 );
-const MarkdownRendererLazy = lazy(
-  () => import("@/components/MarkdownRenderer")
+const MarkdownRendererLazy = lazy(() =>
+  import("@/components/MarkdownRenderer").then((m) => ({ default: m.default }))
 );
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
