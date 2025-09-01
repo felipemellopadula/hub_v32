@@ -22,6 +22,18 @@ const QUALITY_SETTINGS = [
     { id: "fast", label: "Rápido (512x512)", width: 512, height: 512, steps: 10 },
 ];
 
+const KONTEXT_QUALITY_SETTINGS = [
+    { id: "1:1", label: "1:1 (Square)", width: 1024, height: 1024, steps: 15 },
+    { id: "21:9", label: "21:9 (Ultra-Wide / Landscape)", width: 1536, height: 656, steps: 15 },
+    { id: "16:9", label: "16:9 (Wide / Landscape)", width: 1536, height: 864, steps: 15 },
+    { id: "4:3", label: "4:3 (Standard / Landscape)", width: 1024, height: 768, steps: 15 },
+    { id: "3:2", label: "3:2 (Classic / Landscape)", width: 1536, height: 1024, steps: 15 },
+    { id: "2:3", label: "2:3 (Classic / Portrait)", width: 1024, height: 1536, steps: 15 },
+    { id: "3:4", label: "3:4 (Standard / Portrait)", width: 768, height: 1024, steps: 15 },
+    { id: "9:16", label: "9:16 (Tall / Portrait)", width: 864, height: 1536, steps: 15 },
+    { id: "9:21", label: "9:21 (Ultra-Tall / Portrait)", width: 656, height: 1536, steps: 15 },
+];
+
 const MODELS = [
     { id: "openai:1@1", label: "Gpt-Image 1" },
     { id: "ideogram:4@1", label: "Ideogram 3.0" },
@@ -57,6 +69,11 @@ const ImagePage = () => {
     
     // Habilita anexo apenas para GPT
     const canAttachImage = useMemo(() => model === "openai:1@1", [model]);
+    
+    // Seleciona as configurações de qualidade baseado no modelo
+    const availableQualitySettings = useMemo(() => {
+        return model === "bfl:3@1" ? KONTEXT_QUALITY_SETTINGS : QUALITY_SETTINGS;
+    }, [model]);
 
     useEffect(() => {
         document.title = "Gerar Imagens com Ia";
@@ -78,7 +95,12 @@ const ImagePage = () => {
         }
     }, [canAttachImage, selectedFile]);
 
-    const selectedQualityInfo = useMemo(() => QUALITY_SETTINGS.find(q => q.id === quality)!, [quality]);
+    // Reset quality when model changes
+    useEffect(() => {
+        setQuality(availableQualitySettings[0].id);
+    }, [model, availableQualitySettings]);
+
+    const selectedQualityInfo = useMemo(() => availableQualitySettings.find(q => q.id === quality)!, [quality, availableQualitySettings]);
 
     // Carrega imagens salvas
     const loadSavedImages = useCallback(async () => {
@@ -302,11 +324,11 @@ const ImagePage = () => {
                                     </Select>
                                 </div>
                                 <div className="md:col-span-2">
-                                    <Label>Qualidade</Label>
+                                    <Label>{model === "bfl:3@1" ? "Formato" : "Qualidade"}</Label>
                                     <Select value={quality} onValueChange={setQuality}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            {QUALITY_SETTINGS.map(q => ( <SelectItem key={q.id} value={q.id}>{q.label}</SelectItem> ))}
+                                            {availableQualitySettings.map(q => ( <SelectItem key={q.id} value={q.id}>{q.label}</SelectItem> ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
