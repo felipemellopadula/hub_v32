@@ -1,20 +1,21 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to estimate token count (rough approximation)
+// Function to estimate token count (4 characters = 1 token as per user requirement)
 function estimateTokenCount(text: string): number {
-  // Rough approximation: 1 token ≈ 4 characters for Portuguese text
-  return Math.ceil(text.length / 3);
+  // User specified: 4 characters = 1 token
+  return Math.ceil(text.length / 4);
 }
 
 // Function to split text into chunks
 function splitIntoChunks(text: string, maxTokens: number): string[] {
-  const maxChars = maxTokens * 3; // Convert tokens to approximate characters
+  const maxChars = maxTokens * 4; // Convert tokens to characters (4 chars = 1 token)
   const chunks = [];
   
   for (let i = 0; i < text.length; i += maxChars) {
@@ -32,6 +33,25 @@ serve(async (req) => {
 
   try {
     const { message, model = 'gpt-5-2025-08-07', files, conversationHistory = [], contextEnabled = false } = await req.json();
+    
+    // Get user info from JWT
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let userId = null;
+    if (token) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(token);
+        userId = user?.id;
+      } catch (error) {
+        console.log('Could not get user from token:', error);
+      }
+    }
     
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
@@ -199,6 +219,52 @@ serve(async (req) => {
     const finalResponse = responsePrefix + generatedText;
 
     console.log('OpenAI response received successfully');
+
+    // Record token usage in database
+    if (userId) {
+      try {
+        // Calculate token usage - 4 characters = 1 token
+        const inputTokens = estimateTokenCount(finalMessage);
+        const outputTokens = estimateTokenCount(generatedText);
+        const totalTokens = inputTokens + outputTokens;
+        
+        // Map internal model to display model (handle SynergyAi)
+        const displayModel = model === 'gpt-4o-mini' ? 'synergyai' : model;
+        
+        console.log('Recording token usage:', {
+          userId,
+          model: displayModel,
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          messageLength: finalMessage.length,
+          responseLength: generatedText.length
+        });
+
+        // Save token usage to database
+        const { error: tokenError } = await supabase
+          .from('token_usage')
+          .insert({
+            user_id: userId,
+            model_name: displayModel,
+            tokens_used: totalTokens,
+            message_content: finalMessage.length > 500 
+              ? finalMessage.substring(0, 500) + '...' 
+              : finalMessage,
+            created_at: new Date().toISOString()
+          });
+
+        if (tokenError) {
+          console.error('Error saving token usage:', tokenError);
+        } else {
+          console.log('Token usage recorded successfully');
+        }
+      } catch (tokenRecordError) {
+        console.error('Error recording token usage:', tokenRecordError);
+      }
+    } else {
+      console.log('No user ID available, skipping token usage recording');
+    }
 
     return new Response(JSON.stringify({ response: finalResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
