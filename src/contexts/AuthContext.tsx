@@ -3,6 +3,15 @@ import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
+// Custom hook to safely use navigate
+const useSafeNavigate = () => {
+  try {
+    return useNavigate();
+  } catch {
+    return null;
+  }
+};
+
 interface Profile {
   id: string;
   name: string;
@@ -44,7 +53,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const navigate = useNavigate();
+  const navigate = useSafeNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -214,13 +223,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Redirect to dashboard only for explicit sign-in events
           if (event === 'SIGNED_IN' && window.location.pathname === '/') {
-            setTimeout(() => navigate('/dashboard', { replace: true }), 100);
+            if (navigate) {
+              setTimeout(() => navigate('/dashboard', { replace: true }), 100);
+            } else {
+              setTimeout(() => window.location.replace('/dashboard'), 100);
+            }
           }
         } else {
           setProfile(null);
           // Only redirect if explicitly signed out
           if (event === 'SIGNED_OUT' && window.location.pathname !== '/') {
-            setTimeout(() => navigate('/', { replace: true }), 100);
+            if (navigate) {
+              setTimeout(() => navigate('/', { replace: true }), 100);
+            } else {
+              setTimeout(() => window.location.replace('/'), 100);
+            }
           }
         }
       }
@@ -305,14 +322,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('Logout completed, redirecting...');
       
-      // Redirecionamento usando React Router
-      setTimeout(() => navigate('/', { replace: true }), 300);
+      // Redirecionamento usando React Router ou fallback
+      if (navigate) {
+        setTimeout(() => navigate('/', { replace: true }), 300);
+      } else {
+        setTimeout(() => window.location.replace('/'), 300);
+      }
     } catch (error) {
       console.error('Error signing out:', error);
       // Forçar limpeza em caso de erro
       localStorage.clear();
       sessionStorage.clear();
-      setTimeout(() => navigate('/', { replace: true }), 100);
+      if (navigate) {
+        setTimeout(() => navigate('/', { replace: true }), 100);
+      } else {
+        setTimeout(() => window.location.replace('/'), 100);
+      }
     }
   };
 
