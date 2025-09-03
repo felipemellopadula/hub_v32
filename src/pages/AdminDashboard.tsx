@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminStatsCards } from "@/components/AdminStatsCards";
+import { OpenAIPricingTable } from "@/components/OpenAIPricingTable";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Shield, AlertTriangle, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TokenUsage {
@@ -25,18 +27,17 @@ interface AdminStats {
   totalTokens: number;
 }
 
-// OpenAI pricing (per million tokens) - Updated from official table
+// OpenAI pricing per million tokens (USD) - Updated from user's table
 const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
-  'gpt-5': { input: 1.25, output: 10.0 },
-  'gpt-5-mini': { input: 0.25, output: 2.0 },
-  'gpt-5-nano': { input: 0.05, output: 0.4 },
-  'gpt-4.1': { input: 3.0, output: 12.0 },
-  'gpt-4.1-mini': { input: 0.8, output: 3.2 },
-  'gpt-4.1-nano': { input: 0.2, output: 0.8 },
-  'o4-mini': { input: 4.0, output: 16.0 },
-  'gpt-4o-mini': { input: 0.15, output: 0.6 },
-  'synergyai': { input: 0.15, output: 0.6 }, // Map SynergyAi to gpt-4o-mini pricing
-  // Legacy models
+  'gpt-5': { input: 1.25, output: 10.00 },
+  'gpt-5-mini': { input: 0.25, output: 2.00 },
+  'gpt-5-nano': { input: 0.05, output: 0.40 },
+  'gpt-4.1': { input: 3.00, output: 12.00 },
+  'gpt-4.1-mini': { input: 0.80, output: 3.20 },
+  'gpt-4.1-nano': { input: 0.20, output: 0.80 },
+  'o4-mini': { input: 4.00, output: 16.00 },
+  'gpt-4o-mini': { input: 0.15, output: 0.60 },
+  'synergyai': { input: 0.15, output: 0.60 }, // Same as gpt-4o-mini
   'gpt-4o': { input: 5.0, output: 15.0 },
   'gpt-4': { input: 30.0, output: 60.0 },
   'gpt-3.5-turbo': { input: 3.0, output: 6.0 }
@@ -58,12 +59,20 @@ const AdminDashboard = () => {
   const charsToTokens = (chars: number): number => Math.ceil(chars / 4);
 
   const getCostPerToken = (model: string, type: 'input' | 'output'): number => {
-    const modelKey = Object.keys(OPENAI_PRICING).find(key => 
-      model.toLowerCase().includes(key.toLowerCase()) || 
-      (model.toLowerCase() === 'synergyai' && key === 'synergyai')
+    // Direct model match or fallback to gpt-4o-mini
+    let modelKey = model.toLowerCase();
+    
+    // Handle SynergyAI mapping
+    if (modelKey === 'synergyai') {
+      modelKey = 'gpt-4o-mini';
+    }
+    
+    // Find exact match or similar match
+    const matchedKey = Object.keys(OPENAI_PRICING).find(key => 
+      modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
     ) || 'gpt-4o-mini';
     
-    return OPENAI_PRICING[modelKey][type] / 1_000_000;
+    return OPENAI_PRICING[matchedKey][type] / 1_000_000;
   };
 
   const calculateAdminStats = (data: TokenUsage[]): AdminStats => {
@@ -84,7 +93,7 @@ const AdminDashboard = () => {
       const outputCost = outputTokens * getCostPerToken(usage.model_name, 'output');
       const cost = inputCost + outputCost;
       
-      // Revenue with 200% markup (3x the cost)
+      // Revenue with 200% markup (3x cost = 200% profit margin)
       const revenue = cost * 3;
       
       totalCost += cost;
@@ -110,17 +119,23 @@ const AdminDashboard = () => {
       if (!isAdmin && user !== null) return;
 
       try {
+        console.log('Fetching admin data...');
         // Fetch all token usage data
         const { data: allUsage, error } = await supabase
           .from('token_usage')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+
+        console.log('Token usage data fetched:', allUsage?.length, 'records');
 
         if (allUsage) {
           setAdminStats(calculateAdminStats(allUsage));
-          setRecentUsage(allUsage.slice(0, 10)); // Show last 10 transactions
+          setRecentUsage(allUsage.slice(0, 20)); // Show last 20 transactions
         }
       } catch (error) {
         console.error('Error fetching admin data:', error);
@@ -132,8 +147,8 @@ const AdminDashboard = () => {
     if (!authLoading) {
       fetchAdminData();
       
-      // Auto-refresh every 30 seconds for real-time updates
-      const interval = setInterval(fetchAdminData, 30000);
+      // Auto-refresh every 10 seconds for real-time updates
+      const interval = setInterval(fetchAdminData, 10000);
       return () => clearInterval(interval);
     }
   }, [isAdmin, authLoading, user]);
@@ -194,6 +209,17 @@ const AdminDashboard = () => {
               </h1>
             </div>
           </div>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
 
         <Alert className="mb-6">
@@ -209,6 +235,11 @@ const AdminDashboard = () => {
 
         {/* Stats Cards */}
         <AdminStatsCards {...adminStats} />
+
+        {/* OpenAI Pricing Table */}
+        <div className="mb-8">
+          <OpenAIPricingTable />
+        </div>
 
         {/* Recent Usage */}
         <Card>

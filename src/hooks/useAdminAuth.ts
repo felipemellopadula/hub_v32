@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 
 const ADMIN_EMAILS = [
   'valdiney.victor@gmail.com',
@@ -9,42 +7,56 @@ const ADMIN_EMAILS = [
   'alanvazcardoso@gmail.com'
 ];
 
+const ADMIN_PASSWORD = 'SynergyAi1234';
+
 export const useAdminAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      setIsAdmin(currentUser ? ADMIN_EMAILS.includes(currentUser.email || '') : false);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      setIsAdmin(currentUser ? ADMIN_EMAILS.includes(currentUser.email || '') : false);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if user is logged in as admin (using localStorage for simplicity)
+    const adminUser = localStorage.getItem('adminUser');
+    if (adminUser) {
+      const userData = JSON.parse(adminUser);
+      setUser(userData);
+      setIsAdmin(true);
+    }
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    // Simple validation - check if email is in admin list and password matches
+    if (!ADMIN_EMAILS.includes(email)) {
+      return { error: { message: 'Email não autorizado para acesso administrativo' } };
+    }
+    
+    if (password !== ADMIN_PASSWORD) {
+      return { error: { message: 'Senha incorreta' } };
+    }
+    
+    // Create admin user object
+    const adminUser = { 
+      email, 
+      id: email, 
+      role: 'admin',
+      name: email.split('@')[0] 
+    };
+    
+    // Store in localStorage
+    localStorage.setItem('adminUser', JSON.stringify(adminUser));
+    
+    setUser(adminUser);
+    setIsAdmin(true);
+    
+    return { error: null };
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    localStorage.removeItem('adminUser');
+    setUser(null);
+    setIsAdmin(false);
+    return { error: null };
   };
 
   return {
