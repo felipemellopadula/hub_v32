@@ -75,7 +75,7 @@ const getCategoryColor = (category: Model['category']) => {
 
 const getProviderIcon = (provider: string) => {
   const iconMap: Record<string, string> = {
-    'Synergy': '/lovable-uploads/3f22acfa-6c56-4617-a7f6-cfe77f357e89.png',
+    'Synergy': '/images/synergy-icon.webp',
     'OpenAI': '/images/logos/openai.svg',
     'Anthropic': '/images/logos/anthropic.svg',
     'Google': '/images/logos/gemini.svg',
@@ -146,7 +146,7 @@ export const ModelSelector = ({ onModelSelect, selectedModel }: ModelSelectorPro
                                 aria-label="Ícone SynergyIA"
                                 className="w-3.5 h-3.5"
                                 style={{
-                                  backgroundImage: `url(/lovable-uploads/3f22acfa-6c56-4617-a7f6-cfe77f357e89.png)`,
+                                  backgroundImage: `url(/images/synergy-icon.webp)`,
                                   backgroundSize: 'contain',
                                   backgroundRepeat: 'no-repeat',
                                   backgroundPosition: 'center',
