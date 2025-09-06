@@ -96,6 +96,7 @@ const ImagePage = () => {
     const availableQualitySettings = useMemo(() => {
         if (model === "bfl:3@1") return KONTEXT_QUALITY_SETTINGS;
         if (model === "ideogram:4@1") return IDEOGRAM_QUALITY_SETTINGS;
+        if (model === "google:4@1") return GEMINI_QUALITY_SETTINGS;
         return QUALITY_SETTINGS;
     }, [model]);
 
