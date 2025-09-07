@@ -24,12 +24,14 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core React libraries
+          // Core React libraries (keep minimal)
           vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
           
           // Landing page specific (keep minimal)
           landing: ['next-themes'],
+          
+          // Core routing separate from app logic
+          routing: ['react-router-dom'],
           
           // Authentication and providers (only loaded when needed)
           auth: ['@supabase/supabase-js'],

@@ -2,10 +2,11 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LandingHeader } from "@/components/LandingHeader";
-import { LandingHero } from "@/components/LandingHero";
 
-// Lazy load heavy sections that are below the fold
+// Load minimal version first, then progressive enhancement
+const MinimalLanding = lazy(() => import("@/components/MinimalLanding").then(m => ({ default: m.MinimalLanding })));
+const LandingHeader = lazy(() => import("@/components/LandingHeader").then(m => ({ default: m.LandingHeader })));
+const LandingHero = lazy(() => import("@/components/LandingHero").then(m => ({ default: m.LandingHero })));
 const LandingSections = lazy(() => import("@/components/LandingSections"));
 const AuthModal = lazy(() => import("@/components/AuthModal").then(m => ({ default: m.AuthModal })));
 
@@ -13,6 +14,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [enhancedVersion, setEnhancedVersion] = useState(false);
 
   const scrollToSection = useCallback((sectionId: string) => {
     const el = document.getElementById(sectionId);
@@ -22,6 +24,11 @@ const Index = () => {
   useEffect(() => {
     // Set title immediately
     document.title = "Synergy AI Hub – Modelos de IA, Recursos e Planos";
+
+    // Progressive enhancement - load full version after initial render
+    const enhanceTimer = setTimeout(() => {
+      setEnhancedVersion(true);
+    }, 100);
 
     // Defer non-critical tasks
     let id: number | NodeJS.Timeout = 0;
@@ -64,6 +71,7 @@ const Index = () => {
     }
 
     return () => {
+      clearTimeout(enhanceTimer);
       if (typeof requestIdleCallback !== 'undefined' && typeof id === 'number') {
         cancelIdleCallback(id as number);
       } else {
@@ -72,20 +80,44 @@ const Index = () => {
     };
   }, []);
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex-1 flex flex-col">
-        <LandingHeader 
+  // Show minimal version first for fastest loading
+  if (!enhancedVersion) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <MinimalLanding 
           user={user} 
           onShowAuth={() => setShowAuthModal(true)} 
         />
+      </Suspense>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="flex-1 flex flex-col">
+        <Suspense fallback={
+          <div className="h-16 bg-background border-b border-border animate-pulse" />
+        }>
+          <LandingHeader 
+            user={user} 
+            onShowAuth={() => setShowAuthModal(true)} 
+          />
+        </Suspense>
         
         <main className="flex-1">
-          <LandingHero
-            user={user}
-            onShowAuth={() => setShowAuthModal(true)}
-            onScrollToSection={scrollToSection}
-          />
+          <Suspense fallback={
+            <div className="h-96 bg-background animate-pulse" />
+          }>
+            <LandingHero
+              user={user}
+              onShowAuth={() => setShowAuthModal(true)}
+              onScrollToSection={scrollToSection}
+            />
+          </Suspense>
           
           {/* Load heavy sections lazily */}
           <Suspense fallback={

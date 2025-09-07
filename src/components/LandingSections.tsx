@@ -1,7 +1,9 @@
 // Heavy sections below the fold - loaded lazily
 import { lazy, Suspense, useState } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
+// Lazy load Button to reduce initial bundle
+const Button = lazy(() => import("@/components/ui/button").then(m => ({ default: m.Button })));
 
 // Lazy load icons used below the fold
 const BrainCircuitIcon = lazy(() =>
@@ -281,9 +283,11 @@ const LandingSections = () => {
             <p className="text-muted-foreground mb-6">
               Junte-se a milhares de usuários que já potencializaram seus projetos com IA
             </p>
-            <Button size="lg" className="shadow-glow">
-              Começar Gratuitamente
-            </Button>
+            <Suspense fallback={<div className="h-10 w-24 bg-muted rounded animate-pulse" />}>
+              <Button size="lg" className="shadow-glow">
+                Começar Gratuitamente
+              </Button>
+            </Suspense>
           </div>
         </div>
       </footer>

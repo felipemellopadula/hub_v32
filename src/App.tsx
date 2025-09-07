@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// Lazy load heavy providers only when needed
+// Lazy load ALL heavy providers only when needed for authenticated routes
 const QueryClientProvider = lazy(() => 
   import("@tanstack/react-query").then(m => ({ default: m.QueryClientProvider }))
 );
