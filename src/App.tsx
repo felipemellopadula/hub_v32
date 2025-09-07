@@ -1,20 +1,10 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 
-// Lazy load ALL heavy providers only when needed for authenticated routes
-const QueryClientProvider = lazy(() => 
-  import("@tanstack/react-query").then(m => ({ default: m.QueryClientProvider }))
-);
-const TooltipProvider = lazy(() => 
-  import("@/components/ui/tooltip").then(m => ({ default: m.TooltipProvider }))
-);
-const Toaster = lazy(() => 
-  import("@/components/ui/toaster").then(m => ({ default: m.Toaster }))
-);
-const Sonner = lazy(() => 
-  import("@/components/ui/sonner").then(m => ({ default: m.Toaster }))
-);
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 
 // Lazy load all route components for better code splitting
@@ -59,15 +49,13 @@ const AppWrapper = ({ children }: { children: React.ReactNode }) => (
 
 // Heavy providers wrapper for authenticated routes
 const ProvidersWrapper = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<PageLoader />}>
-    <QueryClientProvider client={getQueryClient()}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {children}
-      </TooltipProvider>
-    </QueryClientProvider>
-  </Suspense>
+  <QueryClientProvider client={getQueryClient()}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      {children}
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 const App = () => (
