@@ -368,24 +368,26 @@ const AdminDashboard = () => {
         const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
         
         if (isDeepSeekModel) {
-          // Use real DeepSeek pricing for old records
+          // Use real DeepSeek pricing for old records with realistic token estimation
           const inputCost = getCostPerToken(usage.model_name, 'input', 'deepseek');
           const outputCost = getCostPerToken(usage.model_name, 'output', 'deepseek');
-          const avgCost = (inputCost + outputCost) / 2; // Use average cost
           
-          // Estimate tokens from character count if available, otherwise use fixed value
-          const estimatedTokens = usage.message_content ? 
-            Math.ceil(usage.message_content.length / 4) : // 4 chars = 1 token
-            usage.tokens_used / 10; // Reduce inflated fixed value
+          // For old DeepSeek records, use a realistic estimation
+          // Input tokens: estimate from message length with minimum
+          const inputTokens = usage.message_content ? 
+            Math.max(Math.ceil(usage.message_content.length / 4), 20) : 50; // Minimum 20 tokens
           
-          const totalCostForTransaction = estimatedTokens * avgCost;
+          // Output tokens: DeepSeek reasoning models typically generate 5-10x more output
+          const outputTokens = inputTokens * 8; // Conservative 8:1 ratio
+          
+          const totalCostForTransaction = (inputTokens * inputCost) + (outputTokens * outputCost);
           const revenue = totalCostForTransaction * 3; // 200% profit margin
           
-          console.log(`DeepSeek fallback calculation: ${usage.model_name} - ${estimatedTokens} tokens * ${avgCost} = $${totalCostForTransaction}`);
+          console.log(`DeepSeek realistic calculation: ${usage.model_name} - ${inputTokens} input + ${outputTokens} output tokens = $${totalCostForTransaction.toFixed(6)}`);
           
           totalCost += totalCostForTransaction;
           totalRevenue += revenue;
-          totalTokens += estimatedTokens;
+          totalTokens += (inputTokens + outputTokens);
           
           if (usage.user_id) {
             uniqueUsers.add(usage.user_id);
