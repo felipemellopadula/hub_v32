@@ -304,16 +304,16 @@ const AdminDashboard = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-3 font-medium">Modelo</th>
-                        <th className="text-right p-3 font-medium">Input ($/1M tokens)</th>
-                        <th className="text-right p-3 font-medium">Output ($/1M tokens)</th>
+                        <th className="text-right p-3 font-medium">Input ($/token)</th>
+                        <th className="text-right p-3 font-medium">Output ($/token)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(GEMINI_PRICING).map(([model, pricing]) => (
                         <tr key={model} className="border-b">
                           <td className="p-3 font-medium">{model}</td>
-                          <td className="text-right p-3">${(pricing.input * 1_000_000).toFixed(2)}</td>
-                          <td className="text-right p-3">${(pricing.output * 1_000_000).toFixed(2)}</td>
+                          <td className="text-right p-3">${pricing.input.toFixed(10)}</td>
+                          <td className="text-right p-3">${pricing.output.toFixed(10)}</td>
                         </tr>
                       ))}
                     </tbody>
