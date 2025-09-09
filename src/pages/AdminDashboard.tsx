@@ -61,10 +61,11 @@ const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
 
 // Grok (xAI) pricing per million tokens (USD) - Official xAI pricing 
 const GROK_PRICING: Record<string, { input: number; output: number }> = {
-  'grok-4': { input: 3.0, output: 15.0 },
-  'grok-3': { input: 3.0, output: 15.0 },
+  'grok-4': { input: 0.30, output: 0.50 },
+  'grok-4-0709': { input: 0.30, output: 0.50 }, // Same as grok-3-mini
+  'grok-3': { input: 0.30, output: 0.50 },
   'grok-3-mini': { input: 0.30, output: 0.50 },
-  'grok-beta': { input: 3.0, output: 15.0 }, // Fallback for beta versions
+  'grok-beta': { input: 0.30, output: 0.50 }, // Fallback for beta versions
 };
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
