@@ -131,6 +131,9 @@ const AdminDashboard = () => {
   };
 
   const calculateAdminStats = (data: TokenUsage[], providerFilter: 'openai' | 'gemini' | 'claude' | 'todos' = 'todos'): AdminStats => {
+    console.log('Calculating stats for provider:', providerFilter);
+    console.log('Total records:', data.length);
+    
     let filteredData = data;
     
     // Filter data based on selected provider
@@ -144,6 +147,9 @@ const AdminDashboard = () => {
         return !isGeminiModel && !isClaudeModel; // OpenAI models
       });
     }
+    
+    console.log('Filtered records:', filteredData.length);
+    console.log('Sample filtered data:', filteredData.slice(0, 3));
     
     let totalCost = 0;
     let totalRevenue = 0;
@@ -178,6 +184,19 @@ const AdminDashboard = () => {
       // Revenue calculation: cost + 200% profit margin = 3x cost
       const revenue = totalCostForTransaction * 3;
       
+      // Debug logging for Claude transactions
+      if (isClaudeModel) {
+        console.log('Claude transaction:', {
+          model: usage.model_name,
+          inputChars: inputCharacters,
+          inputTokens,
+          outputTokens,
+          inputCost: inputCost.toFixed(8),
+          outputCost: outputCost.toFixed(8),
+          totalCost: totalCostForTransaction.toFixed(8)
+        });
+      }
+      
       totalCost += totalCostForTransaction;
       totalRevenue += revenue;
       totalTokens += totalTokensForTransaction;
@@ -185,6 +204,14 @@ const AdminDashboard = () => {
       if (usage.user_id) {
         uniqueUsers.add(usage.user_id);
       }
+    });
+
+    console.log('Final calculated totals:', {
+      totalCost: totalCost.toFixed(8),
+      totalRevenue: totalRevenue.toFixed(8),
+      totalProfit: (totalRevenue - totalCost).toFixed(8),
+      totalUsers: uniqueUsers.size,
+      totalTokens
     });
 
     return {
@@ -217,7 +244,11 @@ const AdminDashboard = () => {
         console.log('Token usage data fetched:', allUsage?.length, 'records');
 
         if (allUsage) {
-          setAdminStats(calculateAdminStats(allUsage, selectedProvider));
+          console.log('Raw usage data sample:', allUsage.slice(0, 3));
+          console.log('Selected provider for calculation:', selectedProvider);
+          const calculatedStats = calculateAdminStats(allUsage, selectedProvider);
+          console.log('Calculated stats for', selectedProvider, ':', calculatedStats);
+          setAdminStats(calculatedStats);
           setRecentUsage(allUsage.slice(0, 15)); // Show last 15 transactions
         }
       } catch (error) {
