@@ -213,20 +213,18 @@ const AdminDashboard = () => {
     let claudeTransactionCount = 0;
 
     filteredData.forEach((usage) => {
-      // Use real token data if available, otherwise calculate from characters
+      // Use real token data if available, otherwise skip old records with inflated values
       let inputTokens: number;
       let outputTokens: number;
       
       if (usage.input_tokens && usage.output_tokens !== null) {
-        // Use real data from database
+        // Use real data from database (new system)
         inputTokens = usage.input_tokens;
         outputTokens = usage.output_tokens;
       } else {
-        // Fallback: calculate from characters (4 chars = 1 token)
-        const inputCharacters = usage.message_content?.length || 0;
-        inputTokens = charsToTokens(inputCharacters);
-        // For old records without AI response, assume 0 output tokens
-        outputTokens = 0;
+        // Skip old records with inflated fixed values to avoid wrong calculations
+        console.log(`Skipping old record with fixed tokens: ${usage.model_name} - ${usage.tokens_used} tokens`);
+        return; // Skip this transaction entirely
       }
       
       // Detect provider based on model name
