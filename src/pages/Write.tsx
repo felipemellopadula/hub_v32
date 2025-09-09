@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfile } from "@/components/UserProfile";
+import UserProfile from "@/components/UserProfile";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, ArrowLeft, FileText, Mail, MessageSquare, Newspaper, Globe, Briefcase, Star, Zap, Smile, PenTool, Coffee } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

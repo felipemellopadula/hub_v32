@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Lazy load UserProfile to improve initial render
-const UserProfile = lazy(() => import("@/components/UserProfile").then(module => ({ default: module.UserProfile })));
+const UserProfile = lazy(() => import("@/components/UserProfile"));
 
 const Dashboard = () => {
   const navigate = useNavigate();

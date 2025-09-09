@@ -75,4 +75,4 @@ const UserProfile = ({ tokens }: UserProfileProps) => {
   );
 };
 
-export { UserProfile };
+export default UserProfile;

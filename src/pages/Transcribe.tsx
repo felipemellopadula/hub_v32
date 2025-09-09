@@ -8,7 +8,7 @@ import { Upload, FileAudio, Loader2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/components/UserProfile';
+import UserProfile from '@/components/UserProfile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTokens } from '@/hooks/useTokens';
 

@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, Image as ImageIcon, Share2, ZoomIn, Loader2, X, ArrowLeft, Trash2, Wand2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfile } from "@/components/UserProfile";
+import UserProfile from "@/components/UserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

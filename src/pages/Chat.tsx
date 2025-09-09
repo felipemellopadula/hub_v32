@@ -60,7 +60,7 @@ const ThemeToggleLazy = lazy(() =>
   import("@/components/ThemeToggle").then((m) => ({ default: m.ThemeToggle }))
 );
 const UserProfileLazy = lazy(() =>
-  import("@/components/UserProfile").then((m) => ({ default: m.UserProfile }))
+  import("@/components/UserProfile")
 );
 // Temporarily use static import to debug
 import MarkdownRendererLazy from "@/components/MarkdownRenderer";

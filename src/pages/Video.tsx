@@ -36,7 +36,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // Lazy (reduz bundle inicial)
 const ThemeToggleLazy = lazy(() => import("@/components/ThemeToggle").then(m => ({ default: m.ThemeToggle })));
-const UserProfileLazy = lazy(() => import("@/components/UserProfile").then(m => ({ default: m.UserProfile })));
+const UserProfileLazy = lazy(() => import("@/components/UserProfile"));
 
 // Lazy dos ícones abaixo da dobra
 const DownloadIcon = lazy(() => import("lucide-react").then(m => ({ default: m.Download })));
