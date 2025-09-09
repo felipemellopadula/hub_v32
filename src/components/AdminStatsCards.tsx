@@ -7,6 +7,7 @@ interface AdminStatsCardsProps {
   totalProfit: number;
   totalUsers: number;
   totalTokens: number;
+  selectedProvider: string;
 }
 
 export const AdminStatsCards = ({
@@ -14,8 +15,17 @@ export const AdminStatsCards = ({
   totalRevenue,
   totalProfit,
   totalUsers,
-  totalTokens
+  totalTokens,
+  selectedProvider
 }: AdminStatsCardsProps) => {
+  const getProviderLabel = () => {
+    switch (selectedProvider) {
+      case 'openai': return 'OpenAI';
+      case 'gemini': return 'Gemini';  
+      case 'claude': return 'Claude';
+      default: return 'todos os provedores';
+    }
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <Card>
@@ -28,7 +38,7 @@ export const AdminStatsCards = ({
             ${totalCost.toFixed(4)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Gasto com tokens OpenAI
+            Gasto com tokens {getProviderLabel()}
           </p>
         </CardContent>
       </Card>
@@ -43,7 +53,7 @@ export const AdminStatsCards = ({
             ${totalRevenue.toFixed(4)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Valor cobrado dos usuários
+            Valor cobrado dos usuários ({getProviderLabel()})
           </p>
         </CardContent>
       </Card>

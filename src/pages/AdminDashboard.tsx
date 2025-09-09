@@ -316,7 +316,7 @@ const AdminDashboard = () => {
         </Alert>
 
         {/* Stats Cards */}
-        <AdminStatsCards {...adminStats} />
+        <AdminStatsCards {...adminStats} selectedProvider={selectedProvider} />
 
         {/* Storage Cleanup */}
         <div className="mb-8">
