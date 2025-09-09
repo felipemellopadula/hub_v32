@@ -138,7 +138,9 @@ const AdminDashboard = () => {
       );
       
       if (isGrokModel) {
-        const matchedKey = Object.keys(GROK_PRICING).find(key => 
+        // Sort keys by length (descending) to match more specific names first
+        const sortedKeys = Object.keys(GROK_PRICING).sort((a, b) => b.length - a.length);
+        const matchedKey = sortedKeys.find(key => 
           modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
         ) || 'grok-3';
         
