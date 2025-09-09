@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Load minimal version first, then progressive enhancement
+// Load components lazily with proper exports
 const MinimalLanding = lazy(() => import("@/components/MinimalLanding").then(m => ({ default: m.MinimalLanding })));
 const LandingHeader = lazy(() => import("@/components/LandingHeader").then(m => ({ default: m.LandingHeader })));
 const LandingHero = lazy(() => import("@/components/LandingHero").then(m => ({ default: m.LandingHero })));
@@ -80,6 +80,15 @@ const Index = () => {
     };
   }, []);
 
+  // Show loading while auth is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   // Show minimal version first for fastest loading
   if (!enhancedVersion) {
     return (
@@ -98,51 +107,34 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="flex-1 flex flex-col">
-        <Suspense fallback={
-          <div className="h-16 bg-background border-b border-border animate-pulse" />
-        }>
-          <LandingHeader 
-            user={user} 
-            onShowAuth={() => setShowAuthModal(true)} 
-          />
-        </Suspense>
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <LandingHeader 
+          user={user} 
+          onShowAuth={() => setShowAuthModal(true)} 
+        />
         
-        <main className="flex-1">
-          <Suspense fallback={
-            <div className="h-96 bg-background animate-pulse" />
-          }>
-            <LandingHero
-              user={user}
-              onShowAuth={() => setShowAuthModal(true)}
-              onScrollToSection={scrollToSection}
-            />
-          </Suspense>
+        <main>
+          <LandingHero
+            user={user}
+            onShowAuth={() => setShowAuthModal(true)}
+            onScrollToSection={scrollToSection}
+          />
           
-          {/* Load heavy sections lazily */}
-          <Suspense fallback={
-            <div className="container mx-auto px-4 py-16 animate-pulse">
-              <div className="space-y-8">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-64 bg-muted rounded" />
-                ))}
-              </div>
-            </div>
-          }>
-            <LandingSections />
-          </Suspense>
+          <LandingSections />
         </main>
-      </div>
 
-      {/* Auth modal loaded only when needed */}
-      {showAuthModal && (
-        <Suspense fallback={null}>
+        {/* Auth modal */}
+        {showAuthModal && (
           <AuthModal 
             isOpen={showAuthModal} 
             onClose={() => setShowAuthModal(false)} 
           />
-        </Suspense>
-      )}
+        )}
+      </Suspense>
     </div>
   );
 };
