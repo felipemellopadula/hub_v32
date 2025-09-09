@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { modelName, message } = await req.json()
+    const { modelName, message, aiResponse } = await req.json()
     
     if (!modelName || !message) {
       throw new Error('Model name and message are required')
@@ -37,7 +37,21 @@ serve(async (req) => {
       throw new Error('Invalid authentication')
     }
 
-    // Model token costs - 12k tokens for all models
+    // Calculate actual tokens based on characters (4 chars = 1 token)
+    const inputTokens = Math.ceil((message?.length || 0) / 4)
+    const outputTokens = Math.ceil((aiResponse?.length || 0) / 4)
+    const totalTokensUsed = inputTokens + outputTokens
+
+    console.log('Token calculation:', {
+      modelName,
+      inputChars: message?.length || 0,
+      outputChars: aiResponse?.length || 0,
+      inputTokens,
+      outputTokens,
+      totalTokensUsed
+    })
+
+    // Model token costs mapping to new cost structure (will be used for validation)
     const MODEL_COSTS: Record<string, number> = {
       'claude-3-5-sonnet-20241022': 12000,
       'claude-3-opus-20240229': 12000,
@@ -51,6 +65,7 @@ serve(async (req) => {
       'gemini-pro': 12000,
     }
 
+    // For now, use the old flat rate for billing (will be updated to real cost calculation later)
     const cost = MODEL_COSTS[modelName] || 12000
 
     // Get current user profile
@@ -91,21 +106,27 @@ serve(async (req) => {
       throw new Error('Failed to update tokens')
     }
 
-    // Log token usage
+    // Log token usage with real data
     await supabase
       .from('token_usage')
       .insert({
         user_id: user.id,
         model_name: modelName,
-        tokens_used: cost,
-        message_content: message.substring(0, 1000), // Limit message length
+        tokens_used: cost, // Keep old billing system for now
+        message_content: message?.substring(0, 1000), // Limit message length
+        ai_response_content: aiResponse?.substring(0, 2000), // Store AI response
+        input_tokens: inputTokens,
+        output_tokens: outputTokens
       })
 
     return new Response(
       JSON.stringify({ 
         success: true,
         tokensConsumed: cost,
-        remainingTokens: profile.tokens_remaining - cost
+        remainingTokens: profile.tokens_remaining - cost,
+        actualTokensUsed: totalTokensUsed,
+        inputTokens,
+        outputTokens
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

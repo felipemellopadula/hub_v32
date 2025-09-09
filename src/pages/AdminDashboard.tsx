@@ -18,6 +18,9 @@ interface TokenUsage {
   tokens_used: number;
   model_name: string;
   message_content: string | null;
+  ai_response_content?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
   created_at: string;
 }
 
@@ -183,14 +186,21 @@ const AdminDashboard = () => {
     let claudeTransactionCount = 0;
 
     filteredData.forEach((usage) => {
-      // Input: convert message content characters to tokens (4 chars = 1 token)
-      const inputCharacters = usage.message_content?.length || 0;
-      const inputTokens = charsToTokens(inputCharacters);
+      // Use real token data if available, otherwise calculate from characters
+      let inputTokens: number;
+      let outputTokens: number;
       
-      // Output: estimate IA response tokens (realistic estimate)
-      // Since we don't have the actual IA response, we estimate based on input
-      // Typical IA responses are shorter than input for most queries
-      const outputTokens = Math.ceil(inputTokens * 0.5); // More realistic: response is usually 50% of input
+      if (usage.input_tokens && usage.output_tokens !== null) {
+        // Use real data from database
+        inputTokens = usage.input_tokens;
+        outputTokens = usage.output_tokens;
+      } else {
+        // Fallback: calculate from characters (4 chars = 1 token)
+        const inputCharacters = usage.message_content?.length || 0;
+        inputTokens = charsToTokens(inputCharacters);
+        // For old records without AI response, assume 0 output tokens
+        outputTokens = 0;
+      }
       
       // Detect provider based on model name
       const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
@@ -205,7 +215,7 @@ const AdminDashboard = () => {
       const outputCost = outputTokens * getCostPerToken(usage.model_name, 'output', provider);
       const totalCostForTransaction = inputCost + outputCost;
       
-      // Total tokens used (input + estimated output)
+      // Total tokens used (input + output)
       const totalTokensForTransaction = inputTokens + outputTokens;
       
       // Revenue calculation: cost + 200% profit margin = 3x cost
@@ -221,9 +231,9 @@ const AdminDashboard = () => {
         if (showDetails) {
           console.log(`\n=== CLAUDE TRANSACTION ${claudeTransactionCount} ===`);
           console.log(`Model: ${usage.model_name}`);
-          console.log(`Message content length: ${inputCharacters} characters`);
-          console.log(`Input tokens (chars/4): ${inputTokens}`);
-          console.log(`Output tokens (estimated): ${outputTokens}`);
+          console.log(`Input tokens (real data): ${inputTokens}`);
+          console.log(`Output tokens (real data): ${outputTokens}`);
+          console.log(`Has AI response data: ${usage.ai_response_content ? 'Yes' : 'No'}`);
           console.log(`Input cost per token: $${getCostPerToken(usage.model_name, 'input', provider).toFixed(10)}`);
           console.log(`Output cost per token: $${getCostPerToken(usage.model_name, 'output', provider).toFixed(10)}`);
           console.log(`Input cost total: $${inputCost.toFixed(10)}`);
@@ -234,7 +244,6 @@ const AdminDashboard = () => {
           // Show expensive transactions
           if (totalCostForTransaction > 0.01) {
             console.log(`⚠️  HIGH COST TRANSACTION DETECTED!`);
-            console.log(`Message preview: "${usage.message_content.substring(0, 200)}..."`);
           }
           console.log(`===================================\n`);
         }

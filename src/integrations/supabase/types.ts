@@ -142,26 +142,35 @@ export type Database = {
       }
       token_usage: {
         Row: {
+          ai_response_content: string | null
           created_at: string | null
           id: string
+          input_tokens: number | null
           message_content: string | null
           model_name: string
+          output_tokens: number | null
           tokens_used: number
           user_id: string | null
         }
         Insert: {
+          ai_response_content?: string | null
           created_at?: string | null
           id?: string
+          input_tokens?: number | null
           message_content?: string | null
           model_name: string
+          output_tokens?: number | null
           tokens_used: number
           user_id?: string | null
         }
         Update: {
+          ai_response_content?: string | null
           created_at?: string | null
           id?: string
+          input_tokens?: number | null
           message_content?: string | null
           model_name?: string
+          output_tokens?: number | null
           tokens_used?: number
           user_id?: string | null
         }

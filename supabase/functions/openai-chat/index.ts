@@ -241,16 +241,21 @@ serve(async (req) => {
           responseLength: generatedText.length
         });
 
-        // Save token usage to database
+        // Save token usage to database with real data
         const { error: tokenError } = await supabase
           .from('token_usage')
           .insert({
             user_id: userId,
             model_name: displayModel,
-            tokens_used: totalTokens,
-            message_content: finalMessage.length > 500 
-              ? finalMessage.substring(0, 500) + '...' 
+            tokens_used: totalTokens, // Keep for compatibility
+            input_tokens: inputTokens, // Real input tokens
+            output_tokens: outputTokens, // Real output tokens
+            message_content: finalMessage.length > 1000 
+              ? finalMessage.substring(0, 1000) + '...' 
               : finalMessage,
+            ai_response_content: generatedText.length > 2000
+              ? generatedText.substring(0, 2000) + '...'
+              : generatedText,
             created_at: new Date().toISOString()
           });
 
