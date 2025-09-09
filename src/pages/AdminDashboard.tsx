@@ -55,7 +55,7 @@ const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-flash': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 }
 };
 
-// Claude pricing per million tokens (USD) - Based on Anthropic pricing
+// Claude pricing per million tokens (USD) - Based on Anthropic pricing from user's table
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   'claude-opus-4.1': { input: 15.0, output: 75.0 },
   'claude-opus-4': { input: 15.0, output: 75.0 },
@@ -117,7 +117,8 @@ const AdminDashboard = () => {
           modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
         ) || 'claude-haiku-3.5';
         
-        return CLAUDE_PRICING[matchedKey][type] / 1_000_000; // Convert from per million to unit price
+        // Convert from per million tokens to per individual token: $X per 1M tokens = $X / 1,000,000 per token
+        return CLAUDE_PRICING[matchedKey][type] / 1_000_000;
       }
     }
     
