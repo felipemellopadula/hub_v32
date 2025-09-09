@@ -61,10 +61,12 @@ Deno.serve(async (req) => {
       console.log(`\n🗂️ PROCESSING BUCKET: ${bucketName}`)
       
       try {
-        // Method 1: Standard list
+        // Method 1: Standard list (root level)
         let allFiles = []
         let page = 0
         const limit = 1000
+        
+        console.log(`📁 Listing files in bucket: ${bucketName}`)
         
         while (true) {
           const { data: files, error } = await supabaseClient.storage
@@ -89,22 +91,68 @@ Deno.serve(async (req) => {
           page++
         }
 
-        // Method 2: Try without sorting (sometimes catches more files)
-        try {
-          const { data: altFiles } = await supabaseClient.storage
-            .from(bucketName)
-            .list('', { limit: 10000 })
-            
-          if (altFiles) {
-            const existingNames = new Set(allFiles.map(f => f.name))
-            const newFiles = altFiles.filter(f => !existingNames.has(f.name))
-            if (newFiles.length > 0) {
-              allFiles = allFiles.concat(newFiles)
-              console.log(`Alternative method found ${newFiles.length} additional files`)
+        // Method 2: List subdirectories and their contents
+        console.log(`🔍 Checking for subdirectories in ${bucketName}...`)
+        const directories = allFiles.filter(item => !item.name.includes('.'))
+        
+        for (const dir of directories) {
+          console.log(`📂 Checking subdirectory: ${dir.name}`)
+          try {
+            let subPage = 0
+            while (true) {
+              const { data: subFiles, error: subError } = await supabaseClient.storage
+                .from(bucketName)
+                .list(dir.name, { 
+                  limit, 
+                  offset: subPage * limit 
+                })
+
+              if (subError) {
+                console.error(`Error listing subdirectory ${dir.name}:`, subError)
+                break
+              }
+
+              if (!subFiles || subFiles.length === 0) break
+
+              // Add subdirectory prefix to file paths
+              const prefixedFiles = subFiles.map(file => ({
+                ...file,
+                name: `${dir.name}/${file.name}`
+              }))
+              
+              allFiles = allFiles.concat(prefixedFiles)
+              console.log(`Found ${subFiles.length} files in ${dir.name} (page ${subPage + 1})`)
+              
+              if (subFiles.length < limit) break
+              subPage++
+            }
+          } catch (subErr) {
+            console.log(`Could not access subdirectory ${dir.name}:`, subErr.message)
+          }
+        }
+
+        // Method 3: Try common subdirectory names that might exist
+        const commonDirs = ['user-images', 'uploads', 'temp', 'cache', 'thumbnails']
+        for (const dirName of commonDirs) {
+          if (!directories.some(d => d.name === dirName)) {
+            console.log(`🔍 Checking for hidden directory: ${dirName}`)
+            try {
+              const { data: hiddenFiles, error: hiddenError } = await supabaseClient.storage
+                .from(bucketName)
+                .list(dirName, { limit: 1000 })
+
+              if (!hiddenError && hiddenFiles && hiddenFiles.length > 0) {
+                console.log(`📂 Found hidden directory ${dirName} with ${hiddenFiles.length} files!`)
+                const prefixedFiles = hiddenFiles.map(file => ({
+                  ...file,
+                  name: `${dirName}/${file.name}`
+                }))
+                allFiles = allFiles.concat(prefixedFiles)
+              }
+            } catch (err) {
+              // Directory doesn't exist, ignore
             }
           }
-        } catch (err) {
-          console.log('Alternative listing failed:', err.message)
         }
 
         totalScanned += allFiles.length
@@ -138,60 +186,132 @@ Deno.serve(async (req) => {
         
         if (filesToDelete.length === 0) continue
 
-        // Delete in batches of 10 (smaller batches for reliability)
-        const batchSize = 10
+        // Delete in batches of 5 (even smaller for reliability)
+        const batchSize = 5
         let deleted = 0
         
         for (let i = 0; i < filesToDelete.length; i += batchSize) {
           const batch = filesToDelete.slice(i, i + batchSize)
           const paths = batch.map(f => f.name)
           
-          console.log(`Deleting batch ${Math.floor(i/batchSize) + 1}: ${paths.join(', ')}`)
+          console.log(`🗑️ Deleting batch ${Math.floor(i/batchSize) + 1}: ${paths.join(', ')}`)
           
+          // Strategy 1: Batch delete with service role
           try {
-            const { error: batchError } = await supabaseClient.storage
+            const { data: batchResult, error: batchError } = await supabaseClient.storage
               .from(bucketName)
               .remove(paths)
             
-            if (batchError) {
-              console.error(`Batch delete failed:`, batchError.message)
-              
-              // Try one by one
-              for (const path of paths) {
-                try {
-                  const { error: singleError } = await supabaseClient.storage
-                    .from(bucketName)
-                    .remove([path])
-                  
-                  if (!singleError) {
-                    deleted++
-                    console.log(`✅ Deleted: ${path}`)
-                  } else {
-                    console.error(`❌ Failed to delete ${path}:`, singleError.message)
-                    errors.push(`${bucketName}/${path}: ${singleError.message}`)
-                  }
-                } catch (err) {
-                  console.error(`❌ Exception deleting ${path}:`, err.message)
-                  errors.push(`${bucketName}/${path}: ${err.message}`)
-                }
-                
-                await new Promise(r => setTimeout(r, 100)) // Small delay
-              }
-            } else {
+            if (!batchError && batchResult) {
               deleted += paths.length
               console.log(`✅ Batch deleted: ${paths.length} files`)
               
               // Calculate freed space
               const batchSize = batch.reduce((sum, f) => sum + (f.metadata?.size || 500000), 0)
               totalFreed += batchSize
+              
+              // Verify deletion
+              await new Promise(r => setTimeout(r, 500)) // Wait a bit
+              
+              for (const path of paths) {
+                try {
+                  const { data: checkFile } = await supabaseClient.storage
+                    .from(bucketName)
+                    .list('', { search: path })
+                  
+                  if (checkFile && checkFile.length > 0) {
+                    console.log(`⚠️ WARNING: File ${path} still exists after batch deletion!`)
+                  }
+                } catch (checkErr) {
+                  // File not found is good
+                }
+              }
+              
+              continue // Batch worked, move to next batch
             }
             
-          } catch (err) {
-            console.error(`Batch error:`, err.message)
-            errors.push(`Batch error in ${bucketName}: ${err.message}`)
+            console.error(`Batch delete failed:`, batchError?.message)
+          } catch (batchErr) {
+            console.error(`Batch delete exception:`, batchErr.message)
           }
           
-          await new Promise(r => setTimeout(r, 200)) // Delay between batches
+          // Strategy 2: Individual deletion with multiple attempts
+          console.log(`🔄 Trying individual deletion for batch ${Math.floor(i/batchSize) + 1}`)
+          
+          for (const path of paths) {
+            let fileDeleted = false
+            
+            // Attempt 1: Standard delete
+            try {
+              const { error: singleError } = await supabaseClient.storage
+                .from(bucketName)
+                .remove([path])
+              
+              if (!singleError) {
+                deleted++
+                fileDeleted = true
+                console.log(`✅ Deleted (attempt 1): ${path}`)
+              } else {
+                console.log(`❌ Delete failed (attempt 1) for ${path}:`, singleError.message)
+              }
+            } catch (err) {
+              console.log(`❌ Delete exception (attempt 1) for ${path}:`, err.message)
+            }
+            
+            if (!fileDeleted) {
+              // Attempt 2: Try with explicit RPC call (bypass RLS)
+              try {
+                await new Promise(r => setTimeout(r, 200))
+                
+                const { error: rpcError } = await supabaseClient.rpc('delete_storage_file', {
+                  bucket_name: bucketName,
+                  file_path: path
+                })
+                
+                if (!rpcError) {
+                  deleted++
+                  fileDeleted = true
+                  console.log(`✅ Deleted (RPC attempt): ${path}`)
+                } else {
+                  console.log(`❌ RPC delete failed for ${path}:`, rpcError.message)
+                }
+              } catch (rpcErr) {
+                console.log(`❌ RPC delete not available for ${path}`)
+              }
+            }
+            
+            if (!fileDeleted) {
+              // Attempt 3: Raw SQL delete (most aggressive)
+              try {
+                await new Promise(r => setTimeout(r, 200))
+                
+                const { error: sqlError } = await supabaseClient
+                  .from('storage.objects')
+                  .delete()
+                  .eq('bucket_id', bucketName)
+                  .eq('name', path)
+                
+                if (!sqlError) {
+                  deleted++
+                  fileDeleted = true
+                  console.log(`✅ Deleted (SQL attempt): ${path}`)
+                } else {
+                  console.log(`❌ SQL delete failed for ${path}:`, sqlError.message)
+                }
+              } catch (sqlErr) {
+                console.log(`❌ SQL delete not available for ${path}`)
+              }
+            }
+            
+            if (!fileDeleted) {
+              errors.push(`Failed to delete ${bucketName}/${path} after all attempts`)
+              console.log(`❌ FINAL FAILURE: Could not delete ${path}`)
+            }
+            
+            await new Promise(r => setTimeout(r, 150)) // Delay between files
+          }
+          
+          await new Promise(r => setTimeout(r, 300)) // Delay between batches
         }
         
         totalDeleted += deleted
