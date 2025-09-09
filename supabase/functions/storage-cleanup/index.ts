@@ -55,9 +55,11 @@ Deno.serve(async (req) => {
   const startTime = Date.now()
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
   const triggeredBy = body.triggered_by || 'cron'
+  const isManualCleanup = triggeredBy === 'admin_manual'
   
   console.log(`=== Storage Cleanup Started ===`)
   console.log(`Triggered by: ${triggeredBy}`)
+  console.log(`Manual cleanup: ${isManualCleanup}`)
   console.log(`Start time: ${new Date().toISOString()}`)
 
   try {
@@ -72,7 +74,9 @@ Deno.serve(async (req) => {
 
     const buckets = ['images', 'documents', 'user-videos', 'video-refs']
     const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - 1) // Remove files older than 1 day (aggressive cleanup)
+    if (!isManualCleanup) {
+      cutoffDate.setDate(cutoffDate.getDate() - 1) // Remove files older than 1 day for automatic cleanup
+    }
 
     let totalStats: CleanupStats = {
       totalFiles: 0,
@@ -83,7 +87,7 @@ Deno.serve(async (req) => {
       skippedFiles: 0
     }
 
-    console.log(`Target cutoff date: ${cutoffDate.toISOString()}`)
+    console.log(`Target cutoff date: ${isManualCleanup ? 'ALL FILES (manual cleanup)' : cutoffDate.toISOString()}`)
     console.log(`Processing ${buckets.length} buckets: ${buckets.join(', ')}`)
 
     for (const bucketName of buckets) {
@@ -147,8 +151,13 @@ Deno.serve(async (req) => {
 
         console.log(`Total files found in ${bucketName}: ${allFiles.length}`)
 
-        // Filter files older than cutoff date OR without timestamp (assume old)
+        // Filter files based on cleanup type
         const filesToDelete = allFiles.filter(file => {
+          if (isManualCleanup) {
+            console.log(`Manual cleanup: will delete ${file.name}`)
+            return true // Delete ALL files in manual cleanup
+          }
+          
           if (!file.created_at) {
             console.log(`File ${file.name} has no created_at timestamp, will delete (assuming old)`)
             return true // Delete files without timestamp
