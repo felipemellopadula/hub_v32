@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminStatsCards } from "@/components/AdminStatsCards";
 import { StorageCleanup } from "@/components/StorageCleanup";
 import { OpenAIPricingTable } from "@/components/OpenAIPricingTable";
+import { GrokPricingTable } from "@/components/GrokPricingTable";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,13 @@ const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-flash': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 }
 };
 
-// Claude pricing per million tokens (USD) - Official Anthropic pricing (January 2025)
+// Grok (xAI) pricing per million tokens (USD) - Official xAI pricing 
+const GROK_PRICING: Record<string, { input: number; output: number }> = {
+  'grok-4': { input: 3.0, output: 15.0 },
+  'grok-3': { input: 3.0, output: 15.0 },
+  'grok-3-mini': { input: 0.30, output: 0.50 },
+  'grok-beta': { input: 3.0, output: 15.0 }, // Fallback for beta versions
+};
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
   'claude-opus-4-20250514': { input: 15.0, output: 75.0 },
@@ -93,11 +100,11 @@ const AdminDashboard = () => {
   });
   const [recentUsage, setRecentUsage] = useState<TokenUsage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'claude' | 'todos'>('todos');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'claude' | 'grok' | 'todos'>('todos');
 
   const charsToTokens = (chars: number): number => Math.ceil(chars / 4);
 
-  const getCostPerToken = (model: string, type: 'input' | 'output', provider: 'openai' | 'gemini' | 'claude' | 'todos' = selectedProvider): number => {
+  const getCostPerToken = (model: string, type: 'input' | 'output', provider: 'openai' | 'gemini' | 'claude' | 'grok' | 'todos' = selectedProvider): number => {
     let modelKey = model.toLowerCase();
     
     // Handle SynergyAI mapping
@@ -120,6 +127,24 @@ const AdminDashboard = () => {
         const cost = GEMINI_PRICING[matchedKey][type]; // Already converted to unit price
         console.log(`Gemini ${type} cost for ${model}:`, cost);
         return cost;
+      }
+    }
+    
+    if (provider === 'grok') {
+      // Check if it's a Grok model
+      const isGrokModel = modelKey.includes('grok') || Object.keys(GROK_PRICING).some(key => 
+        modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
+      );
+      
+      if (isGrokModel) {
+        const matchedKey = Object.keys(GROK_PRICING).find(key => 
+          modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
+        ) || 'grok-3';
+        
+        const costPerMillion = GROK_PRICING[matchedKey][type];
+        const costPerToken = costPerMillion / 1000000; // Convert per million to unit price
+        console.log(`Grok ${type} cost for ${model}: ${costPerMillion} per million = ${costPerToken} per token`);
+        return costPerToken;
       }
     }
     
@@ -152,7 +177,7 @@ const AdminDashboard = () => {
     return cost;
   };
 
-  const calculateAdminStats = (data: TokenUsage[], providerFilter: 'openai' | 'gemini' | 'claude' | 'todos' = 'todos'): AdminStats => {
+  const calculateAdminStats = (data: TokenUsage[], providerFilter: 'openai' | 'gemini' | 'claude' | 'grok' | 'todos' = 'todos'): AdminStats => {
     console.log('Calculating stats for provider:', providerFilter);
     console.log('Total records:', data.length);
     
@@ -205,10 +230,12 @@ const AdminDashboard = () => {
       // Detect provider based on model name
       const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
       const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-      let provider: 'openai' | 'gemini' | 'claude' = 'openai';
+      const isGrokModel = usage.model_name.toLowerCase().includes('grok');
+      let provider: 'openai' | 'gemini' | 'claude' | 'grok' = 'openai';
       
       if (isGeminiModel) provider = 'gemini';
       else if (isClaudeModel) provider = 'claude';
+      else if (isGrokModel) provider = 'grok';
       
       // Calculate costs using correct pricing per token type
       const inputCost = inputTokens * getCostPerToken(usage.model_name, 'input', provider);
@@ -221,7 +248,7 @@ const AdminDashboard = () => {
       // Revenue calculation: cost + 200% profit margin = 3x cost
       const revenue = totalCostForTransaction * 3;
 
-      // Debug Claude transactions in detail
+      // Debug for selected provider
       if (provider === 'claude') {
         claudeTransactionCount++;
         
@@ -258,6 +285,7 @@ const AdminDashboard = () => {
       }
     });
 
+    // Detailed analysis for selected provider
     if (providerFilter === 'claude') {
       console.log(`\n🔍 CLAUDE DETAILED ANALYSIS:`);
       console.log(`Total Claude transactions: ${claudeTransactionCount}`);
@@ -319,6 +347,14 @@ const AdminDashboard = () => {
       expensiveTransactions.forEach((tx, i) => {
         console.log(`${i + 1}. ${tx.model} - Total: $${tx.totalCost.toFixed(6)} | Input: $${tx.inputCost.toFixed(6)} (${tx.inputTokens} tokens) | Output: $${tx.outputCost.toFixed(6)} (${tx.outputTokens} tokens) | ${tx.messageLength} chars`);
       });
+    } else if (providerFilter === 'grok') {
+      console.log(`\n🔍 GROK DETAILED ANALYSIS:`);
+      console.log(`Total Grok transactions: ${filteredData.length}`);
+      console.log(`Total Grok cost: $${totalCost.toFixed(6)}`);
+      console.log(`Average cost per transaction: $${filteredData.length > 0 ? (totalCost / filteredData.length).toFixed(6) : '0'}`);
+      
+      const grokModels = [...new Set(filteredData.map(d => d.model_name))];
+      console.log(`Grok models in data:`, grokModels);
     }
 
     console.log('Final calculated totals:', {
@@ -476,7 +512,7 @@ const AdminDashboard = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Preços dos Modelos de IA</CardTitle>
-                <Select value={selectedProvider} onValueChange={(value: 'openai' | 'gemini' | 'claude' | 'todos') => setSelectedProvider(value)}>
+                <Select value={selectedProvider} onValueChange={(value: 'openai' | 'gemini' | 'claude' | 'grok' | 'todos') => setSelectedProvider(value)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Selecionar provedor" />
                   </SelectTrigger>
@@ -485,12 +521,14 @@ const AdminDashboard = () => {
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="claude">Anthropic Claude</SelectItem>
+                    <SelectItem value="grok">xAI Grok</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </CardHeader>
             <CardContent>
               {(selectedProvider === 'openai' || selectedProvider === 'todos') && <OpenAIPricingTable />}
+              {(selectedProvider === 'grok' || selectedProvider === 'todos') && <GrokPricingTable />}
               {(selectedProvider === 'gemini' || selectedProvider === 'todos') && (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -543,6 +581,32 @@ const AdminDashboard = () => {
                   </table>
                 </div>
               )}
+              {selectedProvider === 'grok' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2">
+                        <th className="text-left p-3 font-medium">Modelo</th>
+                        <th className="text-right p-3 font-medium">Entrada (USD/1M tokens)</th>
+                        <th className="text-right p-3 font-medium">Saída (USD/1M tokens)</th>
+                        <th className="text-right p-3 font-medium">Custo por Token (Entrada)</th>
+                        <th className="text-right p-3 font-medium">Custo por Token (Saída)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(GROK_PRICING).map(([model, pricing]) => (
+                        <tr key={model} className="border-b">
+                          <td className="p-3 font-medium">{model}</td>
+                          <td className="text-right p-3 text-orange-400">${pricing.input.toFixed(2)}</td>
+                          <td className="text-right p-3 text-orange-400">${pricing.output.toFixed(2)}</td>
+                          <td className="text-right p-3 text-orange-400">${(pricing.input / 1_000_000).toFixed(10)}</td>
+                          <td className="text-right p-3 text-orange-400">${(pricing.output / 1_000_000).toFixed(10)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -553,9 +617,12 @@ const AdminDashboard = () => {
             <CardTitle>
               Transações Recentes 
               {selectedProvider !== 'todos' && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({selectedProvider === 'openai' ? 'OpenAI' : selectedProvider === 'gemini' ? 'Google Gemini' : 'Anthropic Claude'})
-                </span>
+                 <span className="text-sm font-normal text-muted-foreground ml-2">
+                   ({selectedProvider === 'openai' ? 'OpenAI' : 
+                     selectedProvider === 'gemini' ? 'Google Gemini' : 
+                     selectedProvider === 'claude' ? 'Anthropic Claude' :
+                     selectedProvider === 'grok' ? 'xAI Grok' : selectedProvider})
+                 </span>
               )}
             </CardTitle>
           </CardHeader>
@@ -567,10 +634,12 @@ const AdminDashboard = () => {
                 filteredUsage = recentUsage.filter((usage) => {
                   const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
                   const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
+                  const isGrokModel = usage.model_name.toLowerCase().includes('grok');
                   
                   if (selectedProvider === 'gemini') return isGeminiModel;
                   if (selectedProvider === 'claude') return isClaudeModel;
-                  return !isGeminiModel && !isClaudeModel; // OpenAI models
+                  if (selectedProvider === 'grok') return isGrokModel;
+                  return !isGeminiModel && !isClaudeModel && !isGrokModel; // OpenAI models
                 });
               }
               
@@ -587,10 +656,12 @@ const AdminDashboard = () => {
                   // Detect provider based on model name
                   const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
                   const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-                  let provider: 'openai' | 'gemini' | 'claude' = 'openai';
+                  const isGrokModel = usage.model_name.toLowerCase().includes('grok');
+                  let provider: 'openai' | 'gemini' | 'claude' | 'grok' = 'openai';
                   
                   if (isGeminiModel) provider = 'gemini';
                   else if (isClaudeModel) provider = 'claude';
+                  else if (isGrokModel) provider = 'grok';
                   
                   // Calculate costs using correct pricing per token type
                   const inputCost = inputTokens * getCostPerToken(usage.model_name, 'input', provider);
