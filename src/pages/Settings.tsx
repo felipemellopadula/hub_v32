@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Save, Camera, ArrowLeft, Settings as SettingsIcon, Moon, Sun } from "lucide-react";
+import { ImageManager } from "@/components/ImageManager";
 
 // Lazy load heavy chart components
 const PieChart = lazy(() => import('recharts').then(m => ({ default: m.PieChart })));
@@ -268,6 +269,11 @@ const SettingsPage = () => {
               <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />
             </Suspense>
           </div>
+        </section>
+
+        {/* Seção de Gerenciamento de Imagens */}
+        <section className="mt-8">
+          <ImageManager />
         </section>
       </main>
     </div>
