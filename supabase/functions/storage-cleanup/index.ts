@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
     const buckets = ['images', 'documents', 'user-videos', 'video-refs']
     const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - 7) // Remove files older than 7 days
+    cutoffDate.setDate(cutoffDate.getDate() - 1) // Remove files older than 1 day (aggressive cleanup)
 
     let totalStats: CleanupStats = {
       totalFiles: 0,
@@ -147,12 +147,11 @@ Deno.serve(async (req) => {
 
         console.log(`Total files found in ${bucketName}: ${allFiles.length}`)
 
-        // Filter files older than cutoff date
+        // Filter files older than cutoff date OR without timestamp (assume old)
         const filesToDelete = allFiles.filter(file => {
           if (!file.created_at) {
-            console.warn(`File ${file.name} has no created_at timestamp, skipping`)
-            totalStats.skippedFiles++
-            return false
+            console.log(`File ${file.name} has no created_at timestamp, will delete (assuming old)`)
+            return true // Delete files without timestamp
           }
           
           const fileDate = new Date(file.created_at)
