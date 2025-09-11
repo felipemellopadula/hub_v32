@@ -669,17 +669,18 @@ const AdminDashboard = () => {
                       <SelectItem value="year">Último ano</SelectItem>
                     </SelectContent>
                   </Select>
-                   <Select value={selectedProvider} onValueChange={(value: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'todos') => setSelectedProvider(value)}>
+                   <Select value={selectedProvider} onValueChange={(value: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos') => setSelectedProvider(value)}>
                      <SelectTrigger className="w-full sm:w-[180px]">
                        <SelectValue placeholder="Selecionar provedor" />
                      </SelectTrigger>
-                     <SelectContent>
+                     <SelectContent className="z-50 bg-background">
                        <SelectItem value="todos">Todos</SelectItem>
                        <SelectItem value="openai">OpenAI</SelectItem>
                        <SelectItem value="gemini">Google Gemini</SelectItem>
                        <SelectItem value="claude">Anthropic Claude</SelectItem>
                        <SelectItem value="grok">xAI Grok</SelectItem>
                        <SelectItem value="deepseek">DeepSeek</SelectItem>
+                       <SelectItem value="image">Imagem</SelectItem>
                      </SelectContent>
                    </Select>
                 </div>
