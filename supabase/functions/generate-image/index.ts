@@ -257,14 +257,17 @@ serve(async (req) => {
               
               // Mapear modelos Runware para nomes mais friendly
               if (model === 'runware:108@1') {
-                modelForTracking = 'seedream-4.0';
-                modelCost = IMAGE_COSTS['seedream-4.0'] || 0.03;
+                modelForTracking = 'qwen-image';
+                modelCost = IMAGE_COSTS['qwen-image'] || 0.0058;
               } else if (model === 'runware:109@1') {
                 modelForTracking = 'ideogram-3.0';
                 modelCost = IMAGE_COSTS['ideogram-3.0'] || 0.06;
               } else if (model === 'runware:110@1') {
                 modelForTracking = 'flux.1-kontext-max';
                 modelCost = IMAGE_COSTS['flux.1-kontext-max'] || 0.08;
+              } else if (model === 'bytedance:5@0') {
+                modelForTracking = 'seedream-4.0';
+                modelCost = IMAGE_COSTS['seedream-4.0'] || 0.03;
               } else if (model === 'runware:100@1' || model === 'runware:101@1') {
                 modelForTracking = 'flux-pro';
                 modelCost = 0.02;
