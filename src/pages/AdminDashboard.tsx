@@ -329,11 +329,26 @@ const AdminDashboard = () => {
         );
         let provider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' = 'openai';
         
+        // Debug log for image model detection
+        if (usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+          console.log(`🔍 Debugging model: ${usage.model_name}`);
+          console.log(`🖼️ Is image model: ${isImageModel}`);
+          console.log(`📋 IMAGE_PRICING keys:`, Object.keys(IMAGE_PRICING));
+          console.log(`🎯 Key matches:`, Object.keys(IMAGE_PRICING).map(key => 
+            `${key} -> ${usage.model_name.toLowerCase().includes(key.toLowerCase())}`
+          ));
+        }
+        
         if (isGeminiModel) provider = 'gemini';
         else if (isClaudeModel) provider = 'claude';
         else if (isGrokModel) provider = 'grok';
         else if (isDeepSeekModel) provider = 'deepseek';
         else if (isImageModel) provider = 'image';
+        
+        // Debug log for provider assignment
+        if (usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+          console.log(`🏷️ Assigned provider: ${provider}`);
+        }
         
         // Calculate costs using correct pricing per token type
         let totalCostForTransaction: number;
@@ -346,6 +361,12 @@ const AdminDashboard = () => {
             usage.model_name.toLowerCase().includes(key.toLowerCase())
           ) || 'gpt-image-1';
           totalCostForTransaction = IMAGE_PRICING[imageModelKey].cost;
+          
+          // Debug log for image cost calculation
+          console.log(`🖼️ Image model detected: ${usage.model_name}`);
+          console.log(`🔍 Matched image key: ${imageModelKey}`);
+          console.log(`💰 Image cost: $${totalCostForTransaction}`);
+          console.log(`📊 Available IMAGE_PRICING keys:`, Object.keys(IMAGE_PRICING));
         } else {
           inputCost = inputTokens * getCostPerToken(usage.model_name, 'input', provider);
           outputCost = outputTokens * getCostPerToken(usage.model_name, 'output', provider);
