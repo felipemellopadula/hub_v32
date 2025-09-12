@@ -570,6 +570,41 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, authLoading, user, selectedProvider, selectedPeriod]);
 
+  // Realtime updates para custos em tempo real (incluindo imagens)
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel('admin-dashboard-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'token_usage'
+        },
+        (payload) => {
+          console.log('Nova entrada de token_usage recebida (realtime):', payload.new);
+          // Adicionar o novo registro aos dados existentes e recalcular stats
+          setRecentUsage(prev => {
+            const newEntry = payload.new as TokenUsage;
+            const newUsage = [newEntry, ...prev];
+            const stats = calculateAdminStats(newUsage, selectedProvider, selectedPeriod);
+            setAdminStats(stats);
+            return newUsage.slice(0, 15); // Manter apenas os 15 mais recentes
+          });
+        }
+      )
+      .subscribe();
+
+    console.log('Realtime subscription ativa para token_usage (custos de imagem inclusos)');
+
+    return () => {
+      console.log('Removendo subscription realtime');
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, selectedProvider, selectedPeriod]);
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">

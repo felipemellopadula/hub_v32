@@ -232,6 +232,75 @@ serve(async (req) => {
             console.error('Erro ao inserir user_images:', insertErr);
           } else {
             console.log('Registro inserido no banco de dados');
+            
+            // Inserir custo da imagem no token_usage para tracking no dashboard admin
+            try {
+              // Mapear modelos para custos de acordo com AdminDashboard.tsx
+              const IMAGE_COSTS: Record<string, number> = {
+                'gpt-image-1': 0.25,
+                'gemini-flash': 0.0273,
+                'qwen-image': 0.0058,
+                'ideogram-3.0': 0.06,
+                'flux.1-kontext-max': 0.08,
+                'seedream-4.0': 0.03,
+                // Fallback para modelos runware genéricos
+                'runware:100@1': 0.02, // Flux Pro
+                'runware:101@1': 0.02, // Flux Pro 1.1
+                'runware:108@1': 0.03, // Seedream 4.0
+                'runware:109@1': 0.06, // Ideogram 3.0
+                'runware:110@1': 0.08, // Flux Kontext MAX
+              };
+              
+              // Encontrar o custo baseado no modelo
+              let modelCost = 0.02; // Custo padrão
+              let modelForTracking = model || 'unknown';
+              
+              // Mapear modelos Runware para nomes mais friendly
+              if (model === 'runware:108@1') {
+                modelForTracking = 'seedream-4.0';
+                modelCost = IMAGE_COSTS['seedream-4.0'] || 0.03;
+              } else if (model === 'runware:109@1') {
+                modelForTracking = 'ideogram-3.0';
+                modelCost = IMAGE_COSTS['ideogram-3.0'] || 0.06;
+              } else if (model === 'runware:110@1') {
+                modelForTracking = 'flux.1-kontext-max';
+                modelCost = IMAGE_COSTS['flux.1-kontext-max'] || 0.08;
+              } else if (model === 'runware:100@1' || model === 'runware:101@1') {
+                modelForTracking = 'flux-pro';
+                modelCost = 0.02;
+              } else {
+                // Procurar por correspondência nos custos definidos
+                for (const [modelName, cost] of Object.entries(IMAGE_COSTS)) {
+                  if (model && model.toLowerCase().includes(modelName.toLowerCase())) {
+                    modelForTracking = modelName;
+                    modelCost = cost;
+                    break;
+                  }
+                }
+              }
+              
+              console.log(`Inserindo custo de imagem: modelo=${modelForTracking}, custo=$${modelCost}`);
+              
+              const { error: usageErr } = await supabaseAdmin
+                .from('token_usage')
+                .insert({
+                  user_id: userId,
+                  model_name: modelForTracking,
+                  message_content: prompt || 'Image generation request',
+                  ai_response_content: 'Image generated successfully',
+                  tokens_used: 1, // Para imagens, 1 token = 1 imagem
+                  input_tokens: 1,
+                  output_tokens: 1,
+                });
+              
+              if (usageErr) {
+                console.error('Erro ao inserir token_usage para imagem:', usageErr);
+              } else {
+                console.log('Custo da imagem registrado no token_usage');
+              }
+            } catch (costErr) {
+              console.error('Erro ao calcular/registrar custo da imagem:', costErr);
+            }
           }
         }
       } catch (e) {

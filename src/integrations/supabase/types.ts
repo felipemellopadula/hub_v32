@@ -299,6 +299,15 @@ export type Database = {
         Args: { bucket_name: string; file_path: string }
         Returns: boolean
       }
+      insert_image_usage: {
+        Args: {
+          p_cost: number
+          p_model_name: string
+          p_prompt: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       subscription_type: "free" | "paid" | "admin"
