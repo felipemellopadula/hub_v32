@@ -248,6 +248,8 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
     creative: 'Você é um analista criativo de imagens. Explore aspectos artísticos, emocionais e interpretativos da imagem.'
   };
 
+  // Use the primary grok-beta model for vision (supports all Grok versions)
+  console.log('Using grok-beta model for image analysis');
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -255,7 +257,7 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'grok-vision-beta',
+      model: 'grok-beta',
       messages: [
         { 
           role: 'system', 
@@ -281,10 +283,12 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error('Grok API error:', errorData);
+    console.error('Grok API error response:', errorData);
+    console.error('Grok API status:', response.status);
     throw new Error(`Grok API error: ${response.status}`);
   }
 
+  console.log('Grok vision analysis successful');
   const data = await response.json();
   return data.choices[0].message.content;
 }
