@@ -236,7 +236,7 @@ async function analyzeWithGemini(imageBase64: string, prompt: string, analysisTy
 }
 
 async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
-  console.log('=== GROK ANALYSIS START ===');
+  console.log('=== GROK VISION ANALYSIS START ===');
   const GROK_API_KEY = Deno.env.get('GROK_API_KEY');
   if (!GROK_API_KEY) {
     console.log('ERROR: GROK_API_KEY not found');
@@ -251,11 +251,44 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
     creative: 'Você é um analista criativo de imagens. Explore aspectos artísticos, emocionais e interpretativos da imagem.'
   };
 
-  // Use grok-3 model which supports vision (grok-beta was deprecated)
-  console.log('Using grok-3 model for image analysis');
+  // Use grok-2-vision-1212 model which is the correct vision model for xAI
+  const visionModel = 'grok-2-vision-1212';
+  console.log('Using model:', visionModel, 'for image analysis');
   console.log('Image data length:', imageBase64.length);
   console.log('Analysis type:', analysisType);
   console.log('Prompt:', prompt);
+
+  const requestBody = {
+    model: visionModel,
+    messages: [
+      { 
+        role: 'system', 
+        content: systemPrompts[analysisType as keyof typeof systemPrompts] || systemPrompts.general
+      },
+      { 
+        role: 'user', 
+        content: [
+          { type: 'text', text: prompt || 'Analise esta imagem e descreva o que você vê.' },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: `data:image/jpeg;base64,${imageBase64}` 
+            } 
+          }
+        ]
+      }
+    ],
+    max_tokens: 1000,
+    temperature: 0.7,
+  };
+
+  console.log('Request body prepared:', {
+    model: requestBody.model,
+    messagesCount: requestBody.messages.length,
+    hasSystemMessage: requestBody.messages[0].role === 'system',
+    hasUserMessage: requestBody.messages[1].role === 'user',
+    userContentType: Array.isArray(requestBody.messages[1].content) ? 'multimodal' : 'text'
+  });
 
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
@@ -263,40 +296,20 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
       'Authorization': `Bearer ${GROK_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'grok-3',
-      messages: [
-        { 
-          role: 'system', 
-          content: systemPrompts[analysisType as keyof typeof systemPrompts] || systemPrompts.general
-        },
-        { 
-          role: 'user', 
-          content: [
-            { type: 'text', text: prompt || 'Analise esta imagem e descreva o que você vê.' },
-            { 
-              type: 'image_url', 
-              image_url: { 
-                url: `data:image/jpeg;base64,${imageBase64}` 
-              } 
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   console.log('Grok API response status:', response.status);
   console.log('Grok API response ok:', response.ok);
+  console.log('Grok API response headers:', Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error('Grok API error response:', errorData);
-    console.error('Grok API status:', response.status);
-    console.error('Grok API headers:', Object.fromEntries(response.headers.entries()));
-    throw new Error(`Grok API error: ${response.status} - ${errorData}`);
+    console.error('=== GROK API ERROR ===');
+    console.error('Status:', response.status);
+    console.error('Error response:', errorData);
+    console.error('Request model used:', visionModel);
+    throw new Error(`Grok Vision API error: ${response.status} - ${errorData}`);
   }
 
   console.log('Grok vision analysis successful, parsing response...');
@@ -310,7 +323,7 @@ async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType
   
   const content = data.choices[0].message.content;
   console.log('Grok analysis content length:', content?.length || 0);
-  console.log('=== GROK ANALYSIS SUCCESS ===');
+  console.log('=== GROK VISION ANALYSIS SUCCESS ===');
   
   return content;
 }
