@@ -101,25 +101,25 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isUser = f
             return <>{children}</>;
           },
           p({ children }) {
-            return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
+            return <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>;
           },
           h1({ children }) {
-            return <h1 className="text-xl font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
+            return <h1 className="text-xl font-bold mb-1 mt-2 first:mt-0">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-lg font-semibold mb-2 mt-3 first:mt-0">{children}</h2>;
+            return <h2 className="text-lg font-semibold mb-1 mt-2 first:mt-0">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-base font-medium mb-1 mt-2 first:mt-0">{children}</h3>;
+            return <h3 className="text-base font-medium mb-1 mt-1 first:mt-0">{children}</h3>;
           },
           ul({ children }) {
-            return <ul className="ml-4 mb-0 list-disc space-y-1">{children}</ul>;
+            return <ul className="ml-4 mb-1 list-disc space-y-0">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="ml-4 mb-0 mt-2 list-decimal space-y-0 [&>li]:inline-block [&>li]:w-full">{children}</ol>;
+            return <ol className="ml-4 mb-1 mt-1 list-decimal space-y-0">{children}</ol>;
           },
           li({ children }) {
-            return <li className="leading-relaxed [&>p]:inline [&>p]:m-0">{children}</li>;
+            return <li className="leading-relaxed">{children}</li>;
           },
           blockquote({ children }) {
             return (
