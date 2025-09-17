@@ -140,10 +140,13 @@ async function analyzeWithOpenAI(imageBase64: string, prompt: string, analysisTy
 }
 
 async function analyzeWithClaude(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
+  console.log('=== CLAUDE VISION ANALYSIS START ===');
   const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
   if (!CLAUDE_API_KEY) {
+    console.log('ERROR: CLAUDE_API_KEY not found');
     throw new Error('CLAUDE_API_KEY is not configured. Please add it to use Claude for image analysis.');
   }
+  console.log('Claude API key found, length:', CLAUDE_API_KEY.length);
 
   const systemPrompts = {
     general: 'Você é um assistente especializado em análise de imagens. Descreva o que vê de forma clara e objetiva.',
@@ -152,6 +155,42 @@ async function analyzeWithClaude(imageBase64: string, prompt: string, analysisTy
     creative: 'Você é um analista criativo de imagens. Explore aspectos artísticos, emocionais e interpretativos da imagem.'
   };
 
+  // Use the latest Claude models with vision capabilities
+  const visionModel = 'claude-3-5-haiku-20241022'; // Default to fastest model
+  console.log('Using model:', visionModel, 'for image analysis');
+  console.log('Image data length:', imageBase64.length);
+  console.log('Analysis type:', analysisType);
+  console.log('Prompt:', prompt);
+
+  const requestBody = {
+    model: visionModel,
+    max_tokens: 1000,
+    system: systemPrompts[analysisType as keyof typeof systemPrompts] || systemPrompts.general,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: prompt || 'Analise esta imagem e descreva o que você vê.' },
+        { 
+          type: 'image', 
+          source: { 
+            type: 'base64', 
+            media_type: 'image/jpeg', 
+            data: imageBase64 
+          } 
+        }
+      ]
+    }]
+  };
+
+  console.log('Request body prepared:', {
+    model: requestBody.model,
+    messagesCount: requestBody.messages.length,
+    hasSystemPrompt: !!requestBody.system,
+    hasUserMessage: requestBody.messages[0].role === 'user',
+    userContentType: Array.isArray(requestBody.messages[0].content) ? 'multimodal' : 'text',
+    maxTokens: requestBody.max_tokens
+  });
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -159,35 +198,36 @@ async function analyzeWithClaude(imageBase64: string, prompt: string, analysisTy
       'Content-Type': 'application/json',
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({
-      model: 'claude-3-sonnet-20240229',
-      max_tokens: 1000,
-      system: systemPrompts[analysisType as keyof typeof systemPrompts] || systemPrompts.general,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt || 'Analise esta imagem e descreva o que você vê.' },
-          { 
-            type: 'image', 
-            source: { 
-              type: 'base64', 
-              media_type: 'image/jpeg', 
-              data: imageBase64 
-            } 
-          }
-        ]
-      }]
-    }),
+    body: JSON.stringify(requestBody),
   });
+
+  console.log('Claude API response status:', response.status);
+  console.log('Claude API response ok:', response.ok);
+  console.log('Claude API response headers:', Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error('Claude API error:', errorData);
-    throw new Error(`Claude API error: ${response.status}`);
+    console.error('=== CLAUDE API ERROR ===');
+    console.error('Status:', response.status);
+    console.error('Error response:', errorData);
+    console.error('Request model used:', visionModel);
+    throw new Error(`Claude Vision API error: ${response.status} - ${errorData}`);
   }
 
+  console.log('Claude vision analysis successful, parsing response...');
   const data = await response.json();
-  return data.content[0].text;
+  console.log('Claude response data structure:', {
+    hasContent: !!data.content,
+    contentLength: data.content?.length,
+    hasText: !!data.content?.[0]?.text,
+    contentType: data.content?.[0]?.type
+  });
+  
+  const content = data.content[0].text;
+  console.log('Claude analysis content length:', content?.length || 0);
+  console.log('=== CLAUDE VISION ANALYSIS SUCCESS ===');
+  
+  return content;
 }
 
 async function analyzeWithGemini(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
