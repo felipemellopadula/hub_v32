@@ -790,7 +790,37 @@ const Chat: React.FC = () => {
     async (markdownText: string, _isUser: boolean, messageId: string) => {
       try {
         setCopiedMessageId(messageId);
-        await navigator.clipboard.writeText(markdownText);
+        
+        // Convert markdown to plain text with proper formatting for Word
+        const plainText = markdownText
+          // Convert headers to plain text with proper line breaks
+          .replace(/^#{1}\s+(.+)$/gm, '$1\r\n')  // H1
+          .replace(/^#{2}\s+(.+)$/gm, '$1\r\n')  // H2  
+          .replace(/^#{3}\s+(.+)$/gm, '$1\r\n')  // H3
+          .replace(/^#{4,6}\s+(.+)$/gm, '$1\r\n') // H4-H6
+          
+          // Convert bullet points to proper bullets
+          .replace(/^-\s+(.+)$/gm, '• $1')
+          .replace(/^\*\s+(.+)$/gm, '• $1')
+          
+          // Convert numbered lists (keep numbers)
+          .replace(/^\d+\.\s+(.+)$/gm, (match, p1, offset, string) => {
+            const lineNumber = (string.substring(0, offset).match(/^\d+\.\s+/gm) || []).length + 1;
+            return `${lineNumber}. ${p1}`;
+          })
+          
+          // Remove bold/italic markers but keep the text
+          .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove **bold**
+          .replace(/\*(.+?)\*/g, '$1')      // Remove *italic*
+          .replace(/__(.+?)__/g, '$1')      // Remove __bold__
+          .replace(/_(.+?)_/g, '$1')        // Remove _italic_
+          
+          // Convert line breaks to Windows format
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .replace(/\n/g, '\r\n');
+        
+        await navigator.clipboard.writeText(plainText);
       } catch (error) {
         console.error("Erro ao copiar:", error);
       } finally {
