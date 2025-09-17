@@ -15,6 +15,15 @@ serve(async (req) => {
   try {
     const { message, model = 'gemini-2.0-flash-exp', conversationHistory = [], contextEnabled = false } = await req.json();
     
+    // Map frontend model names to correct Gemini API model names
+    const modelMapping: Record<string, string> = {
+      'gemini-2.5-pro': 'gemini-2.0-flash-exp',
+      'gemini-2.5-flash': 'gemini-2.0-flash-exp', 
+      'gemini-2.5-flash-lite': 'gemini-2.0-flash-exp'
+    };
+    
+    const actualModel = modelMapping[model] || model;
+    
     console.log('Gemini Chat - Request received:', {
       model,
       messageLength: message?.length || 0,
@@ -52,9 +61,10 @@ serve(async (req) => {
       parts: [{ text: message }]
     });
 
-    console.log('Sending request to Gemini with model:', model, 'and', contents.length, 'messages');
+    console.log('Sending request to Gemini with model:', actualModel, 'and', contents.length, 'messages');
+    console.log('Original model requested:', model, '-> Mapped to:', actualModel);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -104,7 +114,7 @@ serve(async (req) => {
           
           console.log('Recording Gemini token usage:', {
             userId,
-            model,
+            model: actualModel,
             inputTokens,
             outputTokens,
             totalTokens,
@@ -117,7 +127,7 @@ serve(async (req) => {
             .from('token_usage')
             .insert({
               user_id: userId,
-              model_name: model,
+              model_name: actualModel,
               tokens_used: totalTokens, // Keep for compatibility
               input_tokens: inputTokens, // Real input tokens
               output_tokens: outputTokens, // Real output tokens

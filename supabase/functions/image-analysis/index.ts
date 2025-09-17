@@ -231,10 +231,13 @@ async function analyzeWithClaude(imageBase64: string, prompt: string, analysisTy
 }
 
 async function analyzeWithGemini(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
+  console.log('=== GEMINI VISION ANALYSIS START ===');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
   if (!GEMINI_API_KEY) {
+    console.log('ERROR: GEMINI_API_KEY not found');
     throw new Error('GEMINI_API_KEY is not configured. Please add it to use Gemini for image analysis.');
   }
+  console.log('Gemini API key found, length:', GEMINI_API_KEY.length);
 
   const systemPrompts = {
     general: 'Você é um assistente especializado em análise de imagens. Descreva o que vê de forma clara e objetiva.',
@@ -243,36 +246,78 @@ async function analyzeWithGemini(imageBase64: string, prompt: string, analysisTy
     creative: 'Você é um analista criativo de imagens. Explore aspectos artísticos, emocionais e interpretativos da imagem.'
   };
 
+  // Use the correct Gemini 2.5 models for vision
+  const visionModel = 'gemini-2.0-flash-exp'; // Default vision-capable model
+  console.log('Using model:', visionModel, 'for image analysis');
+  console.log('Image data length:', imageBase64.length);
+  console.log('Analysis type:', analysisType);
+  console.log('Prompt:', prompt);
+
   const fullPrompt = `${systemPrompts[analysisType as keyof typeof systemPrompts] || systemPrompts.general}\n\n${prompt || 'Analise esta imagem e descreva o que você vê.'}`;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`, {
+  const requestBody = {
+    contents: [{
+      parts: [
+        { text: fullPrompt },
+        { 
+          inline_data: { 
+            mime_type: 'image/jpeg', 
+            data: imageBase64 
+          } 
+        }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 8192,
+    }
+  };
+
+  console.log('Request body prepared:', {
+    model: visionModel,
+    contentsLength: requestBody.contents.length,
+    hasText: !!requestBody.contents[0].parts[0].text,
+    hasImage: !!requestBody.contents[0].parts[1].inline_data,
+    maxOutputTokens: requestBody.generationConfig.maxOutputTokens
+  });
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${visionModel}:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: fullPrompt },
-          { 
-            inline_data: { 
-              mime_type: 'image/jpeg', 
-              data: imageBase64 
-            } 
-          }
-        ]
-      }]
-    }),
+    body: JSON.stringify(requestBody),
   });
+
+  console.log('Gemini API response status:', response.status);
+  console.log('Gemini API response ok:', response.ok);
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error('Gemini API error:', errorData);
-    throw new Error(`Gemini API error: ${response.status}`);
+    console.error('=== GEMINI API ERROR ===');
+    console.error('Status:', response.status);
+    console.error('Error response:', errorData);
+    console.error('Request model used:', visionModel);
+    throw new Error(`Gemini API error: ${response.status} - ${errorData}`);
   }
 
+  console.log('Gemini vision analysis successful, parsing response...');
   const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  console.log('Gemini response data structure:', {
+    hasCandidates: !!data.candidates,
+    candidatesLength: data.candidates?.length,
+    hasContent: !!data.candidates?.[0]?.content,
+    hasParts: !!data.candidates?.[0]?.content?.parts,
+    hasText: !!data.candidates?.[0]?.content?.parts?.[0]?.text
+  });
+  
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Não foi possível gerar resposta';
+  console.log('Gemini analysis content length:', content?.length || 0);
+  console.log('=== GEMINI VISION ANALYSIS SUCCESS ===');
+  
+  return content;
 }
 
 async function analyzeWithGrok(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
