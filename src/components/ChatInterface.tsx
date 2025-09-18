@@ -48,6 +48,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const handlePaste = async (event: ClipboardEvent) => {
     console.log('=== PASTE EVENT DETECTED ===');
     console.log('Clipboard data:', event.clipboardData);
+    console.log('Target element:', event.target);
+    console.log('Current active element:', document.activeElement);
     
     const items = event.clipboardData?.items;
     if (!items) {
@@ -63,6 +65,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       if (item.type.startsWith('image/')) {
         console.log('Image detected, processing...');
         event.preventDefault();
+        event.stopPropagation();
         
         const file = item.getAsFile();
         console.log('File from clipboard:', file);
@@ -89,16 +92,51 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     }
   };
 
+  // Handle paste on the input field specifically
+  const handleInputPaste = async (event: React.ClipboardEvent<HTMLInputElement>) => {
+    console.log('=== INPUT PASTE EVENT DETECTED ===');
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        console.log('Image pasted in input field');
+        
+        const file = item.getAsFile();
+        if (file) {
+          setIsProcessingFile(true);
+          try {
+            const fileName = `screenshot-${Date.now()}.png`;
+            setAttachedFiles([file]);
+            setFileName(fileName);
+            toast.success(`Imagem colada: ${fileName}`);
+          } catch (error) {
+            console.error('Erro ao processar imagem colada:', error);
+            toast.error('Erro ao processar imagem colada');
+          } finally {
+            setIsProcessingFile(false);
+          }
+        }
+        break;
+      }
+    }
+  };
+
   // Add paste event listener
   useEffect(() => {
     console.log('Setting up paste listener, isOpen:', isOpen);
     
     if (isOpen) {
       console.log('Adding paste event listener');
-      document.addEventListener('paste', handlePaste);
+      const handleWindowPaste = (event: Event) => handlePaste(event as ClipboardEvent);
+      window.addEventListener('paste', handleWindowPaste, true);
+      document.addEventListener('paste', handleWindowPaste, true);
+      
       return () => {
-        console.log('Removing paste event listener');
-        document.removeEventListener('paste', handlePaste);
+        console.log('Removing paste event listeners');
+        window.removeEventListener('paste', handleWindowPaste, true);
+        document.removeEventListener('paste', handleWindowPaste, true);
       };
     }
   }, [isOpen]);
@@ -564,13 +602,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onPaste={handleInputPaste}
               placeholder={
                 isProcessingFile
                   ? "Processando arquivo..."
                   : hasAttachedFile && fileName
                   ? `Arquivo anexado: ${fileName}. Digite sua pergunta...`
                   : selectedModel
-                  ? "Digite sua mensagem ou anexe um arquivo (PDF, Word, imagem)..."
+                  ? "Digite sua mensagem ou anexe um arquivo (PDF, Word, imagem). Use Ctrl+V para colar screenshots..."
                   : "Selecione um modelo primeiro"
               }
               disabled={!selectedModel || isProcessingFile}
