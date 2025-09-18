@@ -44,101 +44,78 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [filePages, setFilePages] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle clipboard paste for images
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle clipboard paste for images - simplified version
   const handlePaste = async (event: ClipboardEvent) => {
-    console.log('=== PASTE EVENT DETECTED ===');
-    console.log('Clipboard data:', event.clipboardData);
-    console.log('Target element:', event.target);
-    console.log('Current active element:', document.activeElement);
+    console.log('🖼️ PASTE EVENT TRIGGERED!');
+    console.log('Event target:', event.target);
+    console.log('Active element:', document.activeElement);
     
     const items = event.clipboardData?.items;
     if (!items) {
-      console.log('No clipboard items found');
+      console.log('❌ No clipboard items');
       return;
     }
 
-    console.log('Clipboard items:', Array.from(items).map(item => ({ type: item.type, kind: item.kind })));
-
-    for (const item of Array.from(items)) {
-      console.log('Processing item:', { type: item.type, kind: item.kind });
-      
-      if (item.type.startsWith('image/')) {
-        console.log('Image detected, processing...');
-        event.preventDefault();
-        event.stopPropagation();
-        
-        const file = item.getAsFile();
-        console.log('File from clipboard:', file);
-        
-        if (file) {
-          setIsProcessingFile(true);
-          try {
-            const fileName = `screenshot-${Date.now()}.png`;
-            setAttachedFiles([file]);
-            setFileName(fileName);
-            console.log('Image successfully attached:', fileName);
-            toast.success(`Imagem colada: ${fileName}`);
-          } catch (error) {
-            console.error('Erro ao processar imagem colada:', error);
-            toast.error('Erro ao processar imagem colada');
-          } finally {
-            setIsProcessingFile(false);
-          }
-        } else {
-          console.log('Could not get file from clipboard item');
-        }
-        break;
-      }
-    }
-  };
-
-  // Handle paste on the input field specifically
-  const handleInputPaste = async (event: React.ClipboardEvent<HTMLInputElement>) => {
-    console.log('=== INPUT PASTE EVENT DETECTED ===');
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
-        event.preventDefault();
-        console.log('Image pasted in input field');
-        
-        const file = item.getAsFile();
-        if (file) {
-          setIsProcessingFile(true);
-          try {
-            const fileName = `screenshot-${Date.now()}.png`;
-            setAttachedFiles([file]);
-            setFileName(fileName);
-            toast.success(`Imagem colada: ${fileName}`);
-          } catch (error) {
-            console.error('Erro ao processar imagem colada:', error);
-            toast.error('Erro ao processar imagem colada');
-          } finally {
-            setIsProcessingFile(false);
-          }
-        }
-        break;
-      }
-    }
-  };
-
-  // Add paste event listener
-  useEffect(() => {
-    console.log('Setting up paste listener, isOpen:', isOpen);
+    console.log('📋 Found', items.length, 'clipboard items');
     
-    if (isOpen) {
-      console.log('Adding paste event listener');
-      const handleWindowPaste = (event: Event) => handlePaste(event as ClipboardEvent);
-      window.addEventListener('paste', handleWindowPaste, true);
-      document.addEventListener('paste', handleWindowPaste, true);
+    // Check all items for images
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      console.log(`Item ${i}:`, { type: item.type, kind: item.kind });
       
-      return () => {
-        console.log('Removing paste event listeners');
-        window.removeEventListener('paste', handleWindowPaste, true);
-        document.removeEventListener('paste', handleWindowPaste, true);
-      };
+      if (item.type.startsWith('image/')) {
+        console.log('✅ Image found! Processing...');
+        event.preventDefault();
+        
+        const file = item.getAsFile();
+        if (file) {
+          console.log('📁 File created:', { name: file.name, size: file.size, type: file.type });
+          
+          setIsProcessingFile(true);
+          const fileName = `screenshot-${Date.now()}.png`;
+          setAttachedFiles([file]);
+          setFileName(fileName);
+          console.log('🎉 Image attached successfully');
+          toast.success(`📸 Imagem colada: ${fileName}`);
+          setIsProcessingFile(false);
+        } else {
+          console.log('❌ Could not create file from clipboard');
+        }
+        return;
+      }
     }
+    
+    console.log('ℹ️ No images found in clipboard');
+  };
+
+  // Add global paste listener with immediate setup
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    console.log('🔧 Setting up paste listener...');
+    
+    const pasteHandler = (e: ClipboardEvent) => {
+      console.log('🎯 Global paste detected');
+      handlePaste(e);
+    };
+    
+    // Add multiple listeners to catch all cases
+    document.addEventListener('paste', pasteHandler, true);
+    window.addEventListener('paste', pasteHandler, true);
+    
+    // Focus the container to ensure it can receive events
+    if (chatContainerRef.current) {
+      chatContainerRef.current.focus();
+      console.log('🎯 Chat container focused');
+    }
+    
+    return () => {
+      console.log('🧹 Cleaning up paste listeners');
+      document.removeEventListener('paste', pasteHandler, true);
+      window.removeEventListener('paste', pasteHandler, true);
+    };
   }, [isOpen]);
 
   // Helper function to convert file to base64
@@ -480,7 +457,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const hasAttachedFile = fileContent || attachedFiles.length > 0;
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div 
+      ref={chatContainerRef}
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      tabIndex={-1}
+      style={{ outline: 'none' }}
+    >
       <Card className="w-full max-w-4xl h-[80vh] bg-card border-border shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -602,7 +584,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onPaste={handleInputPaste}
+              onPaste={(e) => {
+                console.log('🔥 INPUT PASTE EVENT!');
+                handlePaste(e.nativeEvent);
+              }}
               placeholder={
                 isProcessingFile
                   ? "Processando arquivo..."
