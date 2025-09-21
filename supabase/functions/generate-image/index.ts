@@ -63,10 +63,12 @@ serve(async (req) => {
     
     // Modelos Google (como google:4@1 - Gemini Flash) não suportam width/height
     const isGoogleModel = model.startsWith('google:');
-    // Modelos que suportam dimensões altas
+    // Modelos que suportam dimensões altas - Seedream especificamente suporta até 6048x6048
     const isHighResModel = model === 'bytedance:5@0' || model === 'ideogram:4@1' || model === 'bfl:3@1';
+    // Seedream tem limite específico maior
+    const isSeedreamModel = model === 'bytedance:5@0';
     
-    console.log('isGoogleModel:', isGoogleModel, 'isHighResModel:', isHighResModel);
+    console.log('isGoogleModel:', isGoogleModel, 'isHighResModel:', isHighResModel, 'isSeedream:', isSeedreamModel);
     
     if (!isGoogleModel) {
       // Apenas definir dimensões para modelos que suportam
@@ -77,7 +79,13 @@ serve(async (req) => {
         }
       } else {
         // Definir limites baseados no modelo
-        const maxDimension = isHighResModel ? 8192 : 2048;
+        let maxDimension = 2048; // Padrão
+        if (isSeedreamModel) {
+          maxDimension = 6048; // Seedream suporta até 6048x6048
+        } else if (isHighResModel) {
+          maxDimension = 8192; // Outros modelos de alta resolução
+        }
+        
         if (Number.isFinite(body.width)) width = Math.max(64, Math.min(maxDimension, Number(body.width)));
         if (Number.isFinite(body.height)) height = Math.max(64, Math.min(maxDimension, Number(body.height)));
       }
