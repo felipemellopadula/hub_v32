@@ -111,8 +111,14 @@ serve(async (req) => {
     console.log('Dimensões finais:', { width, height });
 
     const numberResults: number = Math.max(1, Math.min(4, Number(body.numberResults) || 1));
-    // Usar WEBP por padrão para economizar recursos e melhor desempenho
-    const outputFormat: string = (typeof body.outputFormat === 'string' && body.outputFormat) || 'WEBP';
+    // Usar WEBP para imagens grandes (>2K) para economizar recursos, PNG para menores
+    let outputFormat: string = (typeof body.outputFormat === 'string' && body.outputFormat) || 'WEBP';
+    
+    // Para imagens grandes (4K+), forçar WEBP para reduzir tamanho do arquivo
+    if ((width >= 4096 || height >= 4096) && !isGoogleModel) {
+      outputFormat = 'WEBP';
+      console.log('Imagem 4K+ detectada - forçando formato WEBP para reduzir tamanho do arquivo');
+    }
     
     console.log('Parâmetros:', { numberResults, outputFormat });
 
@@ -230,11 +236,15 @@ serve(async (req) => {
     const ab = await imgRes.arrayBuffer();
     console.log('ArrayBuffer size:', ab.byteLength, 'bytes');
     
-    // Verificar se a imagem não é muito grande (limite de 5MB para otimização)
-    if (ab.byteLength > 5 * 1024 * 1024) {
-      console.error('Imagem muito grande:', ab.byteLength, 'bytes');
+    // Verificar se a imagem não é muito grande (limite de 10MB para imagens 4K+, 5MB para outras)
+    const maxSize = (width >= 4096 || height >= 4096) ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (ab.byteLength > maxSize) {
+      console.error('Imagem muito grande:', ab.byteLength, 'bytes', `(limite: ${maxSize / 1024 / 1024}MB)`);
       return new Response(
-        JSON.stringify({ error: 'Imagem gerada é muito grande para processar' }),
+        JSON.stringify({ 
+          error: `Imagem gerada é muito grande para processar (${(ab.byteLength / 1024 / 1024).toFixed(1)}MB > ${maxSize / 1024 / 1024}MB)`,
+          sugestion: 'Tente usar formato WEBP ou dimensões menores'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
