@@ -40,21 +40,6 @@ serve(async (req) => {
       );
     }
 
-    // Validar dimensões antes de processar
-    const requestedWidth = Number(body.width);
-    const requestedHeight = Number(body.height);
-    console.log('Dimensões solicitadas ORIGINAIS:', { width: requestedWidth, height: requestedHeight });
-    
-    if (requestedWidth > 6144 || requestedHeight > 6144) {
-      console.error('Dimensões muito grandes:', { width: requestedWidth, height: requestedHeight });
-      return new Response(
-        JSON.stringify({ 
-          error: `Dimensões muito grandes: ${requestedWidth}x${requestedHeight}. Máximo permitido: 6144x6144`,
-          sugestion: 'Use dimensões menores ou tente outro modelo'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Obter usuário autenticado a partir do JWT para vincular a imagem
     const authHeader = req.headers.get('Authorization') ?? '';
