@@ -83,9 +83,9 @@ type Resolution = { id: string; label: string; w: number; h: number };
 
 const MODELS = [
   { id: "bytedance:1@1", label: "ByteDance Seedance 1.0 Lite", provider: "bytedance" as const },
-
-  // { id: "google:3@1", label: "Google Veo 3 Fast", provider: "google" as const },
-  // { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const },
+  { id: "klingai:5@3", label: "KlingAI 2.1 Master", provider: "klingai" as const },
+  { id: "minimax:hailuo@2", label: "Minimax Hailuo 2.0", provider: "minimax" as const },
+  { id: "google:veo-3@fast", label: "Google Veo 3 Fast", provider: "google" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
@@ -93,26 +93,30 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p (864×480)", w: 864, h: 480 },
     { id: "16:9-704p", label: "16:9 (Wide / Landscape) - 1248×704", w: 1248, h: 704 },
   ],
-  // "google:3@1": [{ id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 }],
-  // "klingai:5@3": [{ id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 }],
+  "klingai:5@3": [{ id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 }],
+  "minimax:hailuo@2": [{ id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 }],
+  "google:veo-3@fast": [{ id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 }],
 };
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
   "bytedance:1@1": [5, 10],
-  // "google:3@1": [8],
-  // "klingai:5@3": [5, 10],
+  "klingai:5@3": [5, 10],
+  "minimax:hailuo@2": [5, 10],
+  "google:veo-3@fast": [8, 10],
 };
 
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
   "bytedance:1@1": true,
-  // "google:3@1": false,
-  // "klingai:5@3": false,
+  "klingai:5@3": false,
+  "minimax:hailuo@2": false,
+  "google:veo-3@fast": false,
 };
 
 const SUPPORTS_AUDIO: Record<string, boolean> = {
   "bytedance:1@1": false,
-  // "google:3@1": true,
-  // "klingai:5@3": false,
+  "klingai:5@3": false,
+  "minimax:hailuo@2": false,
+  "google:veo-3@fast": true,
 };
 
 const FORMATS = ["mp4", "webm", "mov"];
