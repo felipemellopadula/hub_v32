@@ -31,7 +31,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = 'claude-sonnet-4-20250514', files, conversationHistory = [], contextEnabled = false } = await req.json();
+    const { message, model = 'claude-sonnet-4-5', files, conversationHistory = [], contextEnabled = false } = await req.json();
     
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
