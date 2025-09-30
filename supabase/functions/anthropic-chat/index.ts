@@ -31,7 +31,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = 'claude-sonnet-4-20250514', files, conversationHistory = [], contextEnabled = false } = await req.json();
+    const { message, model = 'claude-sonnet-4-5-20250514', files, conversationHistory = [], contextEnabled = false } = await req.json();
     
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
@@ -40,12 +40,12 @@ serve(async (req) => {
 
     // Define token limits for different Claude models
     const getModelLimits = (modelName: string) => {
-      if (modelName.includes('claude-opus-4')) return { input: 200000, output: 8192 };
-      if (modelName.includes('claude-sonnet-4')) return { input: 200000, output: 8192 };
+      if (modelName.includes('claude-opus-4')) return { input: 200000, output: 16384 };
+      if (modelName.includes('claude-sonnet-4')) return { input: 200000, output: 16384 };
       if (modelName.includes('claude-3-5-haiku')) return { input: 200000, output: 8192 };
       if (modelName.includes('claude-3-5-sonnet')) return { input: 200000, output: 8192 };
       if (modelName.includes('claude-3-opus')) return { input: 200000, output: 4096 };
-      return { input: 200000, output: 8192 }; // Default for Claude models
+      return { input: 200000, output: 16384 }; // Default for Claude 4 models
     };
 
     const limits = getModelLimits(model);

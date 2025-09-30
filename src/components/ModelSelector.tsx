@@ -28,11 +28,11 @@ const modelsByProvider = {
     { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', provider: 'OpenAI', category: 'fast' as const },
     { id: 'o4-mini', name: 'o4 Mini', provider: 'OpenAI', category: 'fast' as const },
   ],
-  'Anthropic': [
-    { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', provider: 'Anthropic', category: 'premium' as const },
-    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'Anthropic', category: 'premium' as const },
-    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', category: 'fast' as const },
-  ],
+  'Anthropic': [
+    { id: 'claude-opus-4-1-20250805', name: 'Claude Opus 4.1', provider: 'Anthropic', category: 'premium' as const },
+    { id: 'claude-sonnet-4-5-20250514', name: 'Claude Sonnet 4.5', provider: 'Anthropic', category: 'premium' as const },
+    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', category: 'fast' as const },
+  ],
   'DeepSeek': [
     { id: 'deepseek-chat', name: 'DeepSeek Chat V3', provider: 'DeepSeek', category: 'premium' as const },
     { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', provider: 'DeepSeek', category: 'premium' as const },

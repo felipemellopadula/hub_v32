@@ -539,7 +539,7 @@ const BotMessage = React.memo(
               {/* Comparação entre modelos — quando a mensagem anterior do usuário não tem anexos */}
               {!hasAttachments && immediateUserMessage?.sender === "user" && (
                 <div className="flex items-center gap-1 pt-2 border-t border-border/30 flex-wrap">
-                  {["gemini-2.5-flash", "claude-opus-4-20250514", "grok-4"].map(
+                  {["gemini-2.5-flash", "claude-opus-4-1-20250805", "grok-4"].map(
                     (model) => {
                       const isComparing =
                         comparingModels[message.id]?.includes(model);
@@ -571,7 +571,7 @@ const BotMessage = React.memo(
                                     <RefreshCw className="h-3 w-3" />
                                     {model === "gemini-2.5-flash"
                                       ? "Gemini"
-                                      : model === "claude-opus-4-20250514"
+                                      : model === "claude-opus-4-1-20250805"
                                       ? "Claude"
                                       : "Grok"}
                                   </div>
@@ -1445,8 +1445,8 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               "gpt-4.1-mini",
               "gpt-4.1-nano",
               "o4-mini",
-              "claude-opus-4-20250514",
-              "claude-sonnet-4-20250514",
+              "claude-opus-4-1-20250805",
+              "claude-sonnet-4-5-20250514",
               "claude-3-5-haiku-20241022",
               "gemini-2.5-pro",
               "gemini-2.5-flash",
