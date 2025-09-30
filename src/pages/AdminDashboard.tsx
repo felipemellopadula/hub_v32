@@ -90,7 +90,7 @@ const IMAGE_PRICING: Record<string, { cost: number }> = {
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
   'claude-opus-4-1-20250805': { input: 15.0, output: 75.0 },
-  'claude-sonnet-4-5-20250514': { input: 3.0, output: 15.0 }, // Using ≤200K token rate
+  'claude-sonnet-4-20250514': { input: 3.0, output: 15.0 }, // Using ≤200K token rate
   'claude-3-5-haiku-20241022': { input: 0.8, output: 4.0 },
   
   // Legacy models with exact version numbers
