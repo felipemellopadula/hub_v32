@@ -1483,19 +1483,20 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               let imageFile = imageFiles[0];
               
               try {
-                // Comprimir imagem se for maior que 4MB (margem de segurança para limite de 5MB)
-                const maxSizeInMB = 4;
+                // Comprimir imagem se for maior que 3MB (base64 aumenta ~33%, então 3MB * 1.33 = ~4MB)
+                const maxSizeInMB = 3;
                 if (imageFile.size > maxSizeInMB * 1024 * 1024) {
-                  console.log(`Compressing image: ${imageFile.size} bytes`);
+                  console.log(`Compressing image: ${imageFile.size} bytes (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)`);
                   const imageCompression = (await import('browser-image-compression')).default;
                   const options = {
                     maxSizeMB: maxSizeInMB,
-                    maxWidthOrHeight: 2048,
+                    maxWidthOrHeight: 1920,
                     useWebWorker: true,
-                    fileType: 'image/jpeg'
+                    fileType: 'image/jpeg',
+                    initialQuality: 0.8
                   };
                   imageFile = await imageCompression(imageFile, options);
-                  console.log(`Image compressed to: ${imageFile.size} bytes`);
+                  console.log(`Image compressed to: ${imageFile.size} bytes (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)`);
                 }
                 
                 const base64 = await new Promise<string>((resolve, reject) => {
@@ -1505,6 +1506,14 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                   reader.readAsDataURL(imageFile);
                 });
                 const base64Data = base64.split(",")[1];
+                
+                // Verificar tamanho do base64
+                const base64SizeInMB = (base64Data.length * 0.75) / (1024 * 1024);
+                console.log(`Base64 size: ${base64SizeInMB.toFixed(2)} MB`);
+                
+                if (base64SizeInMB > 5) {
+                  throw new Error(`Imagem muito grande após compressão (${base64SizeInMB.toFixed(2)} MB). O limite é 5MB.`);
+                }
 
                 let aiProvider = "openai";
                 if (originalModel.includes("claude")) aiProvider = "claude";
