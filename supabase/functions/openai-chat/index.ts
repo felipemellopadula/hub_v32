@@ -79,9 +79,16 @@ serve(async (req) => {
         name: f.name, 
         type: f.type, 
         hasPdfContent: !!f.pdfContent,
-        hasWordContent: !!f.wordContent
+        hasWordContent: !!f.wordContent,
+        hasImageData: !!f.imageData
       })));
     }
+    
+    // Detect if we have images
+    const imageFiles = files?.filter((f: any) => 
+      f.type?.startsWith('image/') && f.imageData
+    ) || [];
+    const hasImages = imageFiles.length > 0;
     
     // Process PDF and DOC files if present
     let finalMessage = message;
@@ -128,11 +135,36 @@ serve(async (req) => {
       }
     }
     
-    // Add current user message
-    messages.push({
-      role: 'user',
-      content: finalMessage
-    });
+    // Add current user message (with images if present)
+    if (hasImages) {
+      console.log('Processing message with images:', imageFiles.length);
+      
+      // Build multimodal content array
+      const content: any[] = [
+        { type: 'text', text: finalMessage }
+      ];
+      
+      // Add all images
+      for (const imageFile of imageFiles) {
+        content.push({
+          type: 'image_url',
+          image_url: {
+            url: imageFile.imageData, // Should be data:image/...;base64,...
+            detail: 'high'
+          }
+        });
+      }
+      
+      messages.push({
+        role: 'user',
+        content: content
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: finalMessage
+      });
+    }
     
     // Calculate total token count for the entire conversation
     const totalText = messages.map((msg: any) => msg.content).join('\n');

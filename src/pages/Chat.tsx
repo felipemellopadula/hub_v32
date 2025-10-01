@@ -1350,14 +1350,29 @@ Forneça uma resposta abrangente que integre informações de todos os documento
 
       const fileData = await Promise.all(
         currentFiles.map(async (file) => {
+          const base64Data = await fileToBase64(file);
           const baseData = {
             name: file.name,
             type: file.type,
-            data: await fileToBase64(file),
+            data: base64Data,
           } as any;
-          return isPdfFile(file)
-            ? { ...baseData, pdfContent: processedPdfs.get(file.name) || "" }
-            : baseData;
+          
+          // Para imagens, adicionar imageData no formato correto
+          if (file.type.startsWith('image/')) {
+            baseData.imageData = base64Data; // data:image/...;base64,...
+          }
+          
+          // Para PDFs
+          if (isPdfFile(file)) {
+            baseData.pdfContent = processedPdfs.get(file.name) || "";
+          }
+          
+          // Para Word docs
+          if (isWordFile(file)) {
+            baseData.wordContent = processedWords.get(file.name) || "";
+          }
+          
+          return baseData;
         })
       );
 
@@ -1445,6 +1460,8 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               "gpt-4.1-mini",
               "gpt-4.1-nano",
               "o4-mini",
+              "synergy-ia", // SynergyIA agora suporta visão
+              "gpt-4o-mini", // Backend model para SynergyIA
               "claude-opus-4-1-20250805",
               "claude-sonnet-4-5",
               "claude-3-5-haiku-20241022",
@@ -1456,8 +1473,13 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               "grok-3-mini",
             ];
             const isVisionModel = visionModels.includes(originalModel);
+            
+            // Para SynergyIA e modelos OpenAI, enviar imagens diretamente ao openai-chat
+            const shouldUseDirect = originalModel === "synergy-ia" || 
+                                   internalModel.includes("gpt-") || 
+                                   internalModel.includes("o4-");
 
-            if (isVisionModel) {
+            if (isVisionModel && !shouldUseDirect) {
               const imageFile = imageFiles[0];
               try {
                 const base64 = await new Promise<string>((resolve, reject) => {
@@ -1517,6 +1539,10 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                 setIsLoading(false);
                 return;
               }
+            } else if (isVisionModel && shouldUseDirect) {
+              // Para SynergyIA e modelos OpenAI, incluir imagens diretamente
+              console.log('Adding images to request for vision model:', originalModel);
+              // Imagens serão enviadas via fileData abaixo
             } else {
               const imageContents = imageFiles.map(
                 (img) => `[Imagem anexada: ${img.name}]`
