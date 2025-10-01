@@ -1505,6 +1505,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                         "Analise esta imagem e descreva o que você vê.",
                       aiProvider,
                       analysisType: "general",
+                      model: originalModel, // Pass the specific model being used
                     },
                   });
 

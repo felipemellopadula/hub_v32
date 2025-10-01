@@ -8,6 +8,7 @@ interface ImageAnalysisRequest {
   prompt: string;
   aiProvider?: 'openai' | 'claude' | 'gemini' | 'grok';
   analysisType?: 'general' | 'detailed' | 'technical' | 'creative';
+  model?: string; // Specific model to use (e.g., claude-sonnet-4-5, claude-opus-4-1-20250805)
 }
 
 Deno.serve(async (req) => {
@@ -17,7 +18,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64, prompt, aiProvider = 'openai', analysisType = 'general' }: ImageAnalysisRequest = await req.json();
+    const { imageBase64, prompt, aiProvider = 'openai', analysisType = 'general', model }: ImageAnalysisRequest = await req.json();
     
     console.log('=== IMAGE ANALYSIS DEBUG ===');
     console.log('Request received with:');
@@ -25,13 +26,14 @@ Deno.serve(async (req) => {
     console.log('- prompt:', prompt);
     console.log('- aiProvider:', aiProvider);
     console.log('- analysisType:', analysisType);
+    console.log('- model:', model);
     
     if (!imageBase64) {
       console.log('ERROR: No image data provided');
       throw new Error('Image data is required');
     }
 
-    console.log(`Starting image analysis with ${aiProvider} - Analysis type: ${analysisType}`);
+    console.log(`Starting image analysis with ${aiProvider} - Analysis type: ${analysisType} - Model: ${model || 'default'}`);
 
     let response: string;
 
@@ -40,7 +42,7 @@ Deno.serve(async (req) => {
         response = await analyzeWithOpenAI(imageBase64, prompt, analysisType);
         break;
       case 'claude':
-        response = await analyzeWithClaude(imageBase64, prompt, analysisType);
+        response = await analyzeWithClaude(imageBase64, prompt, analysisType, model);
         break;
       case 'gemini':
         response = await analyzeWithGemini(imageBase64, prompt, analysisType);
@@ -139,7 +141,7 @@ async function analyzeWithOpenAI(imageBase64: string, prompt: string, analysisTy
   return data.choices[0].message.content;
 }
 
-async function analyzeWithClaude(imageBase64: string, prompt: string, analysisType: string): Promise<string> {
+async function analyzeWithClaude(imageBase64: string, prompt: string, analysisType: string, model?: string): Promise<string> {
   console.log('=== CLAUDE VISION ANALYSIS START ===');
   const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
   if (!CLAUDE_API_KEY) {
@@ -155,8 +157,18 @@ async function analyzeWithClaude(imageBase64: string, prompt: string, analysisTy
     creative: 'Você é um analista criativo de imagens. Explore aspectos artísticos, emocionais e interpretativos da imagem.'
   };
 
-  // Use the latest Claude models with vision capabilities
-  const visionModel = 'claude-3-5-haiku-20241022'; // Default to fastest model
+  // Map common model names and default to appropriate model
+  let visionModel = model || 'claude-3-5-haiku-20241022';
+  
+  // Support both naming conventions
+  if (model === 'claude-sonnet-4-5') {
+    visionModel = 'claude-sonnet-4-5-20250514';
+  } else if (model === 'claude-opus-4-1-20250805') {
+    visionModel = 'claude-opus-4-1-20250805';
+  } else if (model === 'claude-3-5-haiku-20241022') {
+    visionModel = 'claude-3-5-haiku-20241022';
+  }
+  
   console.log('Using model:', visionModel, 'for image analysis');
   console.log('Image data length:', imageBase64.length);
   console.log('Analysis type:', analysisType);
