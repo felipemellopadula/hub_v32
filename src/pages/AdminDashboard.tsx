@@ -89,8 +89,8 @@ const IMAGE_PRICING: Record<string, { cost: number }> = {
 };
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
-  'claude-opus-4-1-20250805': { input: 15.0, output: 75.0 },
-  'claude-sonnet-4-5': { input: 3.0, output: 15.0 }, // Using ≤200K token rate
+  'claude-opus-4-1-20250805': { input: 15.0, output: 30.0 },
+  'claude-sonnet-4-5': { input: 3.0, output: 6.0 },
   'claude-3-5-haiku-20241022': { input: 0.8, output: 4.0 },
   
   // Legacy models with exact version numbers
@@ -99,9 +99,9 @@ const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
   
   // Generic model name matching (fallbacks)
-  'claude-opus-4.1': { input: 15.0, output: 75.0 },
-  'claude-opus-4': { input: 15.0, output: 75.0 },
-  'claude-sonnet-4': { input: 3.0, output: 15.0 },
+  'claude-opus-4.1': { input: 15.0, output: 30.0 },
+  'claude-opus-4': { input: 15.0, output: 30.0 },
+  'claude-sonnet-4': { input: 3.0, output: 6.0 },
   'claude-3-5-sonnet': { input: 3.0, output: 15.0 },
   'claude-3-5-haiku': { input: 0.8, output: 4.0 },
   'claude-haiku-3.5': { input: 0.8, output: 4.0 },
