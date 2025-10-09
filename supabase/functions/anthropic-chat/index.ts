@@ -185,10 +185,11 @@ serve(async (req) => {
     const data = await response.json();
     let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
     
-    // Normalize line breaks to standard \n
+    // Normalize line breaks - remove excessive blank lines
     generatedText = generatedText
       .replace(/\r\n/g, '\n')  // Normalize CRLF to LF
-      .replace(/\r/g, '\n');   // Convert any remaining CR to LF
+      .replace(/\r/g, '\n')    // Convert any remaining CR to LF
+      .replace(/\n{3,}/g, '\n\n'); // Replace 3+ consecutive newlines with just 2
     
     // Add prefix if message was processed in chunks
     const finalResponse = responsePrefix + generatedText;
