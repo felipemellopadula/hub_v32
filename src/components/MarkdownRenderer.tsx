@@ -101,25 +101,25 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isUser = f
             return <>{children}</>;
           },
           p({ children }) {
-            return <p className="mb-4 last:mb-0 leading-7 text-[15px]">{children}</p>;
+            return <p className="mb-5 last:mb-0 leading-relaxed text-[15px]">{children}</p>;
           },
           h1({ children }) {
-            return <h1 className="text-2xl font-bold mb-4 mt-6 first:mt-0 leading-tight">{children}</h1>;
+            return <h1 className="text-2xl font-bold mb-4 mt-8 first:mt-0 leading-tight">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-xl font-bold mb-3 mt-5 first:mt-0 leading-tight">{children}</h2>;
+            return <h2 className="text-xl font-bold mb-4 mt-8 first:mt-0 leading-tight">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-lg font-semibold mb-3 mt-4 first:mt-0 leading-tight">{children}</h3>;
+            return <h3 className="text-lg font-bold mb-4 mt-6 first:mt-0 leading-tight">{children}</h3>;
           },
           ul({ children }) {
-            return <ul className="ml-6 mb-4 list-disc space-y-2">{children}</ul>;
+            return <ul className="ml-6 mb-6 list-disc space-y-3 marker:text-foreground">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="ml-6 mb-4 list-decimal space-y-2">{children}</ol>;
+            return <ol className="ml-6 mb-6 list-decimal space-y-3 marker:text-foreground">{children}</ol>;
           },
           li({ children }) {
-            return <li className="leading-7 text-[15px]">{children}</li>;
+            return <li className="leading-relaxed text-[15px] pl-2">{children}</li>;
           },
           blockquote({ children }) {
             return (
