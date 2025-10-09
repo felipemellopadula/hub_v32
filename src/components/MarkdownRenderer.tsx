@@ -99,22 +99,22 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isUser = f
             return <>{children}</>;
           },
           p({ children }) {
-            return <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>;
+            return <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>;
           },
           h1({ children }) {
-            return <h1 className="text-base font-bold mb-3 mt-6 first:mt-0">{children}</h1>;
+            return <h1 className="text-lg font-bold mb-2 mt-6 first:mt-0">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-base font-bold mb-3 mt-6 first:mt-0">{children}</h2>;
+            return <h2 className="text-lg font-bold mb-2 mt-6 first:mt-0">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-base font-bold mb-3 mt-5 first:mt-0">{children}</h3>;
+            return <h3 className="text-base font-bold mb-2 mt-4 first:mt-0">{children}</h3>;
           },
           ul({ children }) {
-            return <ul className="ml-4 mb-3 list-disc space-y-1 [&>li]:pl-1">{children}</ul>;
+            return <ul className="ml-4 mb-4 list-disc space-y-1 [&>li]:pl-1">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="ml-4 mb-3 list-decimal space-y-1 [&>li]:pl-1">{children}</ol>;
+            return <ol className="ml-4 mb-4 list-decimal space-y-1 [&>li]:pl-1">{children}</ol>;
           },
           li({ children }) {
             return <li className="leading-relaxed">{children}</li>;

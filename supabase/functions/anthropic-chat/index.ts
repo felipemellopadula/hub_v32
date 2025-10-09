@@ -185,13 +185,11 @@ serve(async (req) => {
     const data = await response.json();
     let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
     
-    // Normalize line breaks to match OpenAI format
+    // Normalize line breaks - keep it simple
     generatedText = generatedText
-      .replace(/\r\n/g, '\n')     // Normalize CRLF to LF
-      .replace(/\r/g, '\n')       // Convert any remaining CR to LF
-      .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive newlines with just 2
-      .replace(/\n\s+\n/g, '\n\n') // Remove lines with only whitespace
-      .trim();                    // Remove leading/trailing whitespace
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
     
     // Add prefix if message was processed in chunks
     const finalResponse = responsePrefix + generatedText;
