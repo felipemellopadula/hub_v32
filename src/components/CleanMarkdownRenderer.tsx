@@ -87,28 +87,28 @@ const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, 
             );
           },
           p({ children }) {
-            return <p className="mb-3 leading-relaxed last:mb-0">{children}</p>;
+            return <p className="mb-1.5 leading-relaxed last:mb-0">{children}</p>;
           },
           h1({ children }) {
-            return <h1 className="text-xl font-bold mb-2 mt-5 first:mt-0">{children}</h1>;
+            return <h1 className="text-xl font-bold mb-1.5 mt-3 first:mt-0">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h2>;
+            return <h2 className="text-lg font-bold mb-1.5 mt-2.5 first:mt-0">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h3>;
+            return <h3 className="text-base font-semibold mb-1 mt-2 first:mt-0">{children}</h3>;
           },
           h4({ children }) {
-            return <h4 className="text-sm font-semibold mb-1.5 mt-2">{children}</h4>;
+            return <h4 className="text-sm font-semibold mb-1 mt-1.5">{children}</h4>;
           },
           ul({ children }) {
-            return <ul className="ml-6 mb-3 mt-1 list-disc space-y-1.5">{children}</ul>;
+            return <ul className="ml-6 mb-1.5 mt-0.5 list-disc space-y-0.5">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="ml-6 mb-3 mt-1 list-decimal space-y-1.5">{children}</ol>;
+            return <ol className="ml-6 mb-1.5 mt-0.5 list-decimal space-y-0.5">{children}</ol>;
           },
           li({ children }) {
-            return <li className="leading-relaxed pl-1">{children}</li>;
+            return <li className="leading-snug pl-1">{children}</li>;
           },
           blockquote({ children }) {
             return (
