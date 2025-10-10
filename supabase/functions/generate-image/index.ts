@@ -228,13 +228,20 @@ serve(async (req) => {
     console.log('Dimensões finais:', { width, height });
 
     const numberResults: number = Math.max(1, Math.min(4, Number(body.numberResults) || 1));
-    // Usar WEBP para imagens grandes (>2K) para economizar recursos, PNG para menores
-    // Para Qwen-Image, sempre usar WEBP para reduzir tamanho do arquivo
+    // Usar WEBP para imagens grandes para economizar recursos
     let outputFormat: string = (typeof body.outputFormat === 'string' && body.outputFormat) || 'WEBP';
+    
+    const isGptModel = model === 'openai:1@1';
     
     if (isQwenModel) {
       outputFormat = 'WEBP';
       console.log('Qwen-Image detectado - forçando formato WEBP para reduzir tamanho do arquivo');
+    }
+    
+    // Para GPT: forçar WEBP em paisagem/retrato (>1024px) para evitar arquivos grandes
+    if (isGptModel && (width > 1024 || height > 1024)) {
+      outputFormat = 'WEBP';
+      console.log('GPT paisagem/retrato detectado - forçando formato WEBP para reduzir tamanho do arquivo');
     }
     
     // Para imagens grandes (2K+), forçar WEBP para reduzir tamanho do arquivo
