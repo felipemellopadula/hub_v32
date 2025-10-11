@@ -890,14 +890,29 @@ const ImagePage = () => {
                                 <div className="mt-6 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-lg font-semibold">Resultado (2x maior)</h3>
-                                        <Button
-                                            onClick={() => {
-                                                const link = document.createElement('a');
-                                                link.href = upscaledResult;
-                                                link.download = `upscale-2x-${Date.now()}.webp`;
-                                                link.click();
-                                            }}
-                                            variant="default"
+                        <Button
+                            onClick={() => {
+                                // Converter base64 para blob
+                                const byteString = atob(upscaledResult.split(',')[1]);
+                                const mimeString = upscaledResult.split(',')[0].split(':')[1].split(';')[0];
+                                const ab = new ArrayBuffer(byteString.length);
+                                const ia = new Uint8Array(ab);
+                                for (let i = 0; i < byteString.length; i++) {
+                                    ia[i] = byteString.charCodeAt(i);
+                                }
+                                const blob = new Blob([ab], { type: mimeString });
+                                
+                                // Criar URL do blob e fazer download
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `upscale-2x-${Date.now()}.webp`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }}
+                            variant="default"
                                         >
                                             <Download className="h-4 w-4 mr-2" />
                                             Baixar Imagem Ampliada
