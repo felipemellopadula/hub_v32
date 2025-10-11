@@ -44,12 +44,6 @@ serve(async (req) => {
         inputImage,
         outputType: "base64Data",
         includeCost: true,
-        // Parâmetros otimizados para edição de imagens
-        CFGScale: 7.5, // Maior fidelidade ao prompt
-        steps: 30, // Mais steps para melhor qualidade
-        scheduler: "DPMSolverMultistep",
-        strength: 0.75, // Boa balance entre manter a imagem original e aplicar mudanças
-        seedImage: inputImage, // Usa a imagem como seed para maior consistência
       }
     ];
 
