@@ -247,17 +247,28 @@ const ImagePage = () => {
         setIsUpscalingStandalone(true);
 
         try {
+            // Converter imagem para base64 e extrair apenas a parte base64
             const reader = new FileReader();
-            reader.readAsDataURL(uploadedImageForUpscale);
-            await new Promise<void>((resolve, reject) => {
-                reader.onload = () => resolve();
+            const base64ImagePromise = new Promise<string>((resolve, reject) => {
+                reader.onload = () => {
+                    const dataUrl = reader.result as string;
+                    // Extrair apenas a parte base64 (após a vírgula)
+                    if (dataUrl && dataUrl.includes(',')) {
+                        const base64Part = dataUrl.split(',')[1];
+                        resolve(base64Part);
+                    } else {
+                        reject(new Error("Falha ao ler a imagem como Data URL."));
+                    }
+                };
                 reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(uploadedImageForUpscale);
             });
-            const imageBase64 = (reader.result as string);
+
+            const base64Image = await base64ImagePromise;
 
             const { data, error } = await supabase.functions.invoke('upscale-image', {
                 body: {
-                    inputImage: imageBase64,
+                    inputImage: base64Image,
                     upscaleFactor: 2,
                     outputFormat: 'WEBP'
                 }
