@@ -846,8 +846,8 @@ const ImagePage = () => {
                                                 variant="outline"
                                                 size="sm"
                                             >
-                                                <X className="h-4 w-4 mr-2" />
-                                                Remover
+                                                <Trash2 className="h-4 w-4 sm:mr-2" />
+                                                <span className="hidden sm:inline">Remover</span>
                                             </Button>
                                             <Button
                                                 onClick={(e) => {
@@ -859,13 +859,13 @@ const ImagePage = () => {
                                             >
                                                 {isUpscalingStandalone ? (
                                                     <>
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Processando...
+                                                        <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+                                                        <span className="hidden sm:inline">Processando...</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Maximize2 className="h-4 w-4 mr-2" />
-                                                        Aplicar Upscale 2x
+                                                        <Maximize2 className="h-4 w-4 sm:mr-2" />
+                                                        <span className="hidden sm:inline">Aplicar Upscale 2x</span>
                                                     </>
                                                 )}
                                             </Button>
@@ -913,8 +913,8 @@ const ImagePage = () => {
                             }}
                             variant="default"
                                         >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Baixar Imagem Ampliada
+                                            <Download className="h-4 w-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">Baixar Imagem Ampliada</span>
                                         </Button>
                                     </div>
                                     <img 
