@@ -41,9 +41,10 @@ serve(async (req) => {
         model: model || "runware:100@1",
         numberResults: 1,
         outputFormat: "PNG",
-        inputImage,
+        seedImage: inputImage, // Parâmetro correto é seedImage
         outputType: "base64Data",
         includeCost: true,
+        strength: 0.8, // Controla o quanto a imagem original é transformada
       }
     ];
 
