@@ -450,20 +450,8 @@ const ImagePage = () => {
           toast({ title: "Imagem editada e salva!", variant: "default" });
         }
       } else {
-        // Geração normal sem edição
-        if (model === "google:4@1") {
-          // Para Gemini Flash sem imagem anexada, tenta usar API Gemini
-          const { data: geminiData, error: geminiError } = await supabase.functions.invoke('edit-image-gemini', {
-            body: { prompt: finalPrompt }
-          });
-
-          if (geminiError) throw geminiError;
-          
-          // A API Gemini padrão não gera imagens, apenas texto
-          throw new Error("A API Gemini configurada no Supabase não suporta geração de imagens, apenas análise de texto/imagem. Para gerar imagens, use outro modelo (Runware) ou configure o Lovable AI Gateway.");
-        } else {
-          // Outros modelos usam Runware
-          const body: any = {
+        // Geração normal sem edição - todos os modelos usam Runware
+        const body: any = {
             model,
             positivePrompt: finalPrompt,
             width: selectedQualityInfo.width,
@@ -481,7 +469,6 @@ const ImagePage = () => {
           setTimeout(() => loadSavedImages(), 1000);
           toast({ title: "Imagem gerada e salva!", variant: "default" });
         }
-      }
     } catch (e: any) {
       console.error("Erro no processo:", e);
       toast({ title: "Erro", description: e.message || "Tente novamente.", variant: "destructive" });
