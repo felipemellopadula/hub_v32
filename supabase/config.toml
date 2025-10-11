@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.upscale-image]
 verify_jwt = true
+
+[functions.edit-image-gemini]
+verify_jwt = true
