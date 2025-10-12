@@ -686,8 +686,6 @@ const Chat: React.FC = () => {
   // Efeitos iniciais
   useEffect(() => {
     document.title = "Gerar textos com Ia";
-    // [FIX] Prefetch do renderer para evitar "box cinza" sem conteúdo
-    import("@/components/MarkdownRenderer").catch(() => {});
   }, []);
 
   useEffect(() => {

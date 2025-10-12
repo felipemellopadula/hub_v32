@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTokens } from '@/hooks/useTokens';
 import { PagePreview } from './PagePreview';
-import MarkdownRenderer from './MarkdownRenderer';
+import CleanMarkdownRenderer from './CleanMarkdownRenderer';
 
 interface Message {
   id: string;
@@ -598,7 +598,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                         : 'bg-muted text-foreground'
                     }`}
                   >
-                    <MarkdownRenderer content={message.content} isUser={message.sender === 'user'} />
+                    <CleanMarkdownRenderer content={message.content} isUser={message.sender === 'user'} />
                     {message.files && message.files.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {message.files.map((file, index) => (
