@@ -471,9 +471,101 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="border-t border-border bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-sm text-muted-foreground">
-            © 2024 Synergy AI Hub. Todos os direitos reservados.
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Company Info */}
+            <div className="md:col-span-1">
+              <h3 className="font-bold text-lg mb-3">Synergy IA Hub</h3>
+              <p className="text-sm text-muted-foreground">
+                Capacitando desenvolvedores e empresas com recursos de IA de ponta.
+              </p>
+            </div>
+
+            {/* Empresa Links */}
+            <div>
+              <h4 className="font-semibold mb-3">Empresa</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Sobre Nós
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Carreiras
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Imprensa
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Recursos Links */}
+            <div>
+              <h4 className="font-semibold mb-3">Recursos</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Documentação
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Referência da API
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Tutoriais
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Comunidade
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contato */}
+            <div>
+              <h4 className="font-semibold mb-3">Contato</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <span className="block">Email: contato@synergyia.com.br</span>
+                </li>
+                <li>
+                  <span className="block">Telefone: +55 (11) 4567-8901</span>
+                </li>
+                <li>
+                  <span className="block">Endereço: Av. Paulista, 1000, São Paulo/SP</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Footer Bottom */}
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <div>© 2025 Synergy IA Hub. Todos os direitos reservados.</div>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-foreground transition-colors">
+                Política de Privacidade
+              </a>
+              <a href="#" className="hover:text-foreground transition-colors">
+                Termos de Serviço
+              </a>
+              <a href="#" className="hover:text-foreground transition-colors">
+                Política de Cookies
+              </a>
+            </div>
           </div>
         </div>
       </footer>
