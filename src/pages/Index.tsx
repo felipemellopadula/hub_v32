@@ -322,6 +322,29 @@ const Index = () => {
               <p className="text-muted-foreground mt-2">
                 Escolha o plano ideal para suas necessidades.
               </p>
+              
+              {/* Billing Toggle */}
+              <div className="flex items-center justify-center gap-3 mt-8">
+                <span className={`text-sm ${!annual ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                  Mensal
+                </span>
+                <button
+                  onClick={() => setAnnual(!annual)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    annual ? 'bg-primary' : 'bg-muted-foreground/30'
+                  }`}
+                  aria-label="Toggle billing period"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      annual ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm ${annual ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                  Anual
+                </span>
+              </div>
             </header>
 
             <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
@@ -329,7 +352,7 @@ const Index = () => {
                 <CardHeader className="text-center">
                   <CardTitle className="text-xl">Básico</CardTitle>
                   <div className="text-3xl font-bold text-primary">
-                    R$ 29<span className="text-sm text-muted-foreground">/mês</span>
+                    R$ {annual ? '29' : '39'}<span className="text-sm text-muted-foreground">/mês</span>
                   </div>
                   <CardDescription>
                     Perfeito para uso pessoal e projetos pequenos.
@@ -365,7 +388,7 @@ const Index = () => {
                 <CardHeader className="text-center">
                   <CardTitle className="text-xl">Pro</CardTitle>
                   <div className="text-3xl font-bold text-primary">
-                    R$ 79<span className="text-sm text-muted-foreground">/mês</span>
+                    R$ {annual ? '79' : '89'}<span className="text-sm text-muted-foreground">/mês</span>
                   </div>
                   <CardDescription>
                     Ideal para profissionais e equipes pequenas.
