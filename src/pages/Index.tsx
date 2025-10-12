@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AuthModal } from "@/components/AuthModal";
+import { ContactForm } from "@/components/ContactForm";
 import {
   Sparkles,
   ThumbsUp,
@@ -436,7 +437,7 @@ const Index = () => {
         {/* Contact Section */}
         <section id="contato" className="bg-muted/30">
           <div className="container mx-auto px-4 py-16">
-            <div className="max-w-2xl mx-auto text-center">
+            <div className="max-w-2xl mx-auto text-center mb-12">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">
                 Pronto para começar?
               </h2>
@@ -448,6 +449,21 @@ const Index = () => {
                 Começar Gratuitamente
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+            </div>
+
+            {/* Contact Form */}
+            <div className="max-w-xl mx-auto mt-16">
+              <div className="text-center mb-8">
+                <h3 className="text-xl md:text-2xl font-bold mb-2">
+                  Entre em Contato
+                </h3>
+                <p className="text-muted-foreground">
+                  Tem dúvidas ou sugestões? Envie uma mensagem para nós.
+                </p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-sm">
+                <ContactForm />
+              </div>
             </div>
           </div>
         </section>
