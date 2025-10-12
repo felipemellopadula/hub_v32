@@ -80,8 +80,8 @@ const DEEPSEEK_PRICING: Record<string, { input: number; output: number }> = {
 
 // Image models pricing per image (USD)
 const IMAGE_PRICING: Record<string, { cost: number }> = {
-  'gpt-image-1': { cost: 0.25 },
-  'gemini-flash': { cost: 0.0273 },
+  'gpt-image-1': { cost: 0.167 },
+  'gemini-flash': { cost: 0.039 },
   'qwen-image': { cost: 0.0058 },
   'ideogram-3.0': { cost: 0.06 },
   'flux.1-kontext-max': { cost: 0.08 },
