@@ -12,7 +12,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Shield, AlertTriangle, RefreshCw } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Shield, AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TokenUsage {
@@ -808,20 +809,27 @@ const AdminDashboard = () => {
         {/* Provider Selection and Pricing Table */}
         <div className="mb-8">
           <Card>
-            <CardHeader>
-              <CardTitle>Preços dos Modelos de IA</CardTitle>
-            </CardHeader>
-            <CardContent>
-               <UnifiedPricingTable 
-                 selectedProvider={selectedProvider}
-                  openaiPricing={OPENAI_PRICING}
-                  geminiPricing={GEMINI_PRICING}
-                  claudePricing={CLAUDE_PRICING}
-                  grokPricing={GROK_PRICING}
-                  deepseekPricing={DEEPSEEK_PRICING}
-                  imagePricing={IMAGE_PRICING}
-               />
-            </CardContent>
+            <Collapsible>
+              <CardHeader className="pb-3">
+                <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                  <CardTitle>Preços dos Modelos de IA</CardTitle>
+                  <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  <UnifiedPricingTable 
+                    selectedProvider={selectedProvider}
+                    openaiPricing={OPENAI_PRICING}
+                    geminiPricing={GEMINI_PRICING}
+                    claudePricing={CLAUDE_PRICING}
+                    grokPricing={GROK_PRICING}
+                    deepseekPricing={DEEPSEEK_PRICING}
+                    imagePricing={IMAGE_PRICING}
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         </div>
 
