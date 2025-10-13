@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -135,6 +135,9 @@ const ImagePage = () => {
   const [upscaledResult, setUpscaledResult] = useState<string | null>(null);
   const [isUpscalingStandalone, setIsUpscalingStandalone] = useState(false);
 
+  // Ref para prevenir carregamentos simultâneos
+  const isLoadingRef = useRef(false);
+
   // Habilita anexo para GPT, Ideogram, Kontext, Gemini-Flash e Seedream
   const canAttachImage = useMemo(
     () =>
@@ -195,7 +198,9 @@ const ImagePage = () => {
 
   // Carrega imagens salvas
   const loadSavedImages = useCallback(async () => {
-    if (!user) return;
+    if (!user || isLoadingRef.current) return;
+    
+    isLoadingRef.current = true;
     setIsLoadingHistory(true);
     try {
       const { data, error } = await supabase
@@ -207,9 +212,11 @@ const ImagePage = () => {
 
       if (error) throw error;
 
-      // Remover duplicatas baseado no ID único
+      // Deduplicação robusta por ID e image_path
       const uniqueImages = data ? data.filter((img, index, self) => 
-        index === self.findIndex((t) => t.id === img.id)
+        index === self.findIndex((t) => 
+          t.id === img.id && t.image_path === img.image_path
+        )
       ) : [];
 
       setImages(uniqueImages);
@@ -217,6 +224,7 @@ const ImagePage = () => {
       console.error("Erro ao carregar imagens:", error);
     } finally {
       setIsLoadingHistory(false);
+      isLoadingRef.current = false;
     }
   }, [user]);
 
@@ -403,16 +411,20 @@ const ImagePage = () => {
 
         if (storageError) throw storageError;
 
-        await supabase.from("user_images").insert({
+        const { data: insertData } = await supabase.from("user_images").insert({
           user_id: user.id,
           prompt: finalPrompt,
           image_path: storageData.path,
           width: selectedQualityInfo.width,
           height: selectedQualityInfo.height,
           format: "png",
-        });
+        }).select().single();
 
-        setTimeout(() => loadSavedImages(), 1000);
+        // Optimistic update: adiciona imagem diretamente ao estado
+        if (insertData) {
+          setImages(prev => [insertData, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
+        }
+
         toast({ title: "Imagem editada e salva!", variant: "default" });
       } else {
         // Geração normal sem edição - todos os modelos usam Runware
@@ -431,6 +443,7 @@ const ImagePage = () => {
 
           if (!apiData?.image) throw new Error("A API não retornou uma imagem.");
 
+          // Edge function já salva no banco, então apenas recarrega após 1s para garantir
           setTimeout(() => loadSavedImages(), 1000);
           toast({ title: "Imagem gerada e salva!", variant: "default" });
         }
