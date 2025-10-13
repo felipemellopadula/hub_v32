@@ -207,7 +207,12 @@ const ImagePage = () => {
 
       if (error) throw error;
 
-      setImages(data || []);
+      // Remover duplicatas baseado no ID único
+      const uniqueImages = data ? data.filter((img, index, self) => 
+        index === self.findIndex((t) => t.id === img.id)
+      ) : [];
+
+      setImages(uniqueImages);
     } catch (error) {
       console.error("Erro ao carregar imagens:", error);
     } finally {
@@ -390,7 +395,7 @@ const ImagePage = () => {
           : `data:image/png;base64,${editData.image}`;
         const imageResponse = await fetch(imageDataURI);
         const imageBlob = await imageResponse.blob();
-        const fileName = `${user.id}/${Date.now()}.png`;
+        const fileName = `user-images/${user.id}/${Date.now()}-${crypto.randomUUID()}.png`;
 
         const { data: storageData, error: storageError } = await supabase.storage
           .from("images")
