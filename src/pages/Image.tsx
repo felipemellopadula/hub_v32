@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   Download,
@@ -110,7 +110,6 @@ interface DatabaseImage {
 
 const ImagePage = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(MODELS[0].id);
@@ -263,21 +262,14 @@ const ImagePage = () => {
         setUploadedImageForUpscale(file);
         setUploadedImagePreview(URL.createObjectURL(file));
         setUpscaledResult(null);
-        toast({ title: "Imagem carregada!", description: "Agora você pode fazer o upscale.", variant: "default" });
-      } else {
-        toast({ title: "Arquivo inválido", description: "Por favor, envie apenas imagens.", variant: "destructive" });
       }
+    }
     }
   };
 
   // Handler para aplicar upscale 2x
   const handleStandaloneUpscale = async () => {
     if (!uploadedImageForUpscale) {
-      toast({
-        title: "Nenhuma imagem carregada",
-        description: "Por favor, faça upload de uma imagem primeiro.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -314,17 +306,8 @@ const ImagePage = () => {
       if (error) throw error;
 
       setUpscaledResult(data.imageUrl);
-      toast({
-        title: "Upscale concluído!",
-        description: `Imagem ampliada 2x com sucesso. Custo: $${data.cost.toFixed(4)}`,
-      });
     } catch (error: any) {
       console.error("Erro ao fazer upscale:", error);
-      toast({
-        title: "Erro ao fazer upscale",
-        description: error.message || "Não foi possível ampliar a imagem",
-        variant: "destructive",
-      });
     } finally {
       setIsUpscalingStandalone(false);
     }
@@ -332,15 +315,9 @@ const ImagePage = () => {
 
   const generate = async () => {
     if (!prompt.trim()) {
-      toast({ title: "Escreva um prompt", variant: "destructive" });
       return;
     }
     if (!user) {
-      toast({
-        title: "Acesso Negado",
-        description: "Você precisa estar logado para gerar imagens.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -356,11 +333,6 @@ const ImagePage = () => {
           
           if (error) {
             console.error("Error enhancing prompt:", error);
-            toast({ 
-              title: "Aviso", 
-              description: "Não foi possível melhorar o prompt, usando o original.",
-              variant: "default" 
-            });
           } else if (data?.enhancedPrompt) {
             finalPrompt = data.enhancedPrompt;
             setPrompt(finalPrompt);
@@ -424,8 +396,6 @@ const ImagePage = () => {
         if (insertData) {
           setImages(prev => [insertData, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
         }
-
-        toast({ title: "Imagem editada e salva!", variant: "default" });
       } else {
         // Geração normal sem edição - todos os modelos usam Runware
         const body: any = {
@@ -445,11 +415,9 @@ const ImagePage = () => {
 
           // Edge function já salva no banco, então apenas recarrega após 1s para garantir
           setTimeout(() => loadSavedImages(), 1000);
-          toast({ title: "Imagem gerada e salva!", variant: "default" });
         }
     } catch (e: any) {
       console.error("Erro no processo:", e);
-      toast({ title: "Erro", description: e.message || "Tente novamente.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -530,16 +498,13 @@ const ImagePage = () => {
         const { error: dbError } = await supabase.from("user_images").delete().eq("id", imageId).eq("user_id", user.id);
 
         if (dbError) throw dbError;
-
-        toast({ title: "Imagem deletada", variant: "default" });
       } catch (error) {
         console.error("Erro ao deletar imagem:", error);
-        toast({ title: "Erro ao deletar", description: "Tente novamente.", variant: "destructive" });
         // Reverter otimistic update em caso de erro
         loadSavedImages();
       }
     },
-    [user, toast, loadSavedImages],
+    [user, loadSavedImages],
   );
 
   // --- ALTERAÇÃO AQUI ---: Lógica de download corrigida para funcionar com cross-origin.
@@ -565,15 +530,10 @@ const ImagePage = () => {
         URL.revokeObjectURL(objectUrl);
       } catch (error) {
         console.error("Erro ao baixar a imagem:", error);
-        toast({
-          title: "Não foi possível baixar automaticamente",
-          description: "Abrindo imagem em nova aba. Use 'Salvar como...' para baixar.",
-          variant: "destructive",
-        });
         window.open(imageUrl, "_blank", "noopener,noreferrer");
       }
     },
-    [toast],
+    [],
   );
 
   const handleUpscale = async () => {
@@ -595,20 +555,10 @@ const ImagePage = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Upscale concluído!",
-        description: `Imagem ampliada ${upscaleFactor}x com sucesso. Custo: $${data.cost.toFixed(4)}`,
-      });
-
       // Recarregar imagens para mostrar a nova imagem upscalada
       await loadSavedImages();
     } catch (error) {
       console.error("Erro ao fazer upscale:", error);
-      toast({
-        title: "Erro ao fazer upscale",
-        description: error.message || "Não foi possível ampliar a imagem",
-        variant: "destructive",
-      });
     } finally {
       setIsUpscaling(false);
     }
@@ -629,7 +579,6 @@ const ImagePage = () => {
       }
     } else {
       await navigator.clipboard.writeText(publicData.publicUrl);
-      toast({ title: "Link copiado!", description: "O link da imagem foi copiado para a área de transferência." });
     }
   };
 
@@ -640,7 +589,6 @@ const ImagePage = () => {
 
   const handleEnhancePrompt = async () => {
     if (!prompt.trim()) {
-      toast({ title: "Digite um prompt primeiro", variant: "destructive" });
       return;
     }
 
@@ -653,10 +601,8 @@ const ImagePage = () => {
       if (error) throw error;
 
       setPrompt(data.enhancedPrompt);
-      toast({ title: "Prompt melhorado com sucesso!", variant: "default" });
     } catch (error) {
       console.error("Error enhancing prompt:", error);
-      toast({ title: "Erro ao melhorar o prompt", variant: "destructive" });
     } finally {
       setIsEnhancingPrompt(false);
     }
@@ -692,11 +638,6 @@ const ImagePage = () => {
       setIsDragging(false);
 
       if (!canAttachImage) {
-        toast({
-          title: "Anexo de imagem não disponível",
-          description: "Este modelo não suporta anexar imagens.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -705,21 +646,10 @@ const ImagePage = () => {
         const file = files[0];
         if (file.type.startsWith("image/")) {
           setSelectedFile(file);
-          toast({
-            title: "Imagem anexada",
-            description: "A imagem foi anexada com sucesso.",
-            variant: "default",
-          });
-        } else {
-          toast({
-            title: "Arquivo inválido",
-            description: "Por favor, arraste apenas arquivos de imagem.",
-            variant: "destructive",
-          });
         }
       }
     },
-    [canAttachImage, toast],
+    [canAttachImage],
   );
 
   return (
@@ -1010,11 +940,6 @@ const ImagePage = () => {
                           URL.revokeObjectURL(url);
                         } catch (error) {
                           console.error("Erro ao baixar imagem:", error);
-                          toast({
-                            title: "Erro ao baixar",
-                            description: "Não foi possível baixar a imagem.",
-                            variant: "destructive",
-                          });
                         }
                       }}
                       variant="default"
