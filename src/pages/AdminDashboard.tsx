@@ -916,10 +916,17 @@ const AdminDashboard = () => {
                     outputTokens = 1;
                     totalTokens = 1;
                   } else {
-                    // For text models, calculate based on tokens
-                    const inputCharacters = usage.message_content?.length || 0;
-                    inputTokens = charsToTokens(inputCharacters);
-                    outputTokens = Math.floor(inputTokens * 2.5);
+                    // For text models, use real token data if available, otherwise estimate
+                    if (usage.input_tokens !== null && usage.output_tokens !== null) {
+                      // Use real token data from database
+                      inputTokens = usage.input_tokens;
+                      outputTokens = usage.output_tokens;
+                    } else {
+                      // Fallback to estimation for old records
+                      const inputCharacters = usage.message_content?.length || 0;
+                      inputTokens = charsToTokens(inputCharacters);
+                      outputTokens = Math.floor(inputTokens * 2.5);
+                    }
                     
                     // Detect provider based on model name
                     const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
