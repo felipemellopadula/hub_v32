@@ -399,7 +399,7 @@ const AdminDashboard = () => {
         // Total tokens used (input + output)
         const totalTokensForTransaction = inputTokens + outputTokens;
         
-        // Revenue calculation: cost + 200% profit margin = 3x cost
+        // Revenue calculation: 200% profit margin = custo * 3 (custo + 200% de lucro)
         const revenue = totalCostForTransaction * 3;
 
         // Debug for selected provider
@@ -462,7 +462,7 @@ const AdminDashboard = () => {
           const outputTokens = inputTokens * 8; // Conservative 8:1 ratio
           
           const totalCostForTransaction = (inputTokens * inputCost) + (outputTokens * outputCost);
-          const revenue = totalCostForTransaction * 3; // 200% profit margin
+          const revenue = totalCostForTransaction * 3; // 200% profit margin (custo * 3)
           
           console.log(`DeepSeek realistic calculation: ${usage.model_name} - ${inputTokens} input + ${outputTokens} output tokens = $${totalCostForTransaction.toFixed(6)}`);
           
