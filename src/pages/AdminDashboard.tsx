@@ -52,11 +52,11 @@ const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
   "gpt-3.5-turbo": { input: 3.0, output: 6.0 },
 };
 
-// Gemini pricing per token (USD) - Based on Google AI Studio pricing converted to unit price
+// Gemini pricing per token (USD) - Based on official Google pricing (corrected 2025-10-14)
 const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
-  "gemini-2.5-pro": { input: 0.3 / 1_000_000, output: 2.5 / 1_000_000 },
-  "gemini-2.5-flash": { input: 1.25 / 1_000_000, output: 10.0 / 1_000_000 },
-  "gemini-2.5-flash-lite": { input: 0.3 / 1_000_000, output: 2.5 / 1_000_000 },
+  "gemini-2.5-pro": { input: 1.25 / 1_000_000, output: 10.0 / 1_000_000 }, // US$ 1.25/10.0 per million
+  "gemini-2.5-flash": { input: 2.50 / 1_000_000, output: 15.0 / 1_000_000 }, // US$ 2.50/15.0 per million
+  "gemini-2.5-flash-lite": { input: 0.31 / 1_000_000, output: 2.5 / 1_000_000 }, // US$ 0.31/2.5 per million
 };
 
 // Grok (xAI) pricing per million tokens (USD) - Official xAI pricing
@@ -278,6 +278,13 @@ const AdminDashboard = () => {
     providerFilter: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos" = "todos",
     period: "today" | "week" | "month" | "year" | "all" = "all",
   ): AdminStats => {
+    console.log('========== ADMIN STATS CALCULATION ==========');
+    console.log(`Total registros no banco: ${data.length}`);
+    console.log(`Registros com input_tokens válidos: ${data.filter(d => d.input_tokens !== null).length}`);
+    console.log(`Registros SEM input_tokens (antigos): ${data.filter(d => d.input_tokens === null).length}`);
+    console.log(`Provider selecionado: ${providerFilter}`);
+    console.log(`Período selecionado: ${period}`);
+    console.log('============================================');
     console.log("Calculating stats for provider:", providerFilter, "period:", period);
     console.log("Total records:", data.length);
 
@@ -473,40 +480,59 @@ const AdminDashboard = () => {
         if (usage.user_id) {
           uniqueUsers.add(usage.user_id);
         }
-      } else {
-        // Handle old records with fixed tokens - use fallback calculation for DeepSeek
+      } else if (usage.tokens_used && usage.tokens_used > 0) {
+        // FALLBACK: Para registros antigos sem input_tokens/output_tokens
+        // Estimar: 70% input, 30% output (proporção comum)
+        const totalTokensUsed = usage.tokens_used;
+        inputTokens = Math.floor(totalTokensUsed * 0.7);
+        outputTokens = Math.floor(totalTokensUsed * 0.3);
+        
+        console.log(`⚠️ Registro antigo detectado (ID: ${usage.id})`);
+        console.log(`📊 tokens_used: ${totalTokensUsed} -> Estimando ${inputTokens} input + ${outputTokens} output`);
+        
+        // Detectar provider igual ao código existente
+        const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+        const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+        const isGrokModel = usage.model_name.toLowerCase().includes("grok");
         const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
-
-        if (isDeepSeekModel) {
-          // Use real DeepSeek pricing for old records with realistic token estimation
-          const inputCost = getCostPerToken(usage.model_name, "input", "deepseek");
-          const outputCost = getCostPerToken(usage.model_name, "output", "deepseek");
-
-          // For old DeepSeek records, use a realistic estimation
-          // Input tokens: estimate from message length with minimum
-          const inputTokens = usage.message_content ? Math.max(Math.ceil(usage.message_content.length / 4), 20) : 50; // Minimum 20 tokens
-
-          // Output tokens: DeepSeek reasoning models typically generate 5-10x more output
-          const outputTokens = inputTokens * 8; // Conservative 8:1 ratio
-
-          const totalCostForTransaction = inputTokens * inputCost + outputTokens * outputCost;
-          const revenue = totalCostForTransaction * 3; // 200% profit margin (custo * 3)
-
-          console.log(
-            `DeepSeek realistic calculation: ${usage.model_name} - ${inputTokens} input + ${outputTokens} output tokens = $${totalCostForTransaction.toFixed(6)}`,
+        const isImageModel = Object.keys(IMAGE_PRICING).some((key) =>
+          usage.model_name.toLowerCase().includes(key.toLowerCase())
+        );
+        
+        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" = "openai";
+        
+        if (isImageModel) provider = "image";
+        else if (isGeminiModel) provider = "gemini";
+        else if (isClaudeModel) provider = "claude";
+        else if (isGrokModel) provider = "grok";
+        else if (isDeepSeekModel) provider = "deepseek";
+        
+        // Calcular custo
+        let totalCostForTransaction: number;
+        
+        if (provider === "image") {
+          const imageModelKey = Object.keys(IMAGE_PRICING).find((key) =>
+            usage.model_name.toLowerCase().includes(key.toLowerCase())
           );
-
-          totalCost += totalCostForTransaction;
-          totalRevenue += revenue;
-          totalTokens += inputTokens + outputTokens;
-
-          if (usage.user_id) {
-            uniqueUsers.add(usage.user_id);
-          }
+          totalCostForTransaction = imageModelKey ? IMAGE_PRICING[imageModelKey].cost : 0.039;
         } else {
-          // Skip other old records with inflated fixed values
-          console.log(`Skipping old record with fixed tokens: ${usage.model_name} - ${usage.tokens_used} tokens`);
+          const inputCost = inputTokens * getCostPerToken(usage.model_name, "input", provider);
+          const outputCost = outputTokens * getCostPerToken(usage.model_name, "output", provider);
+          totalCostForTransaction = inputCost + outputCost;
         }
+        
+        console.log(`💰 Custo estimado: $${totalCostForTransaction.toFixed(6)}`);
+        
+        totalCost += totalCostForTransaction;
+        totalRevenue += totalCostForTransaction * 3; // 200% profit margin
+        totalTokens += totalTokensUsed;
+        
+        if (usage.user_id) {
+          uniqueUsers.add(usage.user_id);
+        }
+      } else {
+        // Registro inválido (sem tokens)
+        console.warn(`⚠️ Registro ignorado - sem dados de tokens (ID: ${usage.id})`);
       }
     });
 
