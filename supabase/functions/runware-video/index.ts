@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +115,6 @@ serve(async (req) => {
         return { r, j };
       };
 
-      let { r: res, j: json } = await makeRequest(tasks[1].model);
       console.log("[runware-video] start -> response:", res.status, json);
 
       // Retry fallback automático para modelos que falham
@@ -151,6 +151,41 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
         });
+      }
+
+      // ✅ Registrar uso no banco de dados quando vídeo iniciado com sucesso
+      try {
+        const authHeader = req.headers.get("authorization");
+        if (authHeader) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL");
+          const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+          
+          if (supabaseUrl && supabaseKey) {
+            const supabase = createClient(supabaseUrl, supabaseKey);
+            
+            // Extrair user_id do token JWT
+            const token = authHeader.replace("Bearer ", "");
+            const { data: { user } } = await supabase.auth.getUser(token);
+            
+            if (user) {
+              // Registrar uso de vídeo no token_usage
+              await supabase.from("token_usage").insert({
+                user_id: user.id,
+                model_name: resolvedModel,
+                message_content: positivePrompt || "Video generation",
+                ai_response_content: "Video generation started successfully",
+                tokens_used: 1, // 1 token = 1 vídeo
+                input_tokens: 1,
+                output_tokens: 1,
+              });
+              
+              console.log("[runware-video] ✅ Uso registrado no banco de dados para user:", user.id);
+            }
+          }
+        }
+      } catch (dbError) {
+        // Não falhar a request se o registro falhar, apenas logar
+        console.error("[runware-video] ⚠️ Erro ao registrar uso no banco:", dbError);
       }
 
       return new Response(JSON.stringify({ taskUUID, ack: json.data?.[0] || null }), {

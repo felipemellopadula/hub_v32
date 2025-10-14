@@ -11,13 +11,14 @@ interface ImagePricingData {
 }
 
 interface UnifiedPricingTableProps {
-  selectedProvider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos';
+  selectedProvider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'video' | 'todos';
   openaiPricing: Record<string, PricingData>;
   geminiPricing: Record<string, PricingData>;
   claudePricing: Record<string, PricingData>;
   grokPricing: Record<string, PricingData>;
   deepseekPricing: Record<string, PricingData>;
   imagePricing: Record<string, ImagePricingData>;
+  videoPricing?: Record<string, ImagePricingData>;
 }
 
 export default function UnifiedPricingTable({ 
@@ -27,7 +28,8 @@ export default function UnifiedPricingTable({
   claudePricing, 
   grokPricing,
   deepseekPricing,
-  imagePricing
+  imagePricing,
+  videoPricing
 }: UnifiedPricingTableProps) {
   
   const getAllModels = () => {
@@ -104,6 +106,17 @@ export default function UnifiedPricingTable({
       });
     }
 
+    if (videoPricing && (selectedProvider === 'todos' || selectedProvider === 'video')) {
+      Object.entries(videoPricing).forEach(([model, pricingData]) => {
+        models.push({
+          name: model,
+          provider: 'Modelos de Vídeo',
+          pricing: { input: pricingData.cost, output: 0 }, // Video models don't have output tokens
+          color: 'text-red-400'
+        });
+      });
+    }
+
     return models;
   };
 
@@ -126,14 +139,15 @@ export default function UnifiedPricingTable({
           {models.map((model, index) => {
             const isGeminiModel = model.provider === 'Google Gemini';
             const isImageModel = model.provider === 'Modelos de Imagem';
+            const isVideoModel = model.provider === 'Modelos de Vídeo';
             
             let inputPrice: number;
             let outputPrice: number;
             let inputCostPerToken: number;
             let outputCostPerToken: number;
             
-            if (isImageModel) {
-              // For image models, show cost per image instead of per token
+            if (isImageModel || isVideoModel) {
+              // For image/video models, show cost per item instead of per token
               inputPrice = model.pricing.input;
               outputPrice = 0;
               inputCostPerToken = model.pricing.input;
@@ -155,16 +169,16 @@ export default function UnifiedPricingTable({
                 <TableCell className="font-medium">{model.name}</TableCell>
                 <TableCell className={`text-sm ${model.color}`}>{model.provider}</TableCell>
                 <TableCell className={`text-right ${model.color}`}>
-                  {isImageModel ? `$${inputPrice.toFixed(4)} por imagem` : `$${inputPrice.toFixed(2)}`}
+                  {isImageModel ? `$${inputPrice.toFixed(4)} por imagem` : isVideoModel ? `$${inputPrice.toFixed(4)} por vídeo` : `$${inputPrice.toFixed(2)}`}
                 </TableCell>
                 <TableCell className={`text-right ${model.color}`}>
-                  {isImageModel ? '-' : `$${outputPrice.toFixed(2)}`}
+                  {isImageModel || isVideoModel ? '-' : `$${outputPrice.toFixed(2)}`}
                 </TableCell>
                 <TableCell className={`text-right ${model.color}`}>
-                  {isImageModel ? `$${inputCostPerToken.toFixed(4)}` : `$${inputCostPerToken.toFixed(10)}`}
+                  {isImageModel || isVideoModel ? `$${inputCostPerToken.toFixed(4)}` : `$${inputCostPerToken.toFixed(10)}`}
                 </TableCell>
                 <TableCell className={`text-right ${model.color}`}>
-                  {isImageModel ? '-' : `$${outputCostPerToken.toFixed(10)}`}
+                  {isImageModel || isVideoModel ? '-' : `$${outputCostPerToken.toFixed(10)}`}
                 </TableCell>
               </TableRow>
             );

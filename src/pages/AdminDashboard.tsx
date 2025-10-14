@@ -85,6 +85,12 @@ const IMAGE_PRICING: Record<string, { cost: number }> = {
   "flux.1-kontext-max": { cost: 0.08 },
   "seedream-4.0": { cost: 0.03 },
 };
+
+// Video models pricing per video (USD)
+const VIDEO_PRICING: Record<string, { cost: number }> = {
+  "bytedance:1@1": { cost: 0.162 }, // ByteDance Seedance 1.0 Lite
+  "bytedance": { cost: 0.162 }, // Fallback genérico
+};
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
   "claude-opus-4-1-20250805": { input: 15.0, output: 30.0 },
@@ -120,7 +126,7 @@ const AdminDashboard = () => {
   const [recentUsage, setRecentUsage] = useState<TokenUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<
-    "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos"
+    "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos"
   >("todos");
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year" | "all">("all");
 
@@ -166,7 +172,7 @@ const AdminDashboard = () => {
   const getCostPerToken = (
     model: string,
     type: "input" | "output",
-    provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos" = selectedProvider,
+    provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos" = selectedProvider,
   ): number => {
     let modelKey = model.toLowerCase();
 
@@ -289,7 +295,7 @@ const AdminDashboard = () => {
 
   const calculateAdminStats = (
     data: TokenUsage[],
-    providerFilter: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos" = "todos",
+    providerFilter: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos" = "todos",
     period: "today" | "week" | "month" | "year" | "all" = "all",
   ): AdminStats => {
     console.log('========== ADMIN STATS CALCULATION ==========');
@@ -371,7 +377,9 @@ const AdminDashboard = () => {
         const isImageModel =
           Object.keys(IMAGE_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
           usage.model_name === "google:4@1"; // Detectar registros antigos do Gemini
-        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" = "openai";
+        const isVideoModel =
+          Object.keys(VIDEO_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase()));
+        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" = "openai";
 
         // Debug log for image model detection
         if (
@@ -390,9 +398,9 @@ const AdminDashboard = () => {
           );
         }
 
-        // CRITICAL: Check image models FIRST before text models
-        // This ensures gemini-flash used for images is detected as image provider
-        if (isImageModel) provider = "image";
+        // CRITICAL: Check video and image models FIRST before text models
+        if (isVideoModel) provider = "video";
+        else if (isImageModel) provider = "image";
         else if (isGeminiModel) provider = "gemini";
         else if (isClaudeModel) provider = "claude";
         else if (isGrokModel) provider = "grok";
@@ -412,7 +420,23 @@ const AdminDashboard = () => {
         let inputCost = 0;
         let outputCost = 0;
 
-        if (provider === "image") {
+        if (provider === "video") {
+          // For video models, use fixed cost per video
+          const videoModelKey = Object.keys(VIDEO_PRICING).find((key) =>
+            usage.model_name.toLowerCase().includes(key.toLowerCase()),
+          );
+
+          if (videoModelKey) {
+            totalCostForTransaction = VIDEO_PRICING[videoModelKey].cost;
+          } else {
+            // Fallback para modelos desconhecidos
+            totalCostForTransaction = VIDEO_PRICING["bytedance"]?.cost || 0.162;
+          }
+
+          console.log(`🎬 Video model detected: ${usage.model_name}`);
+          console.log(`🔍 Matched video key: ${videoModelKey || "bytedance (fallback)"}`);
+          console.log(`💰 Video cost: $${totalCostForTransaction}`);
+        } else if (provider === "image") {
           // For image models, use fixed cost per image
           const imageModelKey = Object.keys(IMAGE_PRICING).find((key) =>
             usage.model_name.toLowerCase().includes(key.toLowerCase()),
@@ -517,10 +541,14 @@ const AdminDashboard = () => {
         const isImageModel = Object.keys(IMAGE_PRICING).some((key) =>
           usage.model_name.toLowerCase().includes(key.toLowerCase())
         );
+        const isVideoModel = Object.keys(VIDEO_PRICING).some((key) =>
+          usage.model_name.toLowerCase().includes(key.toLowerCase())
+        );
         
-        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" = "openai";
+        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" = "openai";
         
-        if (isImageModel) provider = "image";
+        if (isVideoModel) provider = "video";
+        else if (isImageModel) provider = "image";
         else if (isGeminiModel) provider = "gemini";
         else if (isClaudeModel) provider = "claude";
         else if (isGrokModel) provider = "grok";
@@ -529,7 +557,12 @@ const AdminDashboard = () => {
         // Calcular custo
         let totalCostForTransaction: number;
         
-        if (provider === "image") {
+        if (provider === "video") {
+          const videoModelKey = Object.keys(VIDEO_PRICING).find((key) =>
+            usage.model_name.toLowerCase().includes(key.toLowerCase())
+          );
+          totalCostForTransaction = videoModelKey ? VIDEO_PRICING[videoModelKey].cost : 0.162;
+        } else if (provider === "image") {
           const imageModelKey = Object.keys(IMAGE_PRICING).find((key) =>
             usage.model_name.toLowerCase().includes(key.toLowerCase())
           );
@@ -871,7 +904,7 @@ const AdminDashboard = () => {
                   </Select>
                   <Select
                     value={selectedProvider}
-                    onValueChange={(value: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos") =>
+                    onValueChange={(value: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos") =>
                       setSelectedProvider(value)
                     }
                   >
@@ -886,6 +919,7 @@ const AdminDashboard = () => {
                       <SelectItem value="grok">xAI Grok</SelectItem>
                       <SelectItem value="deepseek">DeepSeek</SelectItem>
                       <SelectItem value="image">Imagem</SelectItem>
+                      <SelectItem value="video">Vídeo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -922,6 +956,7 @@ const AdminDashboard = () => {
                     grokPricing={GROK_PRICING}
                     deepseekPricing={DEEPSEEK_PRICING}
                     imagePricing={IMAGE_PRICING}
+                    videoPricing={VIDEO_PRICING}
                   />
                 </CardContent>
               </CollapsibleContent>
