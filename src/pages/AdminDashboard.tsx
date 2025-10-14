@@ -185,13 +185,27 @@ const AdminDashboard = () => {
         );
 
       if (isGeminiModel) {
+        console.log(`🔍 DEBUG GEMINI - Model: ${model}, Provider: ${provider}`);
+        console.log(`🔍 ModelKey: ${modelKey}`);
+        console.log(`🔍 Available Gemini keys:`, Object.keys(GEMINI_PRICING));
+        
         const matchedKey =
           Object.keys(GEMINI_PRICING).find(
             (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
-          ) || "gemini-1.5-flash";
+          ) || "gemini-2.5-flash"; // ✅ CORRIGIDO: fallback agora aponta para modelo existente
+
+        console.log(`✅ Matched key: ${matchedKey}`);
+        
+        // ✅ VALIDAÇÃO: Garantir que a key existe no GEMINI_PRICING
+        if (!GEMINI_PRICING[matchedKey]) {
+          console.error(`❌ ERRO: Modelo Gemini não encontrado no GEMINI_PRICING: ${model}`);
+          console.error(`Matched key tentada: ${matchedKey}`);
+          console.error(`Keys disponíveis:`, Object.keys(GEMINI_PRICING));
+          return 0; // Retornar 0 explicitamente ao invés de undefined
+        }
 
         const cost = GEMINI_PRICING[matchedKey][type]; // Already converted to unit price
-        console.log(`Gemini ${type} cost for ${model}:`, cost);
+        console.log(`✅ Gemini ${type} cost for ${model}: $${cost} per token`);
         return cost;
       }
     }
