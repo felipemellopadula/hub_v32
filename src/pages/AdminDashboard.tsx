@@ -38,76 +38,73 @@ interface AdminStats {
 
 // OpenAI pricing per million tokens (USD) - Updated from user's table
 const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
-  'gpt-5': { input: 1.25, output: 10.00 },
-  'gpt-5-mini': { input: 0.25, output: 2.00 },
-  'gpt-5-nano': { input: 0.05, output: 0.40 },
-  'gpt-4.1': { input: 3.00, output: 12.00 },
-  'gpt-4.1-mini': { input: 0.80, output: 3.20 },
-  'gpt-4.1-nano': { input: 0.20, output: 0.80 },
-  'o4-mini': { input: 4.00, output: 16.00 },
-  'gpt-4o-mini': { input: 0.15, output: 0.60 },
-  'synergyai': { input: 0.15, output: 0.60 }, // Same as gpt-4o-mini
-  'gpt-4o': { input: 5.0, output: 15.0 },
-  'gpt-4': { input: 30.0, output: 60.0 },
-  'gpt-3.5-turbo': { input: 3.0, output: 6.0 }
+  "gpt-5": { input: 1.25, output: 10.0 },
+  "gpt-5-mini": { input: 0.25, output: 2.0 },
+  "gpt-5-nano": { input: 0.05, output: 0.4 },
+  "gpt-4.1": { input: 3.0, output: 12.0 },
+  "gpt-4.1-mini": { input: 0.8, output: 3.2 },
+  "gpt-4.1-nano": { input: 0.2, output: 0.8 },
+  "o4-mini": { input: 4.0, output: 16.0 },
+  "gpt-4o-mini": { input: 0.15, output: 0.6 },
+  synergyai: { input: 0.15, output: 0.6 }, // Same as gpt-4o-mini
+  "gpt-4o": { input: 5.0, output: 15.0 },
+  "gpt-4": { input: 30.0, output: 60.0 },
+  "gpt-3.5-turbo": { input: 3.0, output: 6.0 },
 };
 
 // Gemini pricing per token (USD) - Based on Google AI Studio pricing converted to unit price
 const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
-  'gemini-2.0-flash-exp': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 },
-  'gemini-1.5-pro': { input: 1.25 / 1_000_000, output: 10.00 / 1_000_000 },
-  'gemini-1.5-flash': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 },
-  'gemini-1.5-flash-8b': { input: 0.10 / 1_000_000, output: 0.40 / 1_000_000 },
-  'gemini-pro': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 },
-  'gemini-flash': { input: 0.30 / 1_000_000, output: 2.50 / 1_000_000 }
+  "gemini-2.5-pro": { input: 0.3 / 1_000_000, output: 2.5 / 1_000_000 },
+  "gemini-2.5-flash": { input: 1.25 / 1_000_000, output: 10.0 / 1_000_000 },
+  "gemini-2.5-flash-lite": { input: 0.3 / 1_000_000, output: 2.5 / 1_000_000 },
 };
 
-// Grok (xAI) pricing per million tokens (USD) - Official xAI pricing 
+// Grok (xAI) pricing per million tokens (USD) - Official xAI pricing
 const GROK_PRICING: Record<string, { input: number; output: number }> = {
-  'grok-4': { input: 3.0, output: 15.0 },
-  'grok-4-0709': { input: 3.0, output: 15.0 }, // Same as grok-4
-  'grok-3': { input: 3.0, output: 15.0 },
-  'grok-3-mini': { input: 0.30, output: 0.50 },
-  'grok-beta': { input: 3.0, output: 15.0 }, // Fallback for beta versions
+  "grok-4": { input: 3.0, output: 15.0 },
+  "grok-4-0709": { input: 3.0, output: 15.0 }, // Same as grok-4
+  "grok-3": { input: 3.0, output: 15.0 },
+  "grok-3-mini": { input: 0.3, output: 0.5 },
+  "grok-beta": { input: 3.0, output: 15.0 }, // Fallback for beta versions
 };
 
 // DeepSeek pricing per million tokens (USD) - Official DeepSeek pricing
 const DEEPSEEK_PRICING: Record<string, { input: number; output: number }> = {
-  'deepseek-chat': { input: 0.56, output: 1.68 },
-  'deepseek-reasoner': { input: 0.56, output: 1.68 },
-  'deepseek-v3.1': { input: 0.56, output: 1.68 }, // Generic fallback
-  'deepseek': { input: 0.56, output: 1.68 }, // Generic fallback
+  "deepseek-chat": { input: 0.56, output: 1.68 },
+  "deepseek-reasoner": { input: 0.56, output: 1.68 },
+  "deepseek-v3.1": { input: 0.56, output: 1.68 }, // Generic fallback
+  deepseek: { input: 0.56, output: 1.68 }, // Generic fallback
 };
 
 // Image models pricing per image (USD)
 const IMAGE_PRICING: Record<string, { cost: number }> = {
-  'gpt-image-1': { cost: 0.167 },
-  'gemini-flash-image': { cost: 0.039 },
-  'qwen-image': { cost: 0.0058 },
-  'ideogram-3.0': { cost: 0.06 },
-  'flux.1-kontext-max': { cost: 0.08 },
-  'seedream-4.0': { cost: 0.03 },
+  "gpt-image-1": { cost: 0.167 },
+  "gemini-flash-image": { cost: 0.039 },
+  "qwen-image": { cost: 0.0058 },
+  "ideogram-3.0": { cost: 0.06 },
+  "flux.1-kontext-max": { cost: 0.08 },
+  "seedream-4.0": { cost: 0.03 },
 };
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
-  'claude-opus-4-1-20250805': { input: 15.0, output: 30.0 },
-  'claude-sonnet-4-5': { input: 3.0, output: 6.0 },
-  'claude-3-5-haiku-20241022': { input: 0.8, output: 4.0 },
-  
+  "claude-opus-4-1-20250805": { input: 15.0, output: 30.0 },
+  "claude-sonnet-4-5": { input: 3.0, output: 6.0 },
+  "claude-3-5-haiku-20241022": { input: 0.8, output: 4.0 },
+
   // Legacy models with exact version numbers
-  'claude-3-opus-20240229': { input: 15.0, output: 75.0 },
-  'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0 },
-  'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
-  
+  "claude-3-opus-20240229": { input: 15.0, output: 75.0 },
+  "claude-3-5-sonnet-20241022": { input: 3.0, output: 15.0 },
+  "claude-3-haiku-20240307": { input: 0.25, output: 1.25 },
+
   // Generic model name matching (fallbacks)
-  'claude-opus-4.1': { input: 15.0, output: 30.0 },
-  'claude-opus-4': { input: 15.0, output: 30.0 },
-  'claude-sonnet-4': { input: 3.0, output: 6.0 },
-  'claude-3-5-sonnet': { input: 3.0, output: 15.0 },
-  'claude-3-5-haiku': { input: 0.8, output: 4.0 },
-  'claude-haiku-3.5': { input: 0.8, output: 4.0 },
-  'claude-3-opus': { input: 15.0, output: 75.0 },
-  'claude-3-haiku': { input: 0.25, output: 1.25 }
+  "claude-opus-4.1": { input: 15.0, output: 30.0 },
+  "claude-opus-4": { input: 15.0, output: 30.0 },
+  "claude-sonnet-4": { input: 3.0, output: 6.0 },
+  "claude-3-5-sonnet": { input: 3.0, output: 15.0 },
+  "claude-3-5-haiku": { input: 0.8, output: 4.0 },
+  "claude-haiku-3.5": { input: 0.8, output: 4.0 },
+  "claude-3-opus": { input: 15.0, output: 75.0 },
+  "claude-3-haiku": { input: 0.25, output: 1.25 },
 };
 
 const AdminDashboard = () => {
@@ -118,45 +115,47 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     totalProfit: 0,
     totalUsers: 0,
-    totalTokens: 0
+    totalTokens: 0,
   });
   const [recentUsage, setRecentUsage] = useState<TokenUsage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos'>('todos');
-  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
+  const [selectedProvider, setSelectedProvider] = useState<
+    "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos"
+  >("todos");
+  const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year" | "all">("all");
 
-  const getDateFilterRange = (period: 'today' | 'week' | 'month' | 'year' | 'all') => {
+  const getDateFilterRange = (period: "today" | "week" | "month" | "year" | "all") => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+
     switch (period) {
-      case 'today':
+      case "today":
         return {
           start: today,
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          end: new Date(today.getTime() + 24 * 60 * 60 * 1000),
         };
-      case 'week':
+      case "week":
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - 7);
         return {
           start: weekStart,
-          end: now
+          end: now,
         };
-      case 'month':
+      case "month":
         const monthStart = new Date(today);
         monthStart.setMonth(today.getMonth() - 1);
         return {
           start: monthStart,
-          end: now
+          end: now,
         };
-      case 'year':
+      case "year":
         const yearStart = new Date(today);
         yearStart.setFullYear(today.getFullYear() - 1);
         return {
           start: yearStart,
-          end: now
+          end: now,
         };
-      case 'all':
+      case "all":
       default:
         return null;
     }
@@ -164,83 +163,97 @@ const AdminDashboard = () => {
 
   const charsToTokens = (chars: number): number => Math.ceil(chars / 4);
 
-  const getCostPerToken = (model: string, type: 'input' | 'output', provider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos' = selectedProvider): number => {
+  const getCostPerToken = (
+    model: string,
+    type: "input" | "output",
+    provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos" = selectedProvider,
+  ): number => {
     let modelKey = model.toLowerCase();
-    
+
     // Handle SynergyAI mapping
-    if (modelKey === 'synergyai') {
-      modelKey = 'gpt-4o-mini';
-      provider = 'openai';
+    if (modelKey === "synergyai") {
+      modelKey = "gpt-4o-mini";
+      provider = "openai";
     }
-    
-    if (provider === 'gemini') {
+
+    if (provider === "gemini") {
       // Check if it's a Gemini model
-      const isGeminiModel = modelKey.includes('gemini') || Object.keys(GEMINI_PRICING).some(key => 
-        modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-      );
-      
+      const isGeminiModel =
+        modelKey.includes("gemini") ||
+        Object.keys(GEMINI_PRICING).some(
+          (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+        );
+
       if (isGeminiModel) {
-        const matchedKey = Object.keys(GEMINI_PRICING).find(key => 
-          modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-        ) || 'gemini-1.5-flash';
-        
+        const matchedKey =
+          Object.keys(GEMINI_PRICING).find(
+            (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+          ) || "gemini-1.5-flash";
+
         const cost = GEMINI_PRICING[matchedKey][type]; // Already converted to unit price
         console.log(`Gemini ${type} cost for ${model}:`, cost);
         return cost;
       }
     }
-    
-    if (provider === 'grok') {
+
+    if (provider === "grok") {
       // Check if it's a Grok model
-      const isGrokModel = modelKey.includes('grok') || Object.keys(GROK_PRICING).some(key => 
-        modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-      );
-      
+      const isGrokModel =
+        modelKey.includes("grok") ||
+        Object.keys(GROK_PRICING).some(
+          (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+        );
+
       if (isGrokModel) {
         // Sort keys by length (descending) to match more specific names first
         const sortedKeys = Object.keys(GROK_PRICING).sort((a, b) => b.length - a.length);
-        const matchedKey = sortedKeys.find(key => 
-          modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-        ) || 'grok-3';
-        
+        const matchedKey =
+          sortedKeys.find((key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)) ||
+          "grok-3";
+
         const costPerMillion = GROK_PRICING[matchedKey][type];
         const costPerToken = costPerMillion / 1000000; // Convert per million to unit price
         console.log(`Grok ${type} cost for ${model}: ${costPerMillion} per million = ${costPerToken} per token`);
         return costPerToken;
       }
     }
-    
-    if (provider === 'deepseek') {
+
+    if (provider === "deepseek") {
       // Check if it's a DeepSeek model
-      const isDeepSeekModel = modelKey.includes('deepseek') || Object.keys(DEEPSEEK_PRICING).some(key => 
-        modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-      );
-      
+      const isDeepSeekModel =
+        modelKey.includes("deepseek") ||
+        Object.keys(DEEPSEEK_PRICING).some(
+          (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+        );
+
       if (isDeepSeekModel) {
         // Sort keys by length (descending) to match more specific names first
         const sortedKeys = Object.keys(DEEPSEEK_PRICING).sort((a, b) => b.length - a.length);
-        const matchedKey = sortedKeys.find(key => 
-          modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-        ) || 'deepseek-chat';
-        
+        const matchedKey =
+          sortedKeys.find((key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)) ||
+          "deepseek-chat";
+
         const costPerMillion = DEEPSEEK_PRICING[matchedKey][type];
         const costPerToken = costPerMillion / 1000000; // Convert per million to unit price
         console.log(`DeepSeek ${type} cost for ${model}: ${costPerMillion} per million = ${costPerToken} per token`);
         return costPerToken;
       }
     }
-    
-    if (provider === 'claude') {
+
+    if (provider === "claude") {
       // Check if it's a Claude model
-      const isClaudeModel = modelKey.includes('claude') || Object.keys(CLAUDE_PRICING).some(key => 
-        modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-      );
-      
+      const isClaudeModel =
+        modelKey.includes("claude") ||
+        Object.keys(CLAUDE_PRICING).some(
+          (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+        );
+
       if (isClaudeModel) {
-        const matchedKey = Object.keys(CLAUDE_PRICING).find(key => 
-          modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-        ) || 'claude-3-5-haiku';
-        
+        const matchedKey =
+          Object.keys(CLAUDE_PRICING).find(
+            (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+          ) || "claude-3-5-haiku";
+
         // Convert from per million tokens to per individual token: $X per 1M tokens = $X / 1,000,000 per token
         const pricePerMillion = CLAUDE_PRICING[matchedKey][type];
         const costPerToken = pricePerMillion / 1_000_000;
@@ -248,62 +261,67 @@ const AdminDashboard = () => {
         return costPerToken;
       }
     }
-    
+
     // Default to OpenAI pricing (convert from per million to unit price)
-    const matchedKey = Object.keys(OPENAI_PRICING).find(key => 
-      modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
-    ) || 'gpt-4o-mini';
-    
+    const matchedKey =
+      Object.keys(OPENAI_PRICING).find(
+        (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+      ) || "gpt-4o-mini";
+
     const cost = OPENAI_PRICING[matchedKey][type] / 1_000_000;
     console.log(`OpenAI ${type} cost for ${model}:`, cost);
     return cost;
   };
 
-  const calculateAdminStats = (data: TokenUsage[], providerFilter: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos' = 'todos', period: 'today' | 'week' | 'month' | 'year' | 'all' = 'all'): AdminStats => {
-    console.log('Calculating stats for provider:', providerFilter, 'period:', period);
-    console.log('Total records:', data.length);
-    
+  const calculateAdminStats = (
+    data: TokenUsage[],
+    providerFilter: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos" = "todos",
+    period: "today" | "week" | "month" | "year" | "all" = "all",
+  ): AdminStats => {
+    console.log("Calculating stats for provider:", providerFilter, "period:", period);
+    console.log("Total records:", data.length);
+
     let filteredData = data;
-    
+
     // Filter data based on selected period
     const dateRange = getDateFilterRange(period);
     if (dateRange) {
-      filteredData = filteredData.filter(usage => {
+      filteredData = filteredData.filter((usage) => {
         const usageDate = new Date(usage.created_at);
         return usageDate >= dateRange.start && usageDate <= dateRange.end;
       });
-      console.log('After date filter:', filteredData.length, 'records');
+      console.log("After date filter:", filteredData.length, "records");
     }
-    
+
     // Filter data based on selected provider
-    if (providerFilter !== 'todos') {
+    if (providerFilter !== "todos") {
       filteredData = filteredData.filter((usage) => {
-        const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
-        const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-        const isGrokModel = usage.model_name.toLowerCase().includes('grok');
-        const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
-        const isImageModel = Object.keys(IMAGE_PRICING).some(key => 
-          usage.model_name.toLowerCase().includes(key.toLowerCase())
+        const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+        const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+        const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+        const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+        const isImageModel = Object.keys(IMAGE_PRICING).some((key) =>
+          usage.model_name.toLowerCase().includes(key.toLowerCase()),
         );
-        
-        if (providerFilter === 'gemini') return isGeminiModel;
-        if (providerFilter === 'claude') return isClaudeModel;
-        if (providerFilter === 'grok') return isGrokModel;
-        if (providerFilter === 'deepseek') return isDeepSeekModel;
-        if (providerFilter === 'image') return isImageModel;
+
+        if (providerFilter === "gemini") return isGeminiModel;
+        if (providerFilter === "claude") return isClaudeModel;
+        if (providerFilter === "grok") return isGrokModel;
+        if (providerFilter === "deepseek") return isDeepSeekModel;
+        if (providerFilter === "image") return isImageModel;
         return !isGeminiModel && !isClaudeModel && !isGrokModel && !isDeepSeekModel && !isImageModel; // OpenAI models
       });
     }
-    
-    console.log('Filtered records:', filteredData.length);
-    
+
+    console.log("Filtered records:", filteredData.length);
+
     // For debugging Claude, let's see what models we have
-    if (providerFilter === 'claude') {
-      const claudeModels = filteredData.map(d => d.model_name);
-      console.log('Claude models in data:', [...new Set(claudeModels)]);
-      console.log('Calculating total cost for ALL Claude transactions');
+    if (providerFilter === "claude") {
+      const claudeModels = filteredData.map((d) => d.model_name);
+      console.log("Claude models in data:", [...new Set(claudeModels)]);
+      console.log("Calculating total cost for ALL Claude transactions");
     }
-    
+
     let totalCost = 0;
     let totalRevenue = 0;
     let totalTokens = 0;
@@ -314,69 +332,80 @@ const AdminDashboard = () => {
       // Use real token data if available, otherwise skip old records with inflated values
       let inputTokens: number;
       let outputTokens: number;
-      
+
       if (usage.input_tokens && usage.output_tokens !== null) {
         // Use real data from database (new system)
         inputTokens = usage.input_tokens;
         outputTokens = usage.output_tokens;
-        
+
         // Detect provider based on model name
-        const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
-        const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-        const isGrokModel = usage.model_name.toLowerCase().includes('grok');
-        const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
-    const isImageModel = Object.keys(IMAGE_PRICING).some(key => 
-      usage.model_name.toLowerCase().includes(key.toLowerCase())
-    ) || usage.model_name === 'google:4@1'; // Detectar registros antigos do Gemini
-        let provider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' = 'openai';
-        
+        const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+        const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+        const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+        const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+        const isImageModel =
+          Object.keys(IMAGE_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+          usage.model_name === "google:4@1"; // Detectar registros antigos do Gemini
+        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" = "openai";
+
         // Debug log for image model detection
-        if (usage.model_name.toLowerCase().includes('gemini') || usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+        if (
+          usage.model_name.toLowerCase().includes("gemini") ||
+          usage.model_name.toLowerCase().includes("qwen") ||
+          usage.model_name.toLowerCase().includes("image")
+        ) {
           console.log(`🔍 Debugging model: ${usage.model_name}`);
           console.log(`🖼️ Is image model: ${isImageModel}`);
           console.log(`📋 IMAGE_PRICING keys:`, Object.keys(IMAGE_PRICING));
-          console.log(`🎯 Key matches:`, Object.keys(IMAGE_PRICING).map(key => 
-            `${key} -> ${usage.model_name.toLowerCase().includes(key.toLowerCase())}`
-          ));
+          console.log(
+            `🎯 Key matches:`,
+            Object.keys(IMAGE_PRICING).map(
+              (key) => `${key} -> ${usage.model_name.toLowerCase().includes(key.toLowerCase())}`,
+            ),
+          );
         }
-        
+
         // CRITICAL: Check image models FIRST before text models
         // This ensures gemini-flash used for images is detected as image provider
-        if (isImageModel) provider = 'image';
-        else if (isGeminiModel) provider = 'gemini';
-        else if (isClaudeModel) provider = 'claude';
-        else if (isGrokModel) provider = 'grok';
-        else if (isDeepSeekModel) provider = 'deepseek';
-        
+        if (isImageModel) provider = "image";
+        else if (isGeminiModel) provider = "gemini";
+        else if (isClaudeModel) provider = "claude";
+        else if (isGrokModel) provider = "grok";
+        else if (isDeepSeekModel) provider = "deepseek";
+
         // Debug log for provider assignment
-        if (usage.model_name.toLowerCase().includes('gemini') || usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+        if (
+          usage.model_name.toLowerCase().includes("gemini") ||
+          usage.model_name.toLowerCase().includes("qwen") ||
+          usage.model_name.toLowerCase().includes("image")
+        ) {
           console.log(`🏷️ Assigned provider: ${provider}`);
         }
-        
+
         // Calculate costs using correct pricing per token type
         let totalCostForTransaction: number;
         let inputCost = 0;
         let outputCost = 0;
-        
-        if (provider === 'image') {
+
+        if (provider === "image") {
           // For image models, use fixed cost per image
-          const imageModelKey = Object.keys(IMAGE_PRICING).find(key => 
-            usage.model_name.toLowerCase().includes(key.toLowerCase())
+          const imageModelKey = Object.keys(IMAGE_PRICING).find((key) =>
+            usage.model_name.toLowerCase().includes(key.toLowerCase()),
           );
-          
+
           if (imageModelKey) {
             totalCostForTransaction = IMAGE_PRICING[imageModelKey].cost;
-          } else if (usage.model_name === 'google:4@1') {
+          } else if (usage.model_name === "google:4@1") {
             // Registros antigos do Gemini Flash Image antes do mapeamento
             totalCostForTransaction = 0.039;
           } else {
             // Fallback para modelos desconhecidos
-            totalCostForTransaction = IMAGE_PRICING['gpt-image-1']?.cost || 0.02;
+            totalCostForTransaction = IMAGE_PRICING["gpt-image-1"]?.cost || 0.02;
           }
-          
+
           // Debug log for image cost calculation
           console.log(`🖼️ Image model detected: ${usage.model_name}`);
-          console.log(`🔍 Matched image key: ${imageModelKey || 'google:4@1 (old)'}`);
+          console.log(`🔍 Matched image key: ${imageModelKey || "google:4@1 (old)"}`);
           console.log(`💰 Image cost: $${totalCostForTransaction}`);
           console.log(`🔢 Raw cost value:`, totalCostForTransaction);
           console.log(`📊 Available IMAGE_PRICING keys:`, Object.keys(IMAGE_PRICING));
@@ -384,44 +413,44 @@ const AdminDashboard = () => {
           console.log(`🎯 isNaN(totalCostForTransaction):`, isNaN(totalCostForTransaction));
           console.log(`🎯 totalCostForTransaction === 0:`, totalCostForTransaction === 0);
         } else {
-          inputCost = inputTokens * getCostPerToken(usage.model_name, 'input', provider);
-          outputCost = outputTokens * getCostPerToken(usage.model_name, 'output', provider);
+          inputCost = inputTokens * getCostPerToken(usage.model_name, "input", provider);
+          outputCost = outputTokens * getCostPerToken(usage.model_name, "output", provider);
           totalCostForTransaction = inputCost + outputCost;
         }
-        
+
         // Debug log for final calculation
-        if (usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+        if (usage.model_name.toLowerCase().includes("qwen") || usage.model_name.toLowerCase().includes("image")) {
           console.log(`🏁 Final totalCostForTransaction: ${totalCostForTransaction}`);
           console.log(`🏁 Final inputCost: ${inputCost}`);
           console.log(`🏁 Final outputCost: ${outputCost}`);
         }
-        
+
         // Total tokens used (input + output)
         const totalTokensForTransaction = inputTokens + outputTokens;
-        
+
         // Revenue calculation: 200% profit margin = custo * 3 (custo + 200% de lucro)
         const revenue = totalCostForTransaction * 3;
 
         // Debug for selected provider
-        if (provider === 'claude') {
+        if (provider === "claude") {
           claudeTransactionCount++;
-          
+
           // Show detailed breakdown for first 3 transactions and any expensive ones
           const showDetails = claudeTransactionCount <= 3 || totalCostForTransaction > 0.01;
-          
+
           if (showDetails) {
             console.log(`\n=== CLAUDE TRANSACTION ${claudeTransactionCount} ===`);
             console.log(`Model: ${usage.model_name}`);
             console.log(`Input tokens (real data): ${inputTokens}`);
             console.log(`Output tokens (real data): ${outputTokens}`);
-            console.log(`Has AI response data: ${usage.ai_response_content ? 'Yes' : 'No'}`);
-            console.log(`Input cost per token: $${getCostPerToken(usage.model_name, 'input', provider).toFixed(10)}`);
-            console.log(`Output cost per token: $${getCostPerToken(usage.model_name, 'output', provider).toFixed(10)}`);
+            console.log(`Has AI response data: ${usage.ai_response_content ? "Yes" : "No"}`);
+            console.log(`Input cost per token: $${getCostPerToken(usage.model_name, "input", provider).toFixed(10)}`);
+            console.log(`Output cost per token: $${getCostPerToken(usage.model_name, "output", provider).toFixed(10)}`);
             console.log(`Input cost total: $${inputCost.toFixed(10)}`);
             console.log(`Output cost total: $${outputCost.toFixed(10)}`);
             console.log(`Total transaction cost: $${totalCostForTransaction.toFixed(10)}`);
             console.log(`Running total so far: $${(totalCost + totalCostForTransaction).toFixed(10)}`);
-            
+
             // Show expensive transactions
             if (totalCostForTransaction > 0.01) {
               console.log(`⚠️  HIGH COST TRANSACTION DETECTED!`);
@@ -429,47 +458,48 @@ const AdminDashboard = () => {
             console.log(`===================================\n`);
           }
         }
-        
+
         totalCost += totalCostForTransaction;
         totalRevenue += revenue;
         totalTokens += totalTokensForTransaction;
-        
+
         // Debug log for aggregation
-        if (usage.model_name.toLowerCase().includes('qwen') || usage.model_name.toLowerCase().includes('image')) {
+        if (usage.model_name.toLowerCase().includes("qwen") || usage.model_name.toLowerCase().includes("image")) {
           console.log(`📈 Adding to totalCost: ${totalCostForTransaction} (running total: ${totalCost})`);
           console.log(`📈 Revenue for this transaction: ${revenue}`);
           console.log(`📈 Current totalCost after this transaction: ${totalCost}`);
         }
-        
+
         if (usage.user_id) {
           uniqueUsers.add(usage.user_id);
         }
       } else {
         // Handle old records with fixed tokens - use fallback calculation for DeepSeek
-        const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
-        
+        const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+
         if (isDeepSeekModel) {
           // Use real DeepSeek pricing for old records with realistic token estimation
-          const inputCost = getCostPerToken(usage.model_name, 'input', 'deepseek');
-          const outputCost = getCostPerToken(usage.model_name, 'output', 'deepseek');
-          
+          const inputCost = getCostPerToken(usage.model_name, "input", "deepseek");
+          const outputCost = getCostPerToken(usage.model_name, "output", "deepseek");
+
           // For old DeepSeek records, use a realistic estimation
           // Input tokens: estimate from message length with minimum
-          const inputTokens = usage.message_content ? 
-            Math.max(Math.ceil(usage.message_content.length / 4), 20) : 50; // Minimum 20 tokens
-          
+          const inputTokens = usage.message_content ? Math.max(Math.ceil(usage.message_content.length / 4), 20) : 50; // Minimum 20 tokens
+
           // Output tokens: DeepSeek reasoning models typically generate 5-10x more output
           const outputTokens = inputTokens * 8; // Conservative 8:1 ratio
-          
-          const totalCostForTransaction = (inputTokens * inputCost) + (outputTokens * outputCost);
+
+          const totalCostForTransaction = inputTokens * inputCost + outputTokens * outputCost;
           const revenue = totalCostForTransaction * 3; // 200% profit margin (custo * 3)
-          
-          console.log(`DeepSeek realistic calculation: ${usage.model_name} - ${inputTokens} input + ${outputTokens} output tokens = $${totalCostForTransaction.toFixed(6)}`);
-          
+
+          console.log(
+            `DeepSeek realistic calculation: ${usage.model_name} - ${inputTokens} input + ${outputTokens} output tokens = $${totalCostForTransaction.toFixed(6)}`,
+          );
+
           totalCost += totalCostForTransaction;
           totalRevenue += revenue;
-          totalTokens += (inputTokens + outputTokens);
-          
+          totalTokens += inputTokens + outputTokens;
+
           if (usage.user_id) {
             uniqueUsers.add(usage.user_id);
           }
@@ -481,42 +511,47 @@ const AdminDashboard = () => {
     });
 
     // Detailed analysis for selected provider
-    if (providerFilter === 'claude') {
+    if (providerFilter === "claude") {
       console.log(`\n🔍 CLAUDE DETAILED ANALYSIS:`);
       console.log(`Total Claude transactions: ${claudeTransactionCount}`);
       console.log(`Total Claude cost: $${totalCost.toFixed(6)}`);
-      console.log(`Average cost per transaction: $${claudeTransactionCount > 0 ? (totalCost / claudeTransactionCount).toFixed(6) : '0'}`);
-      
+      console.log(
+        `Average cost per transaction: $${claudeTransactionCount > 0 ? (totalCost / claudeTransactionCount).toFixed(6) : "0"}`,
+      );
+
       // Analyze input vs output token ratios and costs
       let totalInputTokens = 0;
       let totalOutputTokens = 0;
       let totalInputCost = 0;
       let totalOutputCost = 0;
-      
+
       const expensiveTransactions = filteredData
-        .filter(usage => {
+        .filter((usage) => {
           const modelKey = usage.model_name.toLowerCase();
-          return modelKey.includes('claude') || Object.keys(CLAUDE_PRICING).some(key => 
-            modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey)
+          return (
+            modelKey.includes("claude") ||
+            Object.keys(CLAUDE_PRICING).some(
+              (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
+            )
           );
         })
-        .map(usage => {
+        .map((usage) => {
           const inputCharacters = usage.message_content?.length || 0;
           const inputTokens = charsToTokens(inputCharacters);
           const outputTokens = Math.ceil(inputTokens * 0.5); // Current estimate
-          
-          const inputCostPerToken = getCostPerToken(usage.model_name, 'input', 'claude');
-          const outputCostPerToken = getCostPerToken(usage.model_name, 'output', 'claude');
-          
+
+          const inputCostPerToken = getCostPerToken(usage.model_name, "input", "claude");
+          const outputCostPerToken = getCostPerToken(usage.model_name, "output", "claude");
+
           const inputCost = inputTokens * inputCostPerToken;
           const outputCost = outputTokens * outputCostPerToken;
           const totalCost = inputCost + outputCost;
-          
+
           totalInputTokens += inputTokens;
           totalOutputTokens += outputTokens;
           totalInputCost += inputCost;
           totalOutputCost += outputCost;
-          
+
           return {
             model: usage.model_name,
             messageLength: inputCharacters,
@@ -525,64 +560,73 @@ const AdminDashboard = () => {
             inputCost,
             outputCost,
             totalCost,
-            date: usage.created_at
+            date: usage.created_at,
           };
         })
         .sort((a, b) => b.totalCost - a.totalCost)
         .slice(0, 5);
-        
+
       console.log(`\n📊 TOKEN BREAKDOWN:`);
       console.log(`Total input tokens: ${totalInputTokens.toLocaleString()}`);
       console.log(`Total output tokens: ${totalOutputTokens.toLocaleString()} (estimated)`);
       console.log(`Input cost: $${totalInputCost.toFixed(6)}`);
       console.log(`Output cost: $${totalOutputCost.toFixed(6)}`);
-      console.log(`Ratio output/input: ${totalInputTokens > 0 ? (totalOutputTokens/totalInputTokens).toFixed(2) : '0'}x`);
-        
+      console.log(
+        `Ratio output/input: ${totalInputTokens > 0 ? (totalOutputTokens / totalInputTokens).toFixed(2) : "0"}x`,
+      );
+
       console.log(`\n💰 Top 5 most expensive Claude transactions:`);
       expensiveTransactions.forEach((tx, i) => {
-        console.log(`${i + 1}. ${tx.model} - Total: $${tx.totalCost.toFixed(6)} | Input: $${tx.inputCost.toFixed(6)} (${tx.inputTokens} tokens) | Output: $${tx.outputCost.toFixed(6)} (${tx.outputTokens} tokens) | ${tx.messageLength} chars`);
+        console.log(
+          `${i + 1}. ${tx.model} - Total: $${tx.totalCost.toFixed(6)} | Input: $${tx.inputCost.toFixed(6)} (${tx.inputTokens} tokens) | Output: $${tx.outputCost.toFixed(6)} (${tx.outputTokens} tokens) | ${tx.messageLength} chars`,
+        );
       });
-    } else if (providerFilter === 'grok') {
+    } else if (providerFilter === "grok") {
       console.log(`\n🔍 GROK DETAILED ANALYSIS:`);
       console.log(`Total Grok transactions: ${filteredData.length}`);
       console.log(`Total Grok cost: $${totalCost.toFixed(6)}`);
-      console.log(`Average cost per transaction: $${filteredData.length > 0 ? (totalCost / filteredData.length).toFixed(6) : '0'}`);
-      
-      const grokModels = [...new Set(filteredData.map(d => d.model_name))];
+      console.log(
+        `Average cost per transaction: $${filteredData.length > 0 ? (totalCost / filteredData.length).toFixed(6) : "0"}`,
+      );
+
+      const grokModels = [...new Set(filteredData.map((d) => d.model_name))];
       console.log(`Grok models in data:`, grokModels);
-    } else if (providerFilter === 'deepseek') {
+    } else if (providerFilter === "deepseek") {
       console.log(`\n🔍 DEEPSEEK DETAILED ANALYSIS:`);
       console.log(`Total DeepSeek transactions: ${filteredData.length}`);
       console.log(`Total DeepSeek cost: $${totalCost.toFixed(6)}`);
-      console.log(`Average cost per transaction: $${filteredData.length > 0 ? (totalCost / filteredData.length).toFixed(6) : '0'}`);
-      
-      const deepSeekModels = [...new Set(filteredData.map(d => d.model_name))];
+      console.log(
+        `Average cost per transaction: $${filteredData.length > 0 ? (totalCost / filteredData.length).toFixed(6) : "0"}`,
+      );
+
+      const deepSeekModels = [...new Set(filteredData.map((d) => d.model_name))];
       console.log(`DeepSeek models in data:`, deepSeekModels);
     }
 
-    console.log('Final calculated totals:', {
+    console.log("Final calculated totals:", {
       totalCost: totalCost.toFixed(8),
       totalRevenue: totalRevenue.toFixed(8),
       totalProfit: (totalRevenue - totalCost).toFixed(8),
       totalUsers: uniqueUsers.size,
-      totalTokens
+      totalTokens,
     });
 
     // Special debug for image costs
-    const imageRecords = filteredData.filter(usage => 
-      Object.keys(IMAGE_PRICING).some(key => 
-        usage.model_name.toLowerCase().includes(key.toLowerCase())
-      )
+    const imageRecords = filteredData.filter((usage) =>
+      Object.keys(IMAGE_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())),
     );
     console.log(`🖼️ Final image records processed: ${imageRecords.length}`);
-    console.log(`🖼️ Image record models:`, imageRecords.map(r => r.model_name));
-    
+    console.log(
+      `🖼️ Image record models:`,
+      imageRecords.map((r) => r.model_name),
+    );
+
     if (imageRecords.length > 0) {
       let imageOnlyTotalCost = 0;
-      imageRecords.forEach(usage => {
-        const imageModelKey = Object.keys(IMAGE_PRICING).find(key => 
-          usage.model_name.toLowerCase().includes(key.toLowerCase())
-        ) || 'gpt-image-1';
+      imageRecords.forEach((usage) => {
+        const imageModelKey =
+          Object.keys(IMAGE_PRICING).find((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+          "gpt-image-1";
         const cost = IMAGE_PRICING[imageModelKey].cost;
         imageOnlyTotalCost += cost;
         console.log(`🖼️ Image ${usage.model_name} -> key: ${imageModelKey} -> cost: $${cost}`);
@@ -595,20 +639,20 @@ const AdminDashboard = () => {
       totalRevenue,
       totalProfit: totalRevenue - totalCost,
       totalUsers: uniqueUsers.size,
-      totalTokens
+      totalTokens,
     };
   };
 
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        console.log('Fetching admin data via edge function...');
-        
+        console.log("Fetching admin data via edge function...");
+
         // Call the admin-data edge function that bypasses RLS
-        const { data: response, error } = await supabase.functions.invoke('admin-data');
+        const { data: response, error } = await supabase.functions.invoke("admin-data");
 
         if (error) {
-          console.error('Function error:', error);
+          console.error("Function error:", error);
           throw error;
         }
 
@@ -617,18 +661,18 @@ const AdminDashboard = () => {
         }
 
         const allUsage = response.data;
-        console.log('Token usage data fetched:', allUsage?.length, 'records');
+        console.log("Token usage data fetched:", allUsage?.length, "records");
 
         if (allUsage) {
-          console.log('Raw usage data sample:', allUsage.slice(0, 3));
-          console.log('Selected provider for calculation:', selectedProvider);
+          console.log("Raw usage data sample:", allUsage.slice(0, 3));
+          console.log("Selected provider for calculation:", selectedProvider);
           const calculatedStats = calculateAdminStats(allUsage, selectedProvider, selectedPeriod);
-          console.log('Calculated stats for', selectedProvider, ':', calculatedStats);
+          console.log("Calculated stats for", selectedProvider, ":", calculatedStats);
           setAdminStats(calculatedStats);
           setRecentUsage(allUsage.slice(0, 15)); // Show last 15 transactions
         }
       } catch (error) {
-        console.error('Error fetching admin data:', error);
+        console.error("Error fetching admin data:", error);
       } finally {
         setLoading(false);
       }
@@ -636,7 +680,7 @@ const AdminDashboard = () => {
 
     if (!authLoading && isAdmin) {
       fetchAdminData();
-      
+
       // Auto-refresh every 30 seconds (reduced from 5s to improve performance)
       const interval = setInterval(fetchAdminData, 30000);
       return () => clearInterval(interval);
@@ -648,32 +692,32 @@ const AdminDashboard = () => {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin-dashboard-updates')
+      .channel("admin-dashboard-updates")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'token_usage'
+          event: "INSERT",
+          schema: "public",
+          table: "token_usage",
         },
         (payload) => {
-          console.log('Nova entrada de token_usage recebida (realtime):', payload.new);
+          console.log("Nova entrada de token_usage recebida (realtime):", payload.new);
           // Adicionar o novo registro aos dados existentes e recalcular stats
-          setRecentUsage(prev => {
+          setRecentUsage((prev) => {
             const newEntry = payload.new as TokenUsage;
             const newUsage = [newEntry, ...prev];
             const stats = calculateAdminStats(newUsage, selectedProvider, selectedPeriod);
             setAdminStats(stats);
             return newUsage.slice(0, 15); // Manter apenas os 15 mais recentes
           });
-        }
+        },
       )
       .subscribe();
 
-    console.log('Realtime subscription ativa para token_usage (custos de imagem inclusos)');
+    console.log("Realtime subscription ativa para token_usage (custos de imagem inclusos)");
 
     return () => {
-      console.log('Removendo subscription realtime');
+      console.log("Removendo subscription realtime");
       supabase.removeChannel(channel);
     };
   }, [isAdmin, selectedProvider, selectedPeriod]);
@@ -700,10 +744,8 @@ const AdminDashboard = () => {
             <CardTitle>Acesso Negado</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Você não tem permissões de administrador para acessar esta área.
-            </p>
-            <Button onClick={() => navigate('/')} variant="outline">
+            <p className="text-muted-foreground">Você não tem permissões de administrador para acessar esta área.</p>
+            <Button onClick={() => navigate("/")} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar ao Início
             </Button>
@@ -719,28 +761,17 @@ const AdminDashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate('/')}
-              className="self-start"
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate("/")} className="self-start">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
             <div className="flex items-center gap-2">
               <Shield className="h-4 sm:h-6 w-4 sm:w-6 text-primary" />
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                Dashboard Administrativo
-              </h1>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.reload()}
-            >
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
             </Button>
@@ -750,13 +781,14 @@ const AdminDashboard = () => {
 
         <Alert className="mb-4 sm:mb-6">
           <Shield className="h-4 w-4 flex-shrink-0" />
-            <AlertDescription className="text-xs sm:text-sm">
-              <strong>Dashboard administrativo</strong> com visão completa de todos os custos e receitas do hub.
-              <br className="hidden sm:block" />
-              <span className="text-xs text-muted-foreground block sm:inline mt-1 sm:mt-0">
-                • Conversão: 4 caracteres = 1 token • Margem de lucro: 200% (3x custo) • Cálculo automático para OpenAI e Gemini
-              </span>
-            </AlertDescription>
+          <AlertDescription className="text-xs sm:text-sm">
+            <strong>Dashboard administrativo</strong> com visão completa de todos os custos e receitas do hub.
+            <br className="hidden sm:block" />
+            <span className="text-xs text-muted-foreground block sm:inline mt-1 sm:mt-0">
+              • Conversão: 4 caracteres = 1 token • Margem de lucro: 200% (3x custo) • Cálculo automático para OpenAI e
+              Gemini
+            </span>
+          </AlertDescription>
         </Alert>
 
         {/* Period Filter */}
@@ -766,7 +798,10 @@ const AdminDashboard = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <CardTitle className="text-base sm:text-lg">Filtros de Período</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <Select value={selectedPeriod} onValueChange={(value: 'today' | 'week' | 'month' | 'year' | 'all') => setSelectedPeriod(value)}>
+                  <Select
+                    value={selectedPeriod}
+                    onValueChange={(value: "today" | "week" | "month" | "year" | "all") => setSelectedPeriod(value)}
+                  >
                     <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Selecionar período" />
                     </SelectTrigger>
@@ -778,20 +813,25 @@ const AdminDashboard = () => {
                       <SelectItem value="year">Último ano</SelectItem>
                     </SelectContent>
                   </Select>
-                   <Select value={selectedProvider} onValueChange={(value: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' | 'image' | 'todos') => setSelectedProvider(value)}>
-                     <SelectTrigger className="w-full sm:w-[180px]">
-                       <SelectValue placeholder="Selecionar provedor" />
-                     </SelectTrigger>
-                     <SelectContent className="z-50 bg-background">
-                       <SelectItem value="todos">Todos</SelectItem>
-                       <SelectItem value="openai">OpenAI</SelectItem>
-                       <SelectItem value="gemini">Google Gemini</SelectItem>
-                       <SelectItem value="claude">Anthropic Claude</SelectItem>
-                       <SelectItem value="grok">xAI Grok</SelectItem>
-                       <SelectItem value="deepseek">DeepSeek</SelectItem>
-                       <SelectItem value="image">Imagem</SelectItem>
-                     </SelectContent>
-                   </Select>
+                  <Select
+                    value={selectedProvider}
+                    onValueChange={(value: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "todos") =>
+                      setSelectedProvider(value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Selecionar provedor" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-background">
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="claude">Anthropic Claude</SelectItem>
+                      <SelectItem value="grok">xAI Grok</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek</SelectItem>
+                      <SelectItem value="image">Imagem</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardHeader>
@@ -818,7 +858,7 @@ const AdminDashboard = () => {
               </CardHeader>
               <CollapsibleContent>
                 <CardContent>
-                  <UnifiedPricingTable 
+                  <UnifiedPricingTable
                     selectedProvider={selectedProvider}
                     openaiPricing={OPENAI_PRICING}
                     geminiPricing={GEMINI_PRICING}
@@ -837,20 +877,39 @@ const AdminDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>
-              Transações Recentes 
-              {(selectedProvider !== 'todos' || selectedPeriod !== 'all') && (
-                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                     ({selectedProvider !== 'todos' && `${selectedProvider === 'openai' ? 'OpenAI' : 
-                       selectedProvider === 'gemini' ? 'Google Gemini' : 
-                       selectedProvider === 'claude' ? 'Anthropic Claude' :
-                       selectedProvider === 'grok' ? 'xAI Grok' :
-                       selectedProvider === 'deepseek' ? 'DeepSeek' : selectedProvider}`}
-                   {selectedProvider !== 'todos' && selectedPeriod !== 'all' && ' • '}
-                   {selectedPeriod !== 'all' && `${selectedPeriod === 'today' ? 'Hoje' :
-                     selectedPeriod === 'week' ? 'Última semana' :
-                     selectedPeriod === 'month' ? 'Último mês' :
-                     selectedPeriod === 'year' ? 'Último ano' : selectedPeriod}`})
-                 </span>
+              Transações Recentes
+              {(selectedProvider !== "todos" || selectedPeriod !== "all") && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (
+                  {selectedProvider !== "todos" &&
+                    `${
+                      selectedProvider === "openai"
+                        ? "OpenAI"
+                        : selectedProvider === "gemini"
+                          ? "Google Gemini"
+                          : selectedProvider === "claude"
+                            ? "Anthropic Claude"
+                            : selectedProvider === "grok"
+                              ? "xAI Grok"
+                              : selectedProvider === "deepseek"
+                                ? "DeepSeek"
+                                : selectedProvider
+                    }`}
+                  {selectedProvider !== "todos" && selectedPeriod !== "all" && " • "}
+                  {selectedPeriod !== "all" &&
+                    `${
+                      selectedPeriod === "today"
+                        ? "Hoje"
+                        : selectedPeriod === "week"
+                          ? "Última semana"
+                          : selectedPeriod === "month"
+                            ? "Último mês"
+                            : selectedPeriod === "year"
+                              ? "Último ano"
+                              : selectedPeriod
+                    }`}
+                  )
+                </span>
               )}
             </CardTitle>
           </CardHeader>
@@ -858,162 +917,172 @@ const AdminDashboard = () => {
             {(() => {
               // Filter recent usage based on selected provider and period
               let filteredUsage = recentUsage;
-              
+
               // First filter by period
               const dateRange = getDateFilterRange(selectedPeriod);
               if (dateRange) {
-                filteredUsage = filteredUsage.filter(usage => {
+                filteredUsage = filteredUsage.filter((usage) => {
                   const usageDate = new Date(usage.created_at);
                   return usageDate >= dateRange.start && usageDate <= dateRange.end;
                 });
               }
-              
+
               // Then filter by provider
-               if (selectedProvider !== 'todos') {
-                 filteredUsage = filteredUsage.filter((usage) => {
-                   const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
-                   const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-                   const isGrokModel = usage.model_name.toLowerCase().includes('grok');
-                   const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
-                   
-                   if (selectedProvider === 'gemini') return isGeminiModel;
-                   if (selectedProvider === 'claude') return isClaudeModel;
-                   if (selectedProvider === 'grok') return isGrokModel;
-                   if (selectedProvider === 'deepseek') return isDeepSeekModel;
-                   return !isGeminiModel && !isClaudeModel && !isGrokModel && !isDeepSeekModel; // OpenAI models
-                 });
-               }
-              
-                return filteredUsage.length > 0 ? (
+              if (selectedProvider !== "todos") {
+                filteredUsage = filteredUsage.filter((usage) => {
+                  const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+                  const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+                  const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+                  const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+
+                  if (selectedProvider === "gemini") return isGeminiModel;
+                  if (selectedProvider === "claude") return isClaudeModel;
+                  if (selectedProvider === "grok") return isGrokModel;
+                  if (selectedProvider === "deepseek") return isDeepSeekModel;
+                  return !isGeminiModel && !isClaudeModel && !isGrokModel && !isDeepSeekModel; // OpenAI models
+                });
+              }
+
+              return filteredUsage.length > 0 ? (
                 <div className="space-y-4">
                   {filteredUsage.map((usage) => {
-                  // Detect if this is an image model
-                  const isImageModel = Object.keys(IMAGE_PRICING).some(key => 
-                    usage.model_name.toLowerCase().includes(key.toLowerCase())
-                  ) || usage.model_name === 'google:4@1';
-                  
-                  let totalCost = 0;
-                  let inputTokens = 0;
-                  let outputTokens = 0;
-                  let totalTokens = 0;
-                  
-                  if (isImageModel) {
-                    // For image models, use fixed cost per image
-                    const imageModelKey = Object.keys(IMAGE_PRICING).find(key => 
-                      usage.model_name.toLowerCase().includes(key.toLowerCase())
-                    );
-                    
-                    if (imageModelKey) {
-                      totalCost = IMAGE_PRICING[imageModelKey].cost;
-                    } else if (usage.model_name === 'google:4@1') {
-                      totalCost = 0.039; // Old Gemini Flash Image records
-                    } else {
-                      totalCost = IMAGE_PRICING['gpt-image-1']?.cost || 0.02;
-                    }
-                    
-                    // For display purposes
-                    inputTokens = 1;
-                    outputTokens = 1;
-                    totalTokens = 1;
-                  } else {
-                    // For text models, use real token data if available, otherwise estimate
-                    if (usage.input_tokens !== null && usage.output_tokens !== null) {
-                      // Use real token data from database
-                      inputTokens = usage.input_tokens;
-                      outputTokens = usage.output_tokens;
-                    } else {
-                      // Fallback to estimation for old records
-                      const inputCharacters = usage.message_content?.length || 0;
-                      inputTokens = charsToTokens(inputCharacters);
-                      outputTokens = Math.floor(inputTokens * 2.5);
-                    }
-                    
-                    // Detect provider based on model name
-                    const isGeminiModel = usage.model_name.toLowerCase().includes('gemini');
-                    const isClaudeModel = usage.model_name.toLowerCase().includes('claude');
-                    const isGrokModel = usage.model_name.toLowerCase().includes('grok');
-                    const isDeepSeekModel = usage.model_name.toLowerCase().includes('deepseek');
-                    let provider: 'openai' | 'gemini' | 'claude' | 'grok' | 'deepseek' = 'openai';
-                    
-                    if (isGeminiModel) provider = 'gemini';
-                    else if (isClaudeModel) provider = 'claude';
-                    else if (isGrokModel) provider = 'grok';
-                    else if (isDeepSeekModel) provider = 'deepseek';
-                    
-                    // Calculate costs using correct pricing per token type
-                    const inputCost = inputTokens * getCostPerToken(usage.model_name, 'input', provider);
-                    const outputCost = outputTokens * getCostPerToken(usage.model_name, 'output', provider);
-                    totalCost = inputCost + outputCost;
-                    totalTokens = inputTokens + outputTokens;
-                  }
-                  
-                  const inputCharacters = usage.message_content?.length || 0;
-                  
-                  // Revenue calculation: cost + 200% profit margin = 3x cost
-                  const revenue = totalCost * 3;
-                  const profit = revenue - totalCost;
+                    // Detect if this is an image model
+                    const isImageModel =
+                      Object.keys(IMAGE_PRICING).some((key) =>
+                        usage.model_name.toLowerCase().includes(key.toLowerCase()),
+                      ) || usage.model_name === "google:4@1";
 
-                  return (
-                    <div key={usage.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-2">
-                          <span className="font-medium text-sm">{usage.model_name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {totalTokens.toLocaleString()} tokens
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {inputCharacters.toLocaleString()} caracteres
-                          </span>
+                    let totalCost = 0;
+                    let inputTokens = 0;
+                    let outputTokens = 0;
+                    let totalTokens = 0;
+
+                    if (isImageModel) {
+                      // For image models, use fixed cost per image
+                      const imageModelKey = Object.keys(IMAGE_PRICING).find((key) =>
+                        usage.model_name.toLowerCase().includes(key.toLowerCase()),
+                      );
+
+                      if (imageModelKey) {
+                        totalCost = IMAGE_PRICING[imageModelKey].cost;
+                      } else if (usage.model_name === "google:4@1") {
+                        totalCost = 0.039; // Old Gemini Flash Image records
+                      } else {
+                        totalCost = IMAGE_PRICING["gpt-image-1"]?.cost || 0.02;
+                      }
+
+                      // For display purposes
+                      inputTokens = 1;
+                      outputTokens = 1;
+                      totalTokens = 1;
+                    } else {
+                      // For text models, use real token data if available, otherwise estimate
+                      if (usage.input_tokens !== null && usage.output_tokens !== null) {
+                        // Use real token data from database
+                        inputTokens = usage.input_tokens;
+                        outputTokens = usage.output_tokens;
+                      } else {
+                        // Fallback to estimation for old records
+                        const inputCharacters = usage.message_content?.length || 0;
+                        inputTokens = charsToTokens(inputCharacters);
+                        outputTokens = Math.floor(inputTokens * 2.5);
+                      }
+
+                      // Detect provider based on model name
+                      const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+                      const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+                      const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+                      const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+                      let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" = "openai";
+
+                      if (isGeminiModel) provider = "gemini";
+                      else if (isClaudeModel) provider = "claude";
+                      else if (isGrokModel) provider = "grok";
+                      else if (isDeepSeekModel) provider = "deepseek";
+
+                      // Calculate costs using correct pricing per token type
+                      const inputCost = inputTokens * getCostPerToken(usage.model_name, "input", provider);
+                      const outputCost = outputTokens * getCostPerToken(usage.model_name, "output", provider);
+                      totalCost = inputCost + outputCost;
+                      totalTokens = inputTokens + outputTokens;
+                    }
+
+                    const inputCharacters = usage.message_content?.length || 0;
+
+                    // Revenue calculation: cost + 200% profit margin = 3x cost
+                    const revenue = totalCost * 3;
+                    const profit = revenue - totalCost;
+
+                    return (
+                      <div key={usage.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4 mb-2">
+                            <span className="font-medium text-sm">{usage.model_name}</span>
+                            <span className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens</span>
+                            <span className="text-xs text-muted-foreground">
+                              {inputCharacters.toLocaleString()} caracteres
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-primary">+${profit.toFixed(4)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Custo: ${totalCost.toFixed(4)} → Receita: ${revenue.toFixed(4)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-primary">
-                          +${profit.toFixed(4)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Custo: ${totalCost.toFixed(4)} → Receita: ${revenue.toFixed(4)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                 })}
-                 </div>
-                ) : (
-                   <p className="text-center text-muted-foreground py-8">
-                     {(() => {
-                       let message = "Nenhuma transação encontrada";
-                       
-                       if (selectedProvider !== 'todos' || selectedPeriod !== 'all') {
-                         message += " para";
-                         
-                         if (selectedProvider !== 'todos') {
-                             const providerName = selectedProvider === 'openai' ? 'OpenAI' : 
-                                                 selectedProvider === 'gemini' ? 'Google Gemini' : 
-                                                 selectedProvider === 'claude' ? 'Anthropic Claude' :
-                                                 selectedProvider === 'grok' ? 'xAI Grok' :
-                                                 selectedProvider === 'deepseek' ? 'DeepSeek' : selectedProvider;
-                           message += ` ${providerName}`;
-                         }
-                         
-                         if (selectedProvider !== 'todos' && selectedPeriod !== 'all') {
-                           message += " no período";
-                         }
-                         
-                         if (selectedPeriod !== 'all') {
-                           const periodName = selectedPeriod === 'today' ? 'hoje' :
-                                            selectedPeriod === 'week' ? 'da última semana' :
-                                            selectedPeriod === 'month' ? 'do último mês' :
-                                            selectedPeriod === 'year' ? 'do último ano' : selectedPeriod;
-                           message += selectedProvider !== 'todos' ? ` ${periodName}` : ` ${periodName}`;
-                         }
-                       }
-                       
-                       return message;
-                     })()}
-                   </p>
-                );
-             })()}
-           </CardContent>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  {(() => {
+                    let message = "Nenhuma transação encontrada";
+
+                    if (selectedProvider !== "todos" || selectedPeriod !== "all") {
+                      message += " para";
+
+                      if (selectedProvider !== "todos") {
+                        const providerName =
+                          selectedProvider === "openai"
+                            ? "OpenAI"
+                            : selectedProvider === "gemini"
+                              ? "Google Gemini"
+                              : selectedProvider === "claude"
+                                ? "Anthropic Claude"
+                                : selectedProvider === "grok"
+                                  ? "xAI Grok"
+                                  : selectedProvider === "deepseek"
+                                    ? "DeepSeek"
+                                    : selectedProvider;
+                        message += ` ${providerName}`;
+                      }
+
+                      if (selectedProvider !== "todos" && selectedPeriod !== "all") {
+                        message += " no período";
+                      }
+
+                      if (selectedPeriod !== "all") {
+                        const periodName =
+                          selectedPeriod === "today"
+                            ? "hoje"
+                            : selectedPeriod === "week"
+                              ? "da última semana"
+                              : selectedPeriod === "month"
+                                ? "do último mês"
+                                : selectedPeriod === "year"
+                                  ? "do último ano"
+                                  : selectedPeriod;
+                        message += selectedProvider !== "todos" ? ` ${periodName}` : ` ${periodName}`;
+                      }
+                    }
+
+                    return message;
+                  })()}
+                </p>
+              );
+            })()}
+          </CardContent>
         </Card>
       </div>
     </div>
