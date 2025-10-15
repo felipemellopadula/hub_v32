@@ -169,12 +169,19 @@ const LazyThumbVideo: React.FC<{
           loop
           muted
           playsInline
-          preload="none"       // evita baixar antes de aparecer
+          preload="metadata"   // ✅ permite carregar poster/thumbnail
           poster={poster}      // usa frame inicial se houver
           onClick={() => vRef.current && onTogglePlay(vRef.current)}
         />
       ) : (
-        <div className="w-full h-full bg-muted animate-pulse" />
+        // ✅ Mostra placeholder com cor de fundo ou poster enquanto não carrega
+        <div className="w-full h-full bg-muted flex items-center justify-center">
+          {poster ? (
+            <img src={poster} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="animate-pulse bg-muted/50 w-full h-full" />
+          )}
+        </div>
       )}
     </div>
   );
@@ -351,10 +358,23 @@ const VideoPage: React.FC = () => {
     }
   }, [user]);
 
-  // Salvar vídeo (upload->url pública->metadados)
+  // Salvar vídeo (upload->url pública->metadados) - COM PREVENÇÃO DE DUPLICATAS
   const saveVideoToDatabase = useCallback(
     async (url: string) => {
       if (!user) return;
+      
+      // ✅ PREVENIR DUPLICATAS: verificar se vídeo já foi salvo
+      const isDuplicate = savedVideos.some(v => 
+        v.prompt === prompt && 
+        v.model === modelId && 
+        Math.abs(new Date(v.created_at).getTime() - Date.now()) < 60000 // 1 minuto
+      );
+      
+      if (isDuplicate) {
+        console.log("[Video] Vídeo já salvo, ignorando duplicata");
+        return;
+      }
+      
       try {
         const videoResponse = await fetch(url);
         const videoBlob = await videoResponse.blob();
@@ -388,7 +408,7 @@ const VideoPage: React.FC = () => {
         console.error("Erro ao salvar vídeo:", error);
       }
     },
-    [user, prompt, modelId, resolution, duration, res.id, frameStartUrl, frameEndUrl, outputFormat, loadSavedVideos]
+    [user, savedVideos, prompt, modelId, resolution, duration, res.id, frameStartUrl, frameEndUrl, outputFormat, loadSavedVideos]
   );
 
   // Deletar vídeo (optimistic + remoção real)
