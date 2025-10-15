@@ -584,20 +584,53 @@ const VideoPage: React.FC = () => {
     [toast, uploadImage]
   );
 
-  // Geração
+  // Geração com TIMEOUT e LIMITE de tentativas
   const beginPolling = useCallback((uuid: string) => {
     if (pollRef.current) {
       window.clearTimeout(pollRef.current);
       pollRef.current = null;
     }
+    
+    const MAX_ATTEMPTS = 60; // Máximo 60 tentativas (aproximadamente 5-10 minutos)
+    const startTime = Date.now();
+    const MAX_DURATION = 10 * 60 * 1000; // 10 minutos timeout absoluto
+    
     const poll = async (attempt = 0) => {
       try {
+        // ✅ Verificar timeout absoluto
+        const elapsed = Date.now() - startTime;
+        if (elapsed > MAX_DURATION) {
+          setIsSubmitting(false);
+          setTaskUUID(null);
+          toast({
+            title: "Timeout",
+            description: "A geração do vídeo demorou muito. Por favor, tente novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // ✅ Verificar limite de tentativas
+        if (attempt >= MAX_ATTEMPTS) {
+          setIsSubmitting(false);
+          setTaskUUID(null);
+          toast({
+            title: "Timeout",
+            description: `Máximo de tentativas atingido (${MAX_ATTEMPTS}). Por favor, tente novamente.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
         const { data, error } = await supabase.functions.invoke("runware-video", {
           body: { action: "status", taskUUID: uuid },
         });
+        
         if (error) throw error;
+        
         const statusItem = data?.result;
         const videoURL = statusItem?.videoURL || statusItem?.url;
+        
         if (videoURL) {
           setVideoUrl(videoURL);
           setIsSubmitting(false);
@@ -605,9 +638,29 @@ const VideoPage: React.FC = () => {
           toast({ title: "Vídeo pronto", description: "Seu vídeo foi gerado com sucesso." });
           return;
         }
+        
+        // ✅ Log de progresso a cada 10 tentativas
+        if (attempt > 0 && attempt % 10 === 0) {
+          console.log(`[Video] Polling tentativa ${attempt}/${MAX_ATTEMPTS}, tempo decorrido: ${Math.round(elapsed / 1000)}s`);
+        }
+        
         const delay = Math.min(2000 * Math.pow(1.4, attempt), 12000);
         pollRef.current = window.setTimeout(() => poll(attempt + 1), delay) as unknown as number;
-      } catch {
+      } catch (err) {
+        console.error("[Video] Erro no polling:", err);
+        
+        // ✅ Limite de erros consecutivos
+        if (attempt >= 5) {
+          setIsSubmitting(false);
+          setTaskUUID(null);
+          toast({
+            title: "Erro",
+            description: "Falha ao verificar status do vídeo. Por favor, tente novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         const delay = 5000;
         pollRef.current = window.setTimeout(() => poll(attempt + 1), delay) as unknown as number;
       }
