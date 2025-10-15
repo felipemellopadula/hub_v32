@@ -638,8 +638,21 @@ const VideoPage: React.FC = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("runware-video", { body: payload });
-      if (error) throw error;
-      if (!data?.taskUUID) throw new Error(data?.error || "Falha ao iniciar geração");
+      
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Erro ao chamar função de vídeo");
+      }
+      
+      if (data?.error) {
+        console.error("API error:", data.error, data.details);
+        throw new Error(data.error + (data.details ? `: ${data.details}` : ""));
+      }
+      
+      if (!data?.taskUUID) {
+        console.error("No taskUUID in response:", data);
+        throw new Error("Resposta inválida do servidor - taskUUID não encontrado");
+      }
 
       setTaskUUID(data.taskUUID);
       toast({ title: "Geração iniciada", description: "Estamos processando seu vídeo. Isso pode levar alguns minutos." });

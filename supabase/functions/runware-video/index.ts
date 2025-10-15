@@ -115,8 +115,36 @@ serve(async (req) => {
         return { r, j };
       };
 
-      // Fazer a requisição inicial
-      let { r: res, j: json } = await makeRequest(resolvedModel);
+      // Fazer a requisição inicial com tratamento de erro robusto
+      console.log("[runware-video] Calling makeRequest with model:", resolvedModel);
+      let res: Response;
+      let json: any;
+      
+      try {
+        const result = await makeRequest(resolvedModel);
+        if (!result || !result.r || !result.j) {
+          console.error("[runware-video] makeRequest returned invalid result:", result);
+          return new Response(
+            JSON.stringify({ 
+              error: "Falha na comunicação com a API de vídeo",
+              details: "Resposta inválida do servidor"
+            }),
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        res = result.r;
+        json = result.j;
+        console.log("[runware-video] makeRequest succeeded, status:", res.status);
+      } catch (makeRequestError) {
+        console.error("[runware-video] Error in makeRequest:", makeRequestError);
+        return new Response(
+          JSON.stringify({ 
+            error: "Falha ao conectar com API de vídeo",
+            details: makeRequestError instanceof Error ? makeRequestError.message : String(makeRequestError)
+          }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
 
       console.log("[runware-video] start -> response:", res.status, json);
 
