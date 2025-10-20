@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Chat = lazy(() => import("./pages/Chat"));
 const VideoPage = lazy(() => import("./pages/Video"));
 const ImagePage = lazy(() => import("./pages/Image"));
+const Image2Page = lazy(() => import("./pages/Image2"));
 const TranslatorPage = lazy(() => import("./pages/Translator"));
 const WritePage = lazy(() => import("./pages/Write"));
 const TranscribePage = lazy(() => import("./pages/Transcribe"));
@@ -66,6 +67,9 @@ const App = () => (
           } />
           <Route path="/image" element={
             <ProtectedRoute><ImagePage /></ProtectedRoute>
+          } />
+          <Route path="/image2" element={
+            <ProtectedRoute><Image2Page /></ProtectedRoute>
           } />
           <Route path="/translator" element={
             <ProtectedRoute><TranslatorPage /></ProtectedRoute>
