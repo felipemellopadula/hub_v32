@@ -444,14 +444,14 @@ const Image2Page = () => {
       {/* Grid de Imagens */}
       <main className="flex-1 overflow-auto p-4 pb-48">
         <div className="container mx-auto max-w-7xl">
-          {isLoadingHistory ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="aspect-square animate-pulse bg-muted" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
+        {isLoadingHistory ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="aspect-square animate-pulse bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {images.map((img) => (
                 <Card
                   key={img.id}
@@ -521,43 +521,43 @@ const Image2Page = () => {
         </div>
       </main>
 
-      {/* Chat Bar Fixo (bottom) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/98 backdrop-blur border-t shadow-lg z-20">
+      {/* Chat Bar Fixo (bottom) - Estilo Higgsfield */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur border-t border-white/10 shadow-2xl z-20">
         <div className="container mx-auto max-w-7xl p-4">
           {/* Preview de arquivo anexado */}
           {previewUrl && (
-            <div className="mb-3 flex items-center gap-2 p-2 bg-muted rounded-lg">
+            <div className="mb-3 flex items-center gap-2 p-2 bg-white/10 rounded-lg">
               <img src={previewUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
-              <p className="text-sm flex-1 truncate">{selectedFile?.name}</p>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedFile(null)}>
+              <p className="text-white text-sm flex-1 truncate">{selectedFile?.name}</p>
+              <Button size="sm" variant="ghost" className="text-white hover:text-white/80" onClick={() => setSelectedFile(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex flex-col lg:flex-row items-end gap-3">
             {/* Textarea */}
-            <div className="flex-1">
+            <div className="flex-1 w-full">
               <Textarea
-                placeholder="Describe the scene you imagine..."
+                placeholder="Describe the scene you imagine"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                rows={2}
-                className="resize-none"
+                rows={1}
+                className="resize-none bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:bg-white/10 focus:border-white/20 min-h-[44px]"
                 disabled={isGenerating}
               />
             </div>
 
-            {/* Controles */}
-            <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+            {/* Controles Inline - Estilo Higgsfield */}
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 w-full lg:w-auto">
               {/* Modelo */}
               <Select value={model} onValueChange={setModel} disabled={isGenerating}>
-                <SelectTrigger className="w-full md:w-40">
+                <SelectTrigger className="w-full lg:w-36 bg-white/5 border-white/10 text-white hover:bg-white/10">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-black/95 border-white/20">
                   {MODELS.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
+                    <SelectItem key={m.id} value={m.id} className="text-white hover:bg-white/10">
                       {m.label}
                     </SelectItem>
                   ))}
@@ -566,12 +566,12 @@ const Image2Page = () => {
 
               {/* Qualidade */}
               <Select value={quality} onValueChange={setQuality} disabled={isGenerating}>
-                <SelectTrigger className="w-full md:w-48">
+                <SelectTrigger className="w-full lg:w-40 bg-white/5 border-white/10 text-white hover:bg-white/10">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-black/95 border-white/20">
                   {availableQualitySettings.map((q) => (
-                    <SelectItem key={q.id} value={q.id}>
+                    <SelectItem key={q.id} value={q.id} className="text-white hover:bg-white/10">
                       {q.label}
                     </SelectItem>
                   ))}
@@ -585,6 +585,7 @@ const Image2Page = () => {
                 disabled={!canAttachImage || isGenerating}
                 onClick={() => document.getElementById("file-input")?.click()}
                 title={canAttachImage ? "Anexar imagem" : "Modelo não suporta anexo"}
+                className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white"
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
@@ -597,16 +598,16 @@ const Image2Page = () => {
               />
 
               {/* Magic Prompt */}
-              <div className="flex items-center gap-2 px-2">
+              <div className="flex items-center gap-2 px-2 py-2 rounded-md bg-white/5 border border-white/10">
                 <Switch checked={magicPromptEnabled} onCheckedChange={setMagicPromptEnabled} disabled={isGenerating} />
-                <Sparkles className="h-4 w-4 text-yellow-500" />
+                <Sparkles className="h-4 w-4 text-yellow-400" />
               </div>
 
-              {/* Botão Gerar */}
+              {/* Botão Gerar - Estilo Neon */}
               <Button
                 onClick={generate}
                 disabled={isGenerating || !prompt.trim()}
-                className="bg-green-500 hover:bg-green-600 text-black font-bold px-6 min-w-32"
+                className="bg-[#c4ff00] hover:bg-[#d4ff30] text-black font-bold px-8 h-11 shadow-lg shadow-[#c4ff00]/20 hover:shadow-[#c4ff00]/40 transition-all disabled:opacity-50 disabled:shadow-none min-w-[140px]"
               >
                 {isGenerating ? (
                   <>
