@@ -23,6 +23,16 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import UserProfile from "@/components/UserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const QUALITY_SETTINGS = [
   { id: "standard", label: "Padrão (1024x1024)", width: 1024, height: 1024, steps: 15 },
@@ -118,6 +128,7 @@ const Image2Page = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedImageForModal, setSelectedImageForModal] = useState<DatabaseImage | null>(null);
+  const [imageToDelete, setImageToDelete] = useState<DatabaseImage | null>(null);
   const isLoadingRef = useRef(false);
 
   const canAttachImage = useMemo(
@@ -484,18 +495,16 @@ const Image2Page = () => {
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm("Deletar esta imagem?")) {
-                            deleteImage(img.id, img.image_path);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageToDelete(img);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     </div>
                   </div>
                 </Card>
@@ -642,6 +651,32 @@ const Image2Page = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={!!imageToDelete} onOpenChange={() => setImageToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar imagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A imagem será permanentemente removida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (imageToDelete) {
+                  deleteImage(imageToDelete.id, imageToDelete.image_path);
+                  setImageToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
