@@ -28,11 +28,35 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.client_reference_id || session.metadata?.user_id;
+        let userId = session.client_reference_id || session.metadata?.user_id;
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
-        console.log(`[Webhook] Checkout completo - User: ${userId}, Subscription: ${subscriptionId}`);
+        console.log(`[Webhook] Checkout completo - Customer: ${customerId}, Subscription: ${subscriptionId}`);
+
+        // Se não temos userId, buscar pelo email do customer
+        if (!userId) {
+          const customer = await stripe.customers.retrieve(customerId);
+          const customerEmail = (customer as Stripe.Customer).email;
+          
+          if (customerEmail) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("email", customerEmail)
+              .single();
+            
+            if (profile) {
+              userId = profile.id;
+              console.log(`[Webhook] Usuário encontrado pelo email: ${userId}`);
+            }
+          }
+        }
+
+        if (!userId) {
+          console.error("[Webhook] Não foi possível identificar o usuário");
+          break;
+        }
 
         // Buscar detalhes da assinatura
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -50,8 +74,10 @@ serve(async (req) => {
           break;
         }
 
+        console.log(`[Webhook] Plano identificado: ${product.plan_id}`);
+
         // Criar registro de assinatura
-        const { error: subError } = await supabase
+        const { data: subscriptionData, error: subError } = await supabase
           .from("stripe_subscriptions")
           .insert({
             user_id: userId,
@@ -64,38 +90,40 @@ serve(async (req) => {
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end,
             tokens_per_period: product.tokens_included
-          });
+          })
+          .select()
+          .single();
 
         if (subError) {
           console.error("[Webhook] Erro ao criar subscription:", subError);
           break;
         }
 
-        // Creditar tokens iniciais
-        const { error: tokenError } = await supabase.rpc('increment', {
-          table_name: 'profiles',
-          id_value: userId,
-          column_name: 'tokens_remaining',
-          increment_value: product.tokens_included
-        }).single();
-
-        // Se RPC falhar, usar UPDATE direto
-        if (tokenError) {
-          await supabase
-            .from("profiles")
-            .update({ 
-              tokens_remaining: product.tokens_included,
-              stripe_customer_id: customerId
-            })
-            .eq("id", userId);
-        } else {
-          await supabase
-            .from("profiles")
-            .update({ stripe_customer_id: customerId })
-            .eq("id", userId);
+        // Determinar subscription_type baseado no plan_id
+        let subscriptionType: 'free' | 'basic' | 'plus' | 'admin' = 'free';
+        const planIdLower = product.plan_id.toLowerCase();
+        if (planIdLower.includes('plus') || planIdLower.includes('premium')) {
+          subscriptionType = 'plus';
+        } else if (planIdLower.includes('basic') || planIdLower.includes('standard')) {
+          subscriptionType = 'basic';
         }
 
-        console.log(`[Webhook] Tokens creditados: ${product.tokens_included}`);
+        // Atualizar perfil com tokens, customer_id, subscription_type e current_subscription_id
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ 
+            tokens_remaining: product.tokens_included,
+            stripe_customer_id: customerId,
+            subscription_type: subscriptionType,
+            current_subscription_id: subscriptionData?.id
+          })
+          .eq("id", userId);
+
+        if (updateError) {
+          console.error("[Webhook] Erro ao atualizar perfil:", updateError);
+        }
+
+        console.log(`[Webhook] ✅ Usuário atualizado - Tokens: ${product.tokens_included}, Tipo: ${subscriptionType}`);
 
         // Enviar email de boas-vindas em background
         const sendWelcomeEmail = async () => {
