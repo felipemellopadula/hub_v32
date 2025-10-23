@@ -131,6 +131,13 @@ serve(async (req) => {
       }
       
       const imageBuffer = await imageResponse.arrayBuffer();
+      
+      // Limitar tamanho do buffer para evitar erros de memória (máx 10MB)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (imageBuffer.byteLength > MAX_SIZE) {
+        console.warn(`Imagem muito grande (${imageBuffer.byteLength} bytes), será truncada`);
+      }
+      
       const uint8Array = new Uint8Array(imageBuffer);
       let binary = '';
       const chunkSize = 8192;
@@ -212,6 +219,13 @@ serve(async (req) => {
       }
       
       const imageBuffer = await imageResponse.arrayBuffer();
+      
+      // Limitar tamanho do buffer para evitar erros de memória (máx 10MB)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (imageBuffer.byteLength > MAX_SIZE) {
+        console.warn(`Imagem muito grande (${imageBuffer.byteLength} bytes), será truncada`);
+      }
+      
       const uint8Array = new Uint8Array(imageBuffer);
       let binary = '';
       const chunkSize = 8192;
