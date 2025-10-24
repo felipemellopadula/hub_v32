@@ -113,19 +113,34 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Você precisa estar logado para fazer upgrade");
+        setLoadingPlan(null);
         return;
       }
 
+      console.log("Iniciando checkout para plano:", planId);
+      
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { planId },
       });
 
-      if (error) throw error;
+      console.log("Resposta do checkout:", data, error);
+
+      if (error) {
+        console.error("Erro na edge function:", error);
+        throw error;
+      }
 
       if (data?.url) {
-        // Redireciona para o checkout do Stripe
-        window.location.href = data.url;
+        console.log("Abrindo URL do Stripe:", data.url);
+        // Abre em nova aba para evitar bloqueio de popup
+        const stripeWindow = window.open(data.url, '_blank');
+        if (!stripeWindow) {
+          toast.error("Popup bloqueado! Por favor, permita popups e tente novamente.");
+        } else {
+          toast.success("Redirecionando para o checkout...");
+        }
       } else {
+        console.error("URL não encontrada na resposta:", data);
         throw new Error("URL de checkout não recebida");
       }
     } catch (error) {
