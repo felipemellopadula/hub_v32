@@ -758,10 +758,11 @@ const Chat: React.FC = () => {
 
   // Auto-scroll quando novas mensagens chegam e não há streaming
   useEffect(() => {
-    if (!isStreamingResponse && isNearBottom && messagesEndRef.current) {
+    if (!isStreamingResponse && messagesEndRef.current) {
+      // Rola automaticamente para o final sempre que mensagens mudam e não está streaming
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isStreamingResponse, isNearBottom]);
+  }, [messages, isStreamingResponse]);
 
   // Limpeza de URLs de preview ao desmontar
   useEffect(() => {
@@ -1772,9 +1773,9 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           setIsLoading(false); // [FIX] só agora some o "pensando..."
         });
 
-        // Auto-scroll após inserir o primeiro chunk
+        // Auto-scroll após inserir o primeiro chunk - SEMPRE rola quando IA responde
         requestAnimationFrame(() => {
-          if (isNearBottom && messagesEndRef.current) {
+          if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
           }
         });
@@ -1796,9 +1797,9 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               setIsStreamingResponse(false);
             });
 
-            // scroll suave no final
+            // scroll suave no final - SEMPRE rola quando IA termina de responder
             requestAnimationFrame(() => {
-              if (isNearBottom && messagesEndRef.current) {
+              if (messagesEndRef.current) {
                 messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
               }
             });
