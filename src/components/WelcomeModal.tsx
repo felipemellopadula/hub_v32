@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   MessageCircle,
@@ -52,7 +46,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       name: "Básico Mensal",
       price: "R$ 1,00",
       period: "/mês",
-      features: ["50.000 tokens/mês", "Todos os modelos de IA", "Suporte prioritário"],
+      features: ["500.000 tokens/mês", "Todos os modelos de IA", "Suporte prioritário"],
     },
     {
       id: "basic-yearly",
@@ -60,7 +54,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       name: "Básico Anual",
       price: "R$ 1,00",
       period: "/ano",
-      features: ["50.000 tokens/mês", "Todos os modelos de IA", "Suporte prioritário"],
+      features: ["500.000 tokens/mês", "Todos os modelos de IA", "Suporte prioritário"],
     },
     {
       id: "pro-monthly",
@@ -68,7 +62,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       name: "Pro Mensal",
       price: "R$ 1,00",
       period: "/mês",
-      features: ["150.000 tokens/mês", "Todos os modelos de IA", "Suporte VIP", "Funcionalidades exclusivas"],
+      features: ["1.000.000 tokens/mês", "Todos os modelos de IA", "Suporte VIP", "Funcionalidades exclusivas"],
     },
     {
       id: "pro-yearly",
@@ -78,19 +72,18 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       period: "/ano",
       badge: "Economize 17%",
       popular: true,
-      features: ["150.000 tokens/mês", "Todos os modelos de IA", "Suporte VIP", "Funcionalidades exclusivas"],
+      features: ["1.00.000 tokens/mês", "Todos os modelos de IA", "Suporte VIP", "Funcionalidades exclusivas"],
     },
   ];
 
   const handleClose = async () => {
     setIsClosing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ has_seen_welcome_modal: true })
-          .eq("id", user.id);
+        const { error } = await supabase.from("profiles").update({ has_seen_welcome_modal: true }).eq("id", user.id);
 
         if (error) {
           console.error("Erro ao atualizar modal:", error);
@@ -108,7 +101,9 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
   const handleCheckout = async (planId: string) => {
     setLoadingPlan(planId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Você precisa estar logado para fazer upgrade");
         setLoadingPlan(null);
@@ -116,7 +111,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       }
 
       console.log("Iniciando checkout para plano:", planId);
-      
+
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { planId },
       });
@@ -131,7 +126,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
       if (data?.url) {
         console.log("Abrindo URL do Stripe:", data.url);
         // Abre em nova aba para evitar bloqueio de popup
-        const stripeWindow = window.open(data.url, '_blank');
+        const stripeWindow = window.open(data.url, "_blank");
         if (!stripeWindow) {
           toast.error("Popup bloqueado! Por favor, permita popups e tente novamente.");
         } else {
@@ -183,21 +178,16 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold text-foreground">
-                  1.000 Tokens de Teste Grátis!
-                </h3>
+                <h3 className="text-xl font-semibold text-foreground">1.000 Tokens de Teste Grátis!</h3>
               </div>
               <p className="text-muted-foreground">
-                Comece agora mesmo a explorar todas as funcionalidades da nossa plataforma
-                sem compromisso.
+                Comece agora mesmo a explorar todas as funcionalidades da nossa plataforma sem compromisso.
               </p>
             </div>
 
             {/* Funcionalidades */}
             <div>
-              <h4 className="text-lg font-semibold text-foreground mb-4 text-center">
-                O que você pode fazer:
-              </h4>
+              <h4 className="text-lg font-semibold text-foreground mb-4 text-center">O que você pode fazer:</h4>
               <div className="grid grid-cols-2 gap-4">
                 {features.map((feature, index) => {
                   const Icon = feature.icon;
@@ -207,9 +197,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
                       className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                     >
                       <Icon className={`h-5 w-5 ${feature.color}`} />
-                      <span className="text-sm font-medium text-foreground">
-                        {feature.name}
-                      </span>
+                      <span className="text-sm font-medium text-foreground">{feature.name}</span>
                     </div>
                   );
                 })}
@@ -218,18 +206,11 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
 
             {/* Planos */}
             <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-foreground mb-2 text-center">
-                Quer mais tokens?
-              </h4>
+              <h4 className="text-lg font-semibold text-foreground mb-2 text-center">Quer mais tokens?</h4>
               <p className="text-muted-foreground text-center mb-4">
                 Confira nossos planos com muito mais tokens e funcionalidades ilimitadas!
               </p>
-              <Button
-                onClick={() => setShowPlans(true)}
-                className="w-full"
-                size="lg"
-                disabled={isClosing}
-              >
+              <Button onClick={() => setShowPlans(true)} className="w-full" size="lg" disabled={isClosing}>
                 Ver Planos
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -237,13 +218,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
 
             {/* Botão de Começar */}
             <div className="pt-4 border-t">
-              <Button
-                onClick={handleClose}
-                variant="outline"
-                className="w-full"
-                size="lg"
-                disabled={isClosing}
-              >
+              <Button onClick={handleClose} variant="outline" className="w-full" size="lg" disabled={isClosing}>
                 Começar a Usar Agora
               </Button>
             </div>
@@ -252,20 +227,13 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
           /* Tela de seleção de planos */
           <div className="space-y-6 mt-4">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-foreground mb-2">
-                Escolha seu plano
-              </h3>
-              <p className="text-muted-foreground">
-                Selecione o plano ideal para suas necessidades
-              </p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Escolha seu plano</h3>
+              <p className="text-muted-foreground">Selecione o plano ideal para suas necessidades</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {plans.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className={`relative ${plan.popular ? "border-primary border-2" : ""}`}
-                >
+                <Card key={plan.id} className={`relative ${plan.popular ? "border-primary border-2" : ""}`}>
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
@@ -326,12 +294,7 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
               >
                 Voltar
               </Button>
-              <Button
-                onClick={handleClose}
-                variant="ghost"
-                className="flex-1"
-                disabled={loadingPlan !== null}
-              >
+              <Button onClick={handleClose} variant="ghost" className="flex-1" disabled={loadingPlan !== null}>
                 Começar com plano gratuito
               </Button>
             </div>
