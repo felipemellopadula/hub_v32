@@ -86,8 +86,14 @@ const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, 
               </code>
             );
           },
-          p({ children }) {
-            return <p className="mb-2 leading-relaxed last:mb-0">{children}</p>;
+          p({ children, node }) {
+            const isInsideListItem = node?.position?.start.line && 
+              content.split('\n')[node.position.start.line - 1]?.match(/^\s*\d+\./);
+            return (
+              <p className={isInsideListItem ? "inline" : "mb-2 leading-relaxed last:mb-0"}>
+                {children}
+              </p>
+            );
           },
           h1({ children }) {
             return <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>;
@@ -108,7 +114,7 @@ const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, 
             return <ol className="ml-6 mb-2 mt-1 list-decimal space-y-1">{children}</ol>;
           },
           li({ children }) {
-            return <li className="leading-snug pl-1">{children}</li>;
+            return <li className="leading-relaxed pl-1 [&>p]:inline [&>p]:mr-1">{children}</li>;
           },
           blockquote({ children }) {
             return (
