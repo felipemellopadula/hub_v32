@@ -196,7 +196,52 @@ serve(async (req) => {
       }
 
       console.log('Anthropic API response status:', response.status);
-      return response;
+      
+      // Continue processing the response
+      const data = await response.json();
+      console.log('Response data received, parsing...');
+      
+      let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
+      
+      // Normalize line breaks and remove excessive spacing
+      generatedText = generatedText
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      
+      // Add prefix if message was processed in chunks
+      const finalResponse = responsePrefix + generatedText;
+
+      console.log('Anthropic response received successfully', {
+        responseLength: finalResponse.length,
+        hadPrefix: !!responsePrefix
+      });
+
+      // Record token usage in database
+      const authHeader = req.headers.get('authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: userData } = await supabaseClient.auth.getUser(token);
+        
+        if (userData.user) {
+          const inputTokens = data.usage?.input_tokens || 0;
+          const outputTokens = data.usage?.output_tokens || 0;
+          
+          await supabaseClient.from('token_usage').insert({
+            user_id: userData.user.id,
+            tokens_used: inputTokens + outputTokens,
+            model: model,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ response: finalResponse }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+      
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
@@ -205,90 +250,6 @@ serve(async (req) => {
       }
       throw fetchError;
     }
-
-    const data = await response.json();
-    console.log('Response data received, parsing...');
-    
-    let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
-    
-    // Normalize line breaks and remove excessive spacing
-    generatedText = generatedText
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-    
-    // Add prefix if message was processed in chunks
-    const finalResponse = responsePrefix + generatedText;
-
-    console.log('Anthropic response received successfully', {
-      responseLength: finalResponse.length,
-      hadPrefix: !!responsePrefix
-    });
-
-    // Record token usage in database
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (token) {
-      try {
-        // Get user info from JWT
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        const userId = user?.id;
-        
-        if (userId) {
-          // Calculate token usage - 4 characters = 1 token (user's specification)
-          const inputTokens = Math.ceil((message?.length || 0) / 4);
-          const outputTokens = Math.ceil(generatedText.length / 4);
-          const totalTokens = inputTokens + outputTokens;
-          
-          console.log('Recording Claude token usage:', {
-            userId,
-            model,
-            inputTokens,
-            outputTokens,
-            totalTokens,
-            messageLength: message?.length || 0,
-            responseLength: generatedText.length
-          });
-
-          // Save token usage to database with real data
-          const { error: tokenError } = await supabase
-            .from('token_usage')
-            .insert({
-              user_id: userId,
-              model_name: model,
-              tokens_used: totalTokens, // Keep for compatibility
-              input_tokens: inputTokens, // Real input tokens
-              output_tokens: outputTokens, // Real output tokens
-              message_content: message?.length > 1000 
-                ? message.substring(0, 1000) + '...' 
-                : message,
-              ai_response_content: generatedText.length > 2000
-                ? generatedText.substring(0, 2000) + '...'
-                : generatedText,
-              created_at: new Date().toISOString()
-            });
-
-          if (tokenError) {
-            console.error('Error saving token usage:', tokenError);
-          } else {
-            console.log('Token usage recorded successfully');
-          }
-        }
-      } catch (tokenRecordError) {
-        console.error('Error recording token usage:', tokenRecordError);
-      }
-    }
-
-    return new Response(JSON.stringify({ response: finalResponse }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Erro na função claude-chat:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }), {
