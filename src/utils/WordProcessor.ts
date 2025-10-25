@@ -17,7 +17,10 @@ export interface WordProcessingResult {
 }
 
 export class WordProcessor {
-  static async processWord(file: File): Promise<WordProcessingResult> {
+  static async processWord(
+    file: File,
+    onProgress?: (current: number, total: number, status: string) => void
+  ): Promise<WordProcessingResult> {
     try {
       console.log('Processing Word file:', file.name, 'Size:', file.size);
 
@@ -33,8 +36,16 @@ export class WordProcessor {
       }
 
       console.log('Convertendo Word para texto...');
+      
+      if (onProgress) {
+        onProgress(1, 3, 'Lendo arquivo Word...');
+      }
 
       const arrayBuffer = await file.arrayBuffer();
+      
+      if (onProgress) {
+        onProgress(2, 3, 'Extraindo texto...');
+      }
       
       let result;
       
@@ -97,6 +108,10 @@ export class WordProcessor {
 
       const content = result.value.trim();
       const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+      
+      if (onProgress) {
+        onProgress(3, 3, 'Processamento concluído!');
+      }
       
       console.log('Word processed successfully:', {
         fileName: file.name,

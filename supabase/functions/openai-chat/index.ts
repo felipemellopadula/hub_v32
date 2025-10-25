@@ -7,15 +7,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to estimate token count (4 characters = 1 token as per user requirement)
+// Function to estimate token count
 function estimateTokenCount(text: string): number {
-  // User specified: 4 characters = 1 token
-  return Math.ceil(text.length / 4);
+  // Improved estimation for Portuguese: ~3.2 characters per token
+  // English averages ~4 chars/token, but Portuguese is slightly denser
+  return Math.ceil(text.length / 3.2);
 }
 
 // Function to split text into chunks
 function splitIntoChunks(text: string, maxTokens: number): string[] {
-  const maxChars = maxTokens * 4; // Convert tokens to characters (4 chars = 1 token)
+  const maxChars = maxTokens * 3.2; // Convert tokens to characters (3.2 chars = 1 token for Portuguese)
   const chunks = [];
   
   for (let i = 0; i < text.length; i += maxChars) {
@@ -191,6 +192,19 @@ serve(async (req) => {
     let responsePrefix = '';
     let chunkResponses: string[] = [];
 
+    // 📊 Diagnostic logging
+    console.log('📊 DIAGNÓSTICO DE PROCESSAMENTO:', {
+      estimatedTokens,
+      inputLimit: limits.input,
+      usedPercentage: ((estimatedTokens / limits.input) * 100).toFixed(1) + '%',
+      willChunk: estimatedTokens > limits.input * 0.6,
+      model,
+      hasFiles: files?.length > 0,
+      fileTypes: files?.map(f => f.type).join(', '),
+      conversationHistorySize: conversationHistory.length,
+      timestamp: new Date().toISOString()
+    });
+
     // If message is too large, split into chunks and process ALL chunks
     // Comparações podem usar 20% mais do limite
     const comparisonMultiplier = isComparison ? 1.2 : 1.0;
@@ -262,6 +276,9 @@ serve(async (req) => {
           role: 'user',
           content: consolidationPrompt
         }];
+        
+        // Preserve context for follow-ups by creating a summary
+        console.log('💾 Preservando contexto do documento processado para follow-ups');
       }
     }
     

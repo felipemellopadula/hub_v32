@@ -34,7 +34,11 @@ export class PdfProcessor {
   static readonly MAX_FILE_SIZE_BYTES = PdfProcessor.MAX_FILE_SIZE_MB * 1024 * 1024;
   static readonly BATCH_SIZE = 50; // Processar em lotes de 50 páginas
 
-  static async processPdf(file: File): Promise<PdfProcessResult> {
+  static async processPdf(
+    file: File, 
+    useFullOCR: boolean = false,
+    onProgress?: (current: number, total: number, status: string) => void
+  ): Promise<PdfProcessResult> {
     try {
       // Verificar tamanho do arquivo
       if (file.size > this.MAX_FILE_SIZE_BYTES) {
@@ -97,9 +101,11 @@ export class PdfProcessor {
             // Para PDFs grandes, não incluir "--- Página X ---" para economizar espaço
             fullText += `${pageText}\n`;
           } else {
-            // Se não há texto, tentar OCR na imagem da página (apenas para poucas páginas)
+            // Se não há texto, tentar OCR na imagem da página
             hasImages = true;
-            if (pageNum <= 10 || pageNum % 10 === 0) { // OCR apenas em algumas páginas para economizar tempo
+            // OCR completo se useFullOCR=true, caso contrário apenas algumas páginas
+            const shouldOCR = useFullOCR || pageNum <= 10 || pageNum % 10 === 0;
+            if (shouldOCR) {
               try {
                 const viewport = page.getViewport({ scale: 1.5 }); // Escala menor para PDFs grandes
                 const canvas = document.createElement('canvas');
@@ -128,6 +134,11 @@ export class PdfProcessor {
           }
           
           processedPages++;
+          
+          // Callback de progresso
+          if (onProgress) {
+            onProgress(processedPages, numPages, `Processando página ${processedPages}/${numPages}`);
+          }
           
           // Pequena pausa a cada 25 páginas para não travar o browser
           if (processedPages % 25 === 0) {

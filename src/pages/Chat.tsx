@@ -671,6 +671,12 @@ const Chat: React.FC = () => {
     [messageId: string]: string[];
   }>({});
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState<{
+    current: number;
+    total: number;
+    status: string;
+    fileName: string;
+  } | null>(null);
 
   const [isPending, startTransition] = useTransition();
 
@@ -1962,7 +1968,18 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             );
             return { fileName, success: true };
           } else if (isPdfFile(file)) {
-            const result = await PdfProcessor.processPdf(file);
+            const result = await PdfProcessor.processPdf(
+              file,
+              false, // useFullOCR - pode ser configurado depois
+              (current, total, status) => {
+                setProcessingProgress({
+                  current,
+                  total,
+                  status,
+                  fileName: file.name
+                });
+              }
+            );
             if (result.success && result.content) {
               setProcessedDocuments(
                 (prev) =>
@@ -1981,12 +1998,23 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               setFileProcessingStatus(
                 (prev) => new Map(prev.set(fileName, "completed"))
               );
+              setProcessingProgress(null); // Limpar progresso após conclusão
               return { fileName, success: true };
             } else {
               throw new Error(result.error || "Erro ao processar PDF");
             }
           } else if (isWordFile(file)) {
-            const result = await WordProcessor.processWord(file);
+            const result = await WordProcessor.processWord(
+              file,
+              (current, total, status) => {
+                setProcessingProgress({
+                  current,
+                  total,
+                  status,
+                  fileName: file.name
+                });
+              }
+            );
             if (result.success && result.content) {
               setProcessedDocuments(
                 (prev) =>
@@ -2004,6 +2032,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               setFileProcessingStatus(
                 (prev) => new Map(prev.set(fileName, "completed"))
               );
+              setProcessingProgress(null); // Limpar progresso após conclusão
               return { fileName, success: true };
             } else {
               throw new Error(result.error || "Erro ao processar Word");
@@ -2969,6 +2998,33 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             </div>
           </div>
         </main>
+
+        {/* Progress Bar para processamento de arquivos */}
+        {processingProgress && (
+          <div className="fixed bottom-20 right-4 bg-card border border-border p-4 rounded-lg shadow-lg z-50 w-80">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{processingProgress.fileName}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {processingProgress.status}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ 
+                    width: `${(processingProgress.current / processingProgress.total) * 100}%` 
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-right">
+                {processingProgress.current} / {processingProgress.total}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
