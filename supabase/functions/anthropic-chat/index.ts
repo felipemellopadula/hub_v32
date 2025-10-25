@@ -185,10 +185,11 @@ serve(async (req) => {
     const data = await response.json();
     let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
     
-    // Normalize line breaks - keep it simple
+    // Normalize line breaks and remove excessive spacing
     generatedText = generatedText
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
     
     // Add prefix if message was processed in chunks

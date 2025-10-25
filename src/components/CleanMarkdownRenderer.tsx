@@ -87,7 +87,7 @@ const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, 
             );
           },
           p({ children }) {
-            return <p className="mb-2 leading-relaxed last:mb-0">{children}</p>;
+            return <p className="mb-1.5 leading-relaxed last:mb-0">{children}</p>;
           },
           h1({ children }) {
             return <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>;
