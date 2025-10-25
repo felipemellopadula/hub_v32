@@ -608,7 +608,7 @@ const Image2Page = () => {
               <Button
                 onClick={generate}
                 disabled={isGenerating || !prompt.trim()}
-                className="bg-[#8C00FF] hover:bg-[#6A42C2] text-white font-bold px-8 h-11 shadow-lg shadow-[#c4ff00]/20 hover:shadow-[#c4ff00]/40 transition-all disabled:opacity-50 disabled:shadow-none min-w-[140px]"
+                className="bg-[#8C00FF] hover:bg-[#6A42C2] text-white font-bold px-8 h-11 shadow-lg shadow-[#FFD700]/20 hover:shadow-[#FFD700]/40 transition-all disabled:opacity-50 disabled:shadow-none min-w-[140px]"
               >
                 {isGenerating ? (
                   <>
