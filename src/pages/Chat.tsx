@@ -1787,6 +1787,26 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const reasoning =
           typeof data.response === "string" ? "" : data.response?.reasoning;
 
+        // 💾 Adicionar contexto de documento ao histórico (se existir)
+        if (data.documentContext) {
+          console.log('📄 Contexto de documento recebido:', data.documentContext);
+          conversationHistory.push({
+            role: 'system',
+            content: `[CONTEXTO DO DOCUMENTO]
+Arquivo(s): ${data.documentContext.fileNames?.join(', ') || 'Documento'}
+Tamanho: ${data.documentContext.estimatedTokens?.toLocaleString()} tokens
+Processado em: ${data.documentContext.totalChunks} seções
+Data: ${new Date(data.documentContext.processedAt).toLocaleString('pt-BR')}
+
+RESUMO DA ANÁLISE:
+${data.documentContext.summary}
+
+Use este contexto para responder perguntas relacionadas a este documento.`,
+            timestamp: new Date().toISOString(),
+            files: []
+          });
+        }
+
         // ✅ CACHE: Armazena resposta se aplicável
         if (cacheKey && fullBotText) {
           apiCache.set(cacheKey, fullBotText, 5 * 60 * 1000); // 5 minutos

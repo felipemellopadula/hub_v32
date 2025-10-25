@@ -121,14 +121,25 @@ serve(async (req) => {
     let messages = [];
     
     if (contextEnabled && conversationHistory.length > 0) {
-      // Add conversation history for context (but keep it simple for large files)
       console.log('Building conversation context with', conversationHistory.length, 'previous messages');
       
-      // Only add recent context if the main message isn't too large
       const mainMessageTokens = estimateTokenCount(finalMessage);
-      if (mainMessageTokens < limits.input * 0.3) {
-        // Add limited conversation history
-        const recentHistory = conversationHistory.slice(-3); // Only last 3 messages
+      
+      // Se o documento é grande (será processado em chunks)
+      if (mainMessageTokens > limits.input * 0.6) {
+        // Filtrar apenas mensagens de contexto de documentos anteriores
+        const documentContextMessages = conversationHistory.filter((msg: any) => 
+          msg.content?.includes('[CONTEXTO DO DOCUMENTO]')
+        );
+        
+        // Manter apenas o contexto de documento mais recente (se houver)
+        if (documentContextMessages.length > 0) {
+          messages = [documentContextMessages[documentContextMessages.length - 1]];
+          console.log('📚 Contexto de documento anterior preservado');
+        }
+      } else {
+        // Documento pequeno: comportamento normal
+        const recentHistory = conversationHistory.slice(-3);
         messages = recentHistory.map((historyMsg: any) => ({
           role: historyMsg.role,
           content: historyMsg.content
@@ -279,6 +290,17 @@ serve(async (req) => {
         
         // Preserve context for follow-ups by creating a summary
         console.log('💾 Preservando contexto do documento processado para follow-ups');
+        
+        // Adicionar mensagem de sistema para contexto futuro
+        processedMessages.push({
+          role: 'system',
+          content: `[CONTEXTO DO DOCUMENTO]
+Arquivo(s): ${files?.map(f => f.name).join(', ') || 'Documento'}
+Tamanho: ${estimatedTokens.toLocaleString()} tokens (${chunks.length} seções)
+Pergunta original: ${message}
+
+Este documento foi processado em múltiplas partes. Use este contexto para responder perguntas de follow-up.`
+        });
       }
     }
     
@@ -381,7 +403,32 @@ serve(async (req) => {
       console.log('No user ID available, skipping token usage recording');
     }
 
-    return new Response(JSON.stringify({ response: finalResponse }), {
+    // Criar contexto de documento para follow-ups (se foi processado em chunks)
+    let documentContext = null;
+    if (chunkResponses.length > 0) {
+      const compactSummary = generatedText.length > 2000 
+        ? generatedText.substring(0, 2000) + '...\n\n[Resposta completa disponível no histórico]'
+        : generatedText;
+      
+      documentContext = {
+        summary: compactSummary,
+        totalChunks: chunkResponses.length,
+        fileNames: files?.map((f: any) => f.name),
+        estimatedTokens: estimateTokenCount(finalMessage),
+        processedAt: new Date().toISOString()
+      };
+      
+      console.log('📄 Contexto de documento criado para follow-ups:', {
+        fileNames: documentContext.fileNames,
+        totalChunks: documentContext.totalChunks,
+        tokens: documentContext.estimatedTokens
+      });
+    }
+
+    return new Response(JSON.stringify({ 
+      response: finalResponse,
+      documentContext 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
