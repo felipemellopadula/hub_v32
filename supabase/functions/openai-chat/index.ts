@@ -136,8 +136,8 @@ serve(async (req) => {
       
       const mainMessageTokens = estimateTokenCount(finalMessage);
       
-      // Se o documento é grande (será processado em chunks)
-      if (mainMessageTokens > limits.input * 0.6) {
+      // Se o documento é grande (será processado em chunks) - OTIMIZADO: 80%
+      if (mainMessageTokens > limits.input * 0.8) {
         // Filtrar apenas mensagens de contexto de documentos anteriores
         const documentContextMessages = conversationHistory.filter((msg: any) => 
           msg.content?.includes('[CONTEXTO DO DOCUMENTO]')
@@ -243,8 +243,18 @@ serve(async (req) => {
     let chunkResponses: string[] = [];
 
     // 📊 Diagnostic logging (APRIMORADO)
-    const estimatedChunks = estimatedTokens > limits.input * 0.8 
-      ? Math.ceil(estimatedTokens / (model.includes('gpt-5') ? Math.floor(limits.input * 0.5) : Math.floor(limits.input * 0.6)))
+    // Calcula chunks com base nos novos thresholds (90% e chunks de 70%/60%)
+    let maxChunkTokensForEstimate;
+    if (model.includes('gpt-5')) {
+      maxChunkTokensForEstimate = Math.floor(limits.input * 0.7);
+    } else if (model.includes('gpt-4.1')) {
+      maxChunkTokensForEstimate = Math.floor(limits.input * 0.6);
+    } else {
+      maxChunkTokensForEstimate = Math.floor(limits.input * 0.6);
+    }
+    
+    const estimatedChunks = estimatedTokens > limits.input * 0.9
+      ? Math.ceil(estimatedTokens / maxChunkTokensForEstimate)
       : 1;
 
     console.log('📊 DIAGNÓSTICO DE PROCESSAMENTO:', {
@@ -255,7 +265,7 @@ serve(async (req) => {
       maxDocumentTokens: maxTokens,
       usedPercentage: ((estimatedTokens / limits.input) * 100).toFixed(1) + '%',
       usedPercentageOfMax: ((estimatedTokens / maxTokens) * 100).toFixed(1) + '%',
-      willChunk: estimatedTokens > limits.input * 0.8,
+      willChunk: estimatedTokens > limits.input * 0.9, // OTIMIZADO: 90%
       estimatedChunks,
       tier: 'Tier 2',
       tpmLimit: model.includes('gpt-5') ? '1M TPM' : 'Variable',
@@ -265,21 +275,55 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
+    // OTIMIZAÇÃO 4: Validação de TPM estimado (Tier 2 = 1M TPM)
+    if (estimatedChunks > 1) {
+      const avgSecondsPerChunk = 8; // Tempo médio por chunk (conservador)
+      const estimatedProcessingMinutes = (estimatedChunks * avgSecondsPerChunk) / 60;
+      const estimatedTPM = (estimatedTokens + (estimatedChunks * limits.output)) / estimatedProcessingMinutes;
+      
+      console.log('⏱️ ESTIMATIVA DE PROCESSAMENTO:', {
+        chunks: estimatedChunks,
+        estimatedMinutes: estimatedProcessingMinutes.toFixed(2),
+        estimatedTPM: Math.ceil(estimatedTPM).toLocaleString(),
+        tier2Limit: '1,000,000 TPM',
+        withinLimits: estimatedTPM < 1000000
+      });
+
+      // Aviso se exceder 2 minutos
+      if (estimatedProcessingMinutes > 2) {
+        console.warn('⚠️ Documento grande: processamento estimado em', estimatedProcessingMinutes.toFixed(1), 'minutos');
+      }
+      
+      // Erro se exceder 5 minutos (risco de timeout ou rate limit)
+      if (estimatedProcessingMinutes > 5) {
+        console.error('❌ Documento muito grande para processar em tempo razoável');
+        return new Response(JSON.stringify({ 
+          error: `Documento muito grande: estimado ${estimatedProcessingMinutes.toFixed(1)} minutos de processamento (${estimatedChunks} chunks). Considere reduzir o tamanho ou usar um modelo mais rápido.`,
+          estimatedMinutes: estimatedProcessingMinutes,
+          estimatedChunks,
+          model
+        }), {
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // If message is too large, split into chunks and process ALL chunks
     // Comparações podem usar 20% mais do limite
     const comparisonMultiplier = isComparison ? 1.2 : 1.0;
     
-    if (estimatedTokens > limits.input * 0.8 * comparisonMultiplier) { // OTIMIZADO: 80% (era 60%)
+    if (estimatedTokens > limits.input * 0.9 * comparisonMultiplier) { // OTIMIZADO: 90% (era 60%)
       console.log('Message too large, processing in chunks...');
       
-      // OTIMIZADO: Chunks maiores por modelo
+      // OTIMIZADO: Chunks muito maiores para máximo aproveitamento (70%/60% do contexto)
       let maxChunkTokens;
       if (model.includes('gpt-5')) {
-        maxChunkTokens = Math.floor(limits.input * 0.5); // 200k chunks (era 50k)
+        maxChunkTokens = Math.floor(limits.input * 0.7); // 280k chunks (era 200k)
       } else if (model.includes('gpt-4.1')) {
-        maxChunkTokens = Math.floor(limits.input * 0.4); // 400k chunks (novo)
+        maxChunkTokens = Math.floor(limits.input * 0.6); // 600k chunks (era 400k) 🚀
       } else {
-        maxChunkTokens = Math.floor(limits.input * 0.6); // 120k+ chunks (era 70%)
+        maxChunkTokens = Math.floor(limits.input * 0.6); // 120k+ chunks
       }
       
       const chunks = splitIntoChunks(finalMessage, maxChunkTokens);
