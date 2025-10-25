@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,13 +11,165 @@ const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
 };
 
+// Função para dividir texto em chunks inteligentes
+const chunkText = (text: string, maxChunkTokens: number): string[] => {
+  const estimatedTokens = estimateTokens(text);
+  const numChunks = Math.ceil(estimatedTokens / maxChunkTokens);
+  
+  if (numChunks <= 1) return [text];
+  
+  const chunkSize = Math.ceil(text.length / numChunks);
+  const chunks: string[] = [];
+  
+  for (let i = 0; i < numChunks; i++) {
+    const start = i * chunkSize;
+    const end = Math.min(start + chunkSize, text.length);
+    chunks.push(text.slice(start, end));
+  }
+  
+  console.log(`📚 Divided into ${chunks.length} chunks (avg ${Math.ceil(estimateTokens(chunks[0]))} tokens each)`);
+  return chunks;
+};
+
+// Função para processar um chunk individual
+const processChunk = async (
+  chunk: string,
+  chunkIndex: number,
+  totalChunks: number,
+  model: string,
+  openAIApiKey: string,
+  retries = 1
+): Promise<string> => {
+  console.log(`🔍 Processing chunk ${chunkIndex + 1}/${totalChunks}...`);
+  
+  const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
+  
+  const requestBody: any = {
+    model,
+    messages: [
+      {
+        role: "system",
+        content: "Você é um assistente especializado em análise profunda de documentos. Extraia insights detalhados, padrões, dados-chave e conclusões relevantes."
+      },
+      {
+        role: "user",
+        content: `Analise esta parte (${chunkIndex + 1} de ${totalChunks}) do documento completo. Seja extremamente detalhado e profundo:\n\n${chunk}`
+      }
+    ],
+    stream: false,
+  };
+
+  if (!isNewerModel) {
+    requestBody.max_tokens = 4000;
+    requestBody.temperature = 0.7;
+  } else {
+    requestBody.max_completion_tokens = 4000;
+  }
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openAIApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429 && attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏱️ Rate limit hit, waiting ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} processed (${estimateTokens(content)} tokens)`);
+      return content;
+    } catch (error) {
+      if (attempt === retries) throw error;
+      console.log(`⚠️ Retry ${attempt + 1}/${retries} for chunk ${chunkIndex + 1}`);
+    }
+  }
+  
+  throw new Error(`Failed to process chunk ${chunkIndex + 1} after ${retries} retries`);
+};
+
+// Função para consolidar respostas e fazer streaming
+const consolidateResponses = async (
+  chunkResponses: string[],
+  originalMessage: string,
+  model: string,
+  openAIApiKey: string
+): Promise<ReadableStream> => {
+  console.log(`🧠 Consolidating ${chunkResponses.length} chunk responses...`);
+  
+  const consolidationPrompt = `Você analisou um documento longo dividido em ${chunkResponses.length} partes. Aqui estão as análises de cada parte:
+
+${chunkResponses.map((resp, i) => `\n[PARTE ${i + 1}/${chunkResponses.length}]\n${resp}\n`).join('\n---\n')}
+
+Agora, crie uma resposta FINAL consolidada e profunda (12.000-16.000 palavras, aproximadamente 16 páginas) que:
+- Resume os pontos mais importantes de TODAS as partes
+- Identifica padrões e conexões entre as diferentes seções
+- Fornece insights profundos e análise crítica
+- Organiza a informação de forma lógica e bem estruturada
+- Inclui exemplos e citações específicas do documento
+- Mantenha o formato em Markdown com títulos, subtítulos e listas
+
+Pergunta/contexto original do usuário: ${originalMessage}`;
+
+  const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
+  
+  const requestBody: any = {
+    model,
+    messages: [
+      {
+        role: "system",
+        content: "Você é um assistente especializado em criar análises consolidadas extremamente detalhadas e profundas de documentos. Suas respostas devem ser extensas, bem estruturadas e ricas em insights."
+      },
+      {
+        role: "user",
+        content: consolidationPrompt
+      }
+    ],
+    stream: true,
+  };
+
+  if (!isNewerModel) {
+    requestBody.max_tokens = 16384;
+    requestBody.temperature = 0.7;
+  } else {
+    requestBody.max_completion_tokens = 16384;
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${openAIApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Consolidation failed: ${response.status}`);
+  }
+
+  return response.body!;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, model = "gpt-4o-mini", files = [], conversationHistory = [] } = await req.json();
+    const { message, model = "gpt-5-mini-2025-08-07", files = [], conversationHistory = [] } = await req.json();
 
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openAIApiKey) {
@@ -33,11 +184,55 @@ serve(async (req) => {
     const needsMapReduce = estimatedTokens > 100000;
 
     if (needsMapReduce) {
-      console.log("⚠️ Document too large, using Map-Reduce approach");
-      // Implementar Map-Reduce aqui se necessário no futuro
-      // Por enquanto, processar direto com streaming
+      console.log(`🗂️ Large document detected (${estimatedTokens} tokens) - using Map-Reduce approach`);
+      
+      try {
+        // MAP PHASE: Dividir em chunks e processar cada um
+        const chunks = chunkText(message, 30000); // ~30k tokens por chunk
+        console.log(`📚 Processing ${chunks.length} chunks in parallel...`);
+        
+        const chunkPromises = chunks.map((chunk, i) => 
+          processChunk(chunk, i, chunks.length, model, openAIApiKey, 1)
+        );
+        
+        const chunkResponses = await Promise.all(chunkPromises);
+        console.log(`✅ All ${chunks.length} chunks processed successfully`);
+        
+        // REDUCE PHASE: Consolidar respostas e fazer streaming
+        const consolidatedStream = await consolidateResponses(
+          chunkResponses,
+          conversationHistory.length > 0 
+            ? conversationHistory[conversationHistory.length - 1].content 
+            : "Analise este documento",
+          model,
+          openAIApiKey
+        );
+        
+        console.log("🧠 Streaming consolidated response...");
+        
+        return new Response(consolidatedStream, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      } catch (error: any) {
+        console.error("❌ Map-Reduce error:", error);
+        return new Response(
+          JSON.stringify({ error: `Map-Reduce processing failed: ${error.message}` }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     }
 
+    // STREAMING DIRETO para documentos menores
+    console.log("📝 Document size OK - using direct streaming");
+    
     // Preparar mensagens para OpenAI
     const messages: any[] = [
       {

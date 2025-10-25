@@ -40,6 +40,7 @@ import {
   Camera,
   FileSpreadsheet,
   FileCode2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -348,6 +349,7 @@ const BotMessage = React.memo(
     compareWithModel,
     immediateUserMessage,
     scrollToBottom,
+    processingStatus,
   }: {
     message: Message;
     getModelDisplayName: (model?: string) => string;
@@ -361,6 +363,7 @@ const BotMessage = React.memo(
     compareWithModel: (messageId: string, modelToCompare: string, originalUserMessage: string) => Promise<void>;
     immediateUserMessage: Message | null;
     scrollToBottom: () => void;
+    processingStatus?: string;
   }) => {
     const hasAttachments = immediateUserMessage?.files && immediateUserMessage.files.length > 0;
 
@@ -385,6 +388,14 @@ const BotMessage = React.memo(
         {/* Bolha ocupa toda a largura disponível no mobile */}
         <div className="flex-1 min-w-0">
           <div className="inline-block w-full sm:w-auto sm:max-w-[85%] rounded-lg px-4 py-3 bg-muted">
+            {/* Status de processamento Map-Reduce */}
+            {processingStatus && (
+              <div className="mb-3 flex items-center gap-2 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>{processingStatus}</span>
+              </div>
+            )}
+            
             <div className="space-y-3">
               {!!message.reasoning && (
                 <div className="border-b border-border/50 pb-2">
@@ -544,6 +555,7 @@ const Chat: React.FC = () => {
     [messageId: string]: string[];
   }>({});
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<string>("");
 
   const [isPending, startTransition] = useTransition();
 
@@ -1709,6 +1721,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         startTransition(() => {
           setMessages(finalMessages);
           setIsStreamingResponse(false);
+          setProcessingStatus("");
         });
 
         // Scroll final
@@ -1730,6 +1743,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         setMessages(newMessages);
         setIsLoading(false);
         setIsStreamingResponse(false);
+        setProcessingStatus("");
       }
     },
     [
@@ -1762,6 +1776,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
     }
     setIsLoading(false);
     setIsStreamingResponse(false);
+    setProcessingStatus("");
     setMessages((prev) => prev.map((msg) => (msg.isStreaming ? { ...msg, isStreaming: false } : msg)));
   }, []);
 
@@ -2392,6 +2407,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                           compareWithModel={compareWithModel}
                           immediateUserMessage={immediateUserMessage}
                           scrollToBottom={scrollToBottom}
+                          processingStatus={index === messages.length - 1 ? processingStatus : undefined}
                         />
                       ) : (
                         <UserMessage message={message} onCopy={copyWithFormatting} renderFileIcon={renderFileIcon} />
