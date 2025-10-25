@@ -31,7 +31,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = 'claude-3-5-sonnet-20241022', files, conversationHistory = [], contextEnabled = false } = await req.json();
+    const { message, model = 'claude-sonnet-4-5', files, conversationHistory = [], contextEnabled = false } = await req.json();
     
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
@@ -86,35 +86,12 @@ serve(async (req) => {
       }
     }
     
-    // Build messages array with conversation history if context is enabled
-    let messages = [];
-    
-    if (contextEnabled && conversationHistory.length > 0) {
-      // Add conversation history for context (but keep it simple for large files)
-      console.log('Building conversation context with', conversationHistory.length, 'previous messages');
-      
-      // Only add recent context if the main message isn't too large (< 1000 tokens)
-      const mainMessageTokens = estimateTokenCount(finalMessage);
-      console.log('Main message tokens:', mainMessageTokens);
-      
-      if (mainMessageTokens < 1000) {
-        // Add only last message for faster response
-        const recentHistory = conversationHistory.slice(-1);
-        messages = recentHistory.map((historyMsg: any) => ({
-          role: historyMsg.role,
-          content: historyMsg.content
-        }));
-        console.log('Added', messages.length, 'history messages');
-      } else {
-        console.log('⚠️ Message too large (', mainMessageTokens, 'tokens), skipping history for faster response');
-      }
-    }
-    
-    // Add current user message
-    messages.push({
+    // Build messages array - ONLY current message (no history for faster response)
+    console.log('⚠️ Sending ONLY current message (no history) for faster response');
+    const messages = [{
       role: 'user',
       content: finalMessage
-    });
+    }];
     
     // Calculate total token count for the entire conversation
     const totalText = messages.map((msg: any) => msg.content).join('\n');
@@ -161,7 +138,7 @@ serve(async (req) => {
     
     const requestBody = {
       model: model,
-      max_tokens: limits.output,
+      max_tokens: Math.min(4096, limits.output),
       messages: processedMessages
     };
 
