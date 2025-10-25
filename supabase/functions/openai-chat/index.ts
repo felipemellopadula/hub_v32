@@ -268,7 +268,6 @@ INSTRUÇÕES CRÍTICAS:
 
     let processedMessages = messages;
     let responsePrefix = '';
-    let chunkResponses: string[] = [];
 
     // 📊 Diagnostic logging (APRIMORADO)
     // Calcula chunks com base nos novos thresholds (90% e chunks de 70%/60%)
