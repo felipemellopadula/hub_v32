@@ -11,6 +11,13 @@ const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
 };
 
+// ✅ TIER-2-MAXOUT-PLUS: Threshold dinâmico baseado no modelo
+const getMapReduceThreshold = (model: string): number => {
+  if (model.includes('gpt-4o')) return 20000; // ~50 páginas para modelos com contexto maior
+  if (model.includes('gpt-4')) return 15000;  // ~40 páginas (padrão)
+  return 10000; // ~25 páginas para modelos menores
+};
+
 // Função para dividir texto em chunks inteligentes
 const chunkText = (text: string, maxChunkTokens: number): string[] => {
   const estimatedTokens = estimateTokens(text);
@@ -183,9 +190,10 @@ serve(async (req) => {
     console.log(`📊 Token estimation: ${estimatedTokens} tokens for model ${model}`);
     console.log(`🔍 Document size: ${estimatedTokens} tokens (${Math.ceil(estimatedTokens / 400)} páginas aprox.)`);
 
-    // Determinar se precisa de Map-Reduce (documentos grandes > 15k tokens = ~40 páginas)
-    const needsMapReduce = estimatedTokens > 15000; // ✅ TIER 2: Reduzido de 100k para 15k
-    console.log(`📊 Map-Reduce ${needsMapReduce ? 'ATIVADO ✅' : 'DESATIVADO ❌'} (threshold: 15000 tokens)`);
+    // ✅ TIER-2-MAXOUT-PLUS: Threshold dinâmico baseado no modelo
+    const threshold = getMapReduceThreshold(model);
+    const needsMapReduce = estimatedTokens > threshold;
+    console.log(`📊 Map-Reduce ${needsMapReduce ? 'ATIVADO ✅' : 'DESATIVADO ❌'} (threshold: ${threshold} tokens, modelo: ${model})`);
 
     if (needsMapReduce) {
       console.log(`🗂️ Large document detected (${estimatedTokens} tokens) - using Map-Reduce approach`);
@@ -303,13 +311,24 @@ serve(async (req) => {
       stream: true,
     };
 
+    // ✅ TIER-2-MAXOUT-PLUS: Output dinâmico baseado no tamanho do input
+    const maxOutputTokens = Math.min(
+      16384, // Máximo absoluto (Tier 2)
+      Math.max(
+        8000,  // Mínimo garantido
+        16384 - Math.floor(estimatedTokens * 1.2) // Margem de segurança para evitar overflow
+      )
+    );
+    
+    console.log(`💡 Dynamic output: ${maxOutputTokens} tokens (input: ${estimatedTokens} tokens, ratio: ${(maxOutputTokens/estimatedTokens).toFixed(1)}x)`);
+
     // Apenas modelos antigos suportam max_tokens e temperature
     if (!isNewerModel) {
-      requestBody.max_tokens = 8000; // ✅ TIER 2: Aumentado de 4k para 8k (seguro)
+      requestBody.max_tokens = maxOutputTokens;
       requestBody.temperature = 0.7;
     } else {
       // Modelos novos usam max_completion_tokens
-      requestBody.max_completion_tokens = 8000; // ✅ TIER 2: Aumentado de 4k para 8k (seguro)
+      requestBody.max_completion_tokens = maxOutputTokens;
     }
     
     console.log(`📝 Direct streaming output config: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
