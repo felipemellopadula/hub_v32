@@ -60,11 +60,13 @@ const processChunk = async (
   };
 
   if (!isNewerModel) {
-    requestBody.max_tokens = 4000;
+    requestBody.max_tokens = 16384; // ✅ TIER 2: Máximo output para chunks Map-Reduce
     requestBody.temperature = 0.7;
   } else {
-    requestBody.max_completion_tokens = 4000;
+    requestBody.max_completion_tokens = 16384; // ✅ TIER 2: Máximo output para chunks Map-Reduce
   }
+  
+  console.log(`📝 Output config for chunk ${chunkIndex + 1}: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -179,16 +181,18 @@ serve(async (req) => {
     // Estimar tokens da mensagem
     const estimatedTokens = estimateTokens(message);
     console.log(`📊 Token estimation: ${estimatedTokens} tokens for model ${model}`);
+    console.log(`🔍 Document size: ${estimatedTokens} tokens (${Math.ceil(estimatedTokens / 400)} páginas aprox.)`);
 
-    // Determinar se precisa de Map-Reduce (documentos grandes > 100k tokens)
-    const needsMapReduce = estimatedTokens > 100000;
+    // Determinar se precisa de Map-Reduce (documentos grandes > 15k tokens = ~40 páginas)
+    const needsMapReduce = estimatedTokens > 15000; // ✅ TIER 2: Reduzido de 100k para 15k
+    console.log(`📊 Map-Reduce ${needsMapReduce ? 'ATIVADO ✅' : 'DESATIVADO ❌'} (threshold: 15000 tokens)`);
 
     if (needsMapReduce) {
       console.log(`🗂️ Large document detected (${estimatedTokens} tokens) - using Map-Reduce approach`);
       
       try {
         // MAP PHASE: Dividir em chunks e processar cada um
-        const chunks = chunkText(message, 30000); // ~30k tokens por chunk
+        const chunks = chunkText(message, 20000); // ✅ TIER 2: ~20k tokens por chunk (~50 páginas)
         console.log(`📚 Processing ${chunks.length} chunks in parallel...`);
         
         const chunkPromises = chunks.map((chunk, i) => 
@@ -301,12 +305,14 @@ serve(async (req) => {
 
     // Apenas modelos antigos suportam max_tokens e temperature
     if (!isNewerModel) {
-      requestBody.max_tokens = 4000;
+      requestBody.max_tokens = 8000; // ✅ TIER 2: Aumentado de 4k para 8k (seguro)
       requestBody.temperature = 0.7;
     } else {
       // Modelos novos usam max_completion_tokens
-      requestBody.max_completion_tokens = 4000;
+      requestBody.max_completion_tokens = 8000; // ✅ TIER 2: Aumentado de 4k para 8k (seguro)
     }
+    
+    console.log(`📝 Direct streaming output config: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
