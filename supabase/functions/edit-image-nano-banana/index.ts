@@ -67,11 +67,15 @@ serve(async (req) => {
 
     const data = await response.json();
     console.log('✅ Resposta recebida do Nano Banana');
+    console.log('📊 Estrutura da resposta:', JSON.stringify(data, null, 2));
 
     // Extrair imagem gerada
     const editedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!editedImageUrl) {
+      console.error('❌ Choices:', data.choices);
+      console.error('❌ Message:', data.choices?.[0]?.message);
+      console.error('❌ Images:', data.choices?.[0]?.message?.images);
       throw new Error('Nenhuma imagem foi gerada pela API');
     }
 
