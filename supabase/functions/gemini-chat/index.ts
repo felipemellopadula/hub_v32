@@ -23,6 +23,13 @@ function splitIntoChunks(text: string, maxTokens: number): string[] {
   return chunks;
 }
 
+// Dynamic Map-Reduce threshold based on model capabilities
+function getMapReduceThreshold(model: string): number {
+  if (model.includes('gemini-2.0')) return 750000; // ~1.050 páginas
+  if (model.includes('gemini-1.5')) return 600000; // ~840 páginas
+  return 500000; // ~700 páginas para modelos menores
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -87,6 +94,17 @@ serve(async (req) => {
 
     const limits = { input: 1000000, output: 8192 }; // Gemini 2.0 Flash
     const estimatedTokens = estimateTokenCount(finalMessage);
+    const mapReduceThreshold = getMapReduceThreshold(actualModel);
+    
+    console.log('🎯 CAPACIDADES DO MODELO:', {
+      modelo: actualModel,
+      inputMaximo: '1.048.576 tokens (1.400 páginas)',
+      inputAtual: `${estimatedTokens} tokens (${Math.ceil(estimatedTokens/714)} páginas)`,
+      outputMaximo: '8.192 tokens (12 páginas)',
+      thresholdMapReduce: `${mapReduceThreshold} tokens (${Math.ceil(mapReduceThreshold/714)} páginas)`,
+      usaraMapReduce: estimatedTokens > mapReduceThreshold,
+      margemSeguranca: `${((1048576 - estimatedTokens) / 1048576 * 100).toFixed(1)}% disponível`
+    });
     
     console.log('📊 Token estimation:', { 
       estimatedTokens, 
@@ -123,11 +141,11 @@ serve(async (req) => {
     }
 
     // Check absolute maximum limit
-    const MAX_DOCUMENT_TOKENS = 700000; // ~980 páginas (70% de 1M tokens)
+    const MAX_DOCUMENT_TOKENS = 950000; // ~1.330 páginas (90% de 1M tokens)
     if (estimatedTokens > MAX_DOCUMENT_TOKENS) {
       console.error('❌ Documento excede limite:', estimatedTokens, 'tokens');
       return new Response(JSON.stringify({ 
-        error: `Documento muito grande: ${Math.ceil(estimatedTokens/1000)}k tokens. Máximo permitido: 700k tokens (~980 páginas de PDF).`,
+        error: `Documento muito grande: ${Math.ceil(estimatedTokens/1000)}k tokens. Máximo permitido: 950k tokens (~1.330 páginas de PDF).`,
         estimatedTokens,
         maxTokens: MAX_DOCUMENT_TOKENS
       }), {
@@ -141,11 +159,11 @@ serve(async (req) => {
       caracteres: finalMessage.length,
       tokens: estimatedTokens,
       limiteTotal: limits.input, // 1M
-      limiteMaximoSeguro: MAX_DOCUMENT_TOKENS, // 700k
+      limiteMaximoSeguro: MAX_DOCUMENT_TOKENS, // 950k
       percentualUsado: `${((estimatedTokens / limits.input) * 100).toFixed(1)}%`,
       percentualMaximoSeguro: `${((estimatedTokens / MAX_DOCUMENT_TOKENS) * 100).toFixed(1)}%`,
-      usaraMapReduce: estimatedTokens > 600000,
-      chunks: estimatedTokens > 600000 ? Math.ceil(estimatedTokens / 250000) : 1,
+      usaraMapReduce: estimatedTokens > mapReduceThreshold,
+      chunks: estimatedTokens > mapReduceThreshold ? Math.ceil(estimatedTokens / 250000) : 1,
       arquivos: files?.map((f: any) => f.name).join(', ') || 'nenhum',
       tamanhosArquivos: files?.map((f: any) => 
         `${f.name}: ${(new Blob([f.pdfContent || f.wordContent || '']).size / (1024 * 1024)).toFixed(1)}MB`
@@ -157,7 +175,7 @@ serve(async (req) => {
     let chunkResponses: string[] = [];
     
     // If document is large, process in chunks with Map-Reduce
-    if (estimatedTokens > 600000) { // 600k tokens (~840 páginas)
+    if (estimatedTokens > mapReduceThreshold) {
       console.log('📄 Large document detected, processing in chunks...');
       const chunks = splitIntoChunks(finalMessage, Math.floor(limits.input * 0.25)); // 250k tokens per chunk
       
