@@ -1598,107 +1598,122 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           return;
         }
 
-        if (!response.ok || !response.body) {
+        if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
 
-        // Processar SSE stream token-por-token
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let textBuffer = "";
+        // Verificar se é JSON (não-streaming) ou SSE (streaming)
+        const contentType = response.headers.get("content-type") || "";
+        const isJson = contentType.includes("application/json");
+
         let accumulatedContent = "";
-        let streamDone = false;
-        
         const botMessageId = (Date.now() + 1).toString();
-        const placeholderBotMessage: Message = {
-          id: botMessageId,
-          content: "",
-          sender: "bot",
-          timestamp: new Date(),
-          model: selectedModel,
-          isStreaming: true,
-        };
 
-        // Adicionar mensagem do bot vazia
-        startTransition(() => {
-          setMessages((prev) => [...prev, placeholderBotMessage]);
-          setIsStreamingResponse(true);
-          setIsLoading(false);
-        });
+        if (isJson && response.body) {
+          // Resposta JSON simples (gemini-chat, deepseek-chat, etc.)
+          console.log("📦 Processing JSON response (non-streaming)");
+          const responseText = await response.text();
+          const jsonData = JSON.parse(responseText);
+          accumulatedContent = jsonData.response || jsonData.message || jsonData.text || "";
+          console.log("JSON response content length:", accumulatedContent.length);
+        } else if (response.body) {
+          // Processar SSE stream token-por-token
+          console.log("🌊 Processing SSE stream");
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let textBuffer = "";
+          let streamDone = false;
+        
+          const placeholderBotMessage: Message = {
+            id: botMessageId,
+            content: "",
+            sender: "bot",
+            timestamp: new Date(),
+            model: selectedModel,
+            isStreaming: true,
+          };
 
-        // Auto-scroll inicial
-        requestAnimationFrame(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-          }
-        });
+          // Adicionar mensagem do bot vazia
+          startTransition(() => {
+            setMessages((prev) => [...prev, placeholderBotMessage]);
+            setIsStreamingResponse(true);
+            setIsLoading(false);
+          });
 
-        // Processar stream linha por linha
-        while (!streamDone) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          textBuffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex: number;
-          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-            let line = textBuffer.slice(0, newlineIndex);
-            textBuffer = textBuffer.slice(newlineIndex + 1);
-
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (line.startsWith(":") || line.trim() === "") continue;
-            if (!line.startsWith("data: ")) continue;
-
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") {
-              streamDone = true;
-              break;
+          // Auto-scroll inicial
+          requestAnimationFrame(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
             }
+          });
 
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-              
-              if (content) {
-                accumulatedContent += content;
-                
-                // Atualizar mensagem do bot em tempo real
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === botMessageId
-                      ? { ...msg, content: accumulatedContent }
-                      : msg
-                  )
-                );
+          // Processar stream linha por linha
+          while (!streamDone) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            textBuffer += decoder.decode(value, { stream: true });
 
-                // Auto-scroll durante streaming (throttled)
-                if (isNearBottom) {
-                  requestAnimationFrame(() => {
-                    if (messagesEndRef.current) {
-                      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-                    }
-                  });
-                }
+            let newlineIndex: number;
+            while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+              let line = textBuffer.slice(0, newlineIndex);
+              textBuffer = textBuffer.slice(newlineIndex + 1);
+
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (line.startsWith(":") || line.trim() === "") continue;
+              if (!line.startsWith("data: ")) continue;
+
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === "[DONE]") {
+                streamDone = true;
+                break;
               }
-            } catch (e) {
-              // JSON incompleto - recolocar no buffer
-              textBuffer = line + "\n" + textBuffer;
-              break;
+
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+                
+                if (content) {
+                  accumulatedContent += content;
+                  
+                  // Atualizar mensagem do bot em tempo real
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === botMessageId
+                        ? { ...msg, content: accumulatedContent }
+                        : msg
+                    )
+                  );
+
+                  // Auto-scroll durante streaming (throttled)
+                  if (isNearBottom) {
+                    requestAnimationFrame(() => {
+                      if (messagesEndRef.current) {
+                        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+                      }
+                    });
+                  }
+                }
+              } catch (e) {
+                // JSON incompleto - recolocar no buffer
+                textBuffer = line + "\n" + textBuffer;
+                break;
+              }
             }
           }
-        }
 
-        // Flush final do buffer
-        if (textBuffer.trim()) {
-          for (let raw of textBuffer.split("\n")) {
-            if (!raw || raw.startsWith(":") || !raw.startsWith("data: ")) continue;
-            const jsonStr = raw.slice(6).trim();
-            if (jsonStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) accumulatedContent += content;
-            } catch { /* ignore */ }
+          // Flush final do buffer
+          if (textBuffer.trim()) {
+            for (let raw of textBuffer.split("\n")) {
+              if (!raw || raw.startsWith(":") || !raw.startsWith("data: ")) continue;
+              const jsonStr = raw.slice(6).trim();
+              if (jsonStr === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) accumulatedContent += content;
+              } catch { /* ignore */ }
+            }
           }
         }
 
