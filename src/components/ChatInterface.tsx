@@ -495,14 +495,38 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         messagePreview: messageContent.substring(0, 300) + '...'
       });
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: {
-          message: messageContent,
-          model: selectedModel,
-        }
+      // Prepare files for sending if we have PDF/Word content
+      const requestBody: any = {
+        message: messageContent,
+        model: selectedModel,
+      };
+
+      // Add files if we processed any PDF/Word documents
+      if (attachedFiles.length > 0 && (fileName?.endsWith('.pdf') || fileName?.endsWith('.docx') || fileName?.endsWith('.doc'))) {
+        requestBody.files = attachedFiles.map(file => ({
+          name: file.name,
+          type: file.type,
+          pdfContent: fileContent,
+          wordContent: fileContent
+        }));
+      }
+
+      console.log('Sending request to function:', {
+        functionName,
+        model: selectedModel,
+        messageLength: messageContent.length,
+        hasFiles: !!requestBody.files,
+        filesCount: requestBody.files?.length || 0
       });
 
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: requestBody
+      });
+
+      console.log('Function response:', { data, error });
+
       if (error) {
+        console.error('Function error details:', error);
         throw new Error(error.message || 'Erro ao enviar mensagem');
       }
 
@@ -525,10 +549,18 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         fileInputRef.current.value = '';
       }
     } catch (error) {
+      console.error('=== CHAT ERROR ===');
       console.error('Error sending message:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      
       const errorMessage: Message = {
         id: crypto.randomUUID(),
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Verifique se as chaves API estão configuradas corretamente.',
+        content: `Desculpe, ocorreu um erro ao processar sua mensagem: ${error?.message || 'Erro desconhecido'}. Verifique se as chaves API estão configuradas corretamente.`,
         sender: 'bot',
         timestamp: new Date(),
         model: selectedModel,
