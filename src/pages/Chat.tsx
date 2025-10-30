@@ -1582,8 +1582,9 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           }
         }
 
-        // Ativar Hierarchical RAG se documento >= 20 páginas
-        shouldUseHierarchicalRAG = documentPageCount >= 20 && documentContent.length > 0;
+        // Ativar Hierarchical RAG se documento >= 20 páginas (TEMPORARIAMENTE DESATIVADO)
+        shouldUseHierarchicalRAG = false; // Desativado até a edge function ser corrigida
+        // shouldUseHierarchicalRAG = documentPageCount >= 20 && documentContent.length > 0;
 
         let functionName: string;
         if (shouldUseHierarchicalRAG) {
