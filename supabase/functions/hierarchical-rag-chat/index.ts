@@ -16,14 +16,14 @@ const FINAL_OUTPUT_RATIO = 0.93; // Nível 3: 93% (para atingir 70% total)
 const TOKENS_PER_PAGE = 1400;
 const CHARS_PER_PAGE = 3500;
 
-// Configurações de chunking adaptativo
+// Configurações de chunking adaptativo - CHUNKS MAIORES para menos chamadas
 const getChunkConfig = (pages: number) => {
-  if (pages <= 50) return { chunkPages: 12, overlapPages: 2 };
-  if (pages <= 100) return { chunkPages: 15, overlapPages: 3 };
-  if (pages <= 200) return { chunkPages: 20, overlapPages: 4 };
-  if (pages <= 500) return { chunkPages: 25, overlapPages: 5 };
-  if (pages <= 1000) return { chunkPages: 30, overlapPages: 6 };
-  return { chunkPages: 40, overlapPages: 8 };
+  if (pages <= 50) return { chunkPages: 20, overlapPages: 3 };  // Aumentado de 12→20
+  if (pages <= 100) return { chunkPages: 25, overlapPages: 4 }; // Aumentado de 15→25
+  if (pages <= 200) return { chunkPages: 30, overlapPages: 5 }; // Aumentado de 20→30
+  if (pages <= 500) return { chunkPages: 40, overlapPages: 6 }; // Aumentado de 25→40
+  if (pages <= 1000) return { chunkPages: 50, overlapPages: 8 }; // Aumentado de 30→50
+  return { chunkPages: 60, overlapPages: 10 }; // Aumentado de 40→60
 };
 
 // Estimação de tokens
@@ -145,9 +145,9 @@ ${chunk}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4.1-2025-04-14",
+        model: "gpt-4o-mini", // Modelo mais rápido para análise de chunks
         messages: [{ role: "user", content: prompt }],
-        max_completion_tokens: Math.min(64000, targetOutputTokens),
+        max_tokens: Math.min(16000, targetOutputTokens),
         temperature: 0.3,
         stream: false,
       }),
@@ -384,7 +384,7 @@ const processChunksInParallel = async (
   openAIApiKey: string,
   progressCallback?: (status: string) => void
 ): Promise<string[]> => {
-  const batchSize = 3; // Aumentado de 2 para 3 (compromisso velocidade/rate-limit)
+  const batchSize = 5; // Aumentado de 3 para 5 - modelo mais rápido aguenta
   const results: string[] = [];
   
   for (let i = 0; i < chunks.length; i += batchSize) {
@@ -409,11 +409,7 @@ const processChunksInParallel = async (
       }
     });
     
-    // Delay de 2s entre batches para evitar rate limit
-    if (i + batchSize < chunks.length) {
-      console.log('⏳ Aguardando 2s antes do próximo batch...');
-      await delay(2000);
-    }
+    // SEM DELAY - modelo rápido + retry já gerencia rate limit
   }
   
   return results;
@@ -468,11 +464,7 @@ serve(async (req) => {
       const synthesis = await synthesizeSection(sections[i], i, sections.length, openAIApiKey);
       sectionSyntheses.push(synthesis);
       
-      // Delay de 1s entre sínteses para evitar rate limit
-      if (i < sections.length - 1) {
-        console.log('⏳ Aguardando 1s antes da próxima síntese...');
-        await delay(1000);
-      }
+      // SEM DELAY - retry já gerencia rate limit
     }
     
     // NÍVEL 3: Document Consolidation + Streaming

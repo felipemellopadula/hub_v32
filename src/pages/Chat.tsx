@@ -1583,14 +1583,22 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         }
 
         // Ativar Hierarchical RAG se documento >= 20 páginas
-        shouldUseHierarchicalRAG = documentPageCount >= 20 && documentContent.length > 0;
+        shouldUseHierarchicalRAG = documentPageCount >= 20 && documentPageCount <= 40 && documentContent.length > 0;
+
+        if (documentPageCount > 40) {
+          toast({
+            title: "⚠️ Documento muito grande",
+            description: `Documentos com mais de 40 páginas (atual: ${documentPageCount}) podem exceder o tempo limite. Considere dividir em partes ou usar um modelo diferente.`,
+            variant: "destructive",
+          });
+        }
 
         let functionName: string;
         if (shouldUseHierarchicalRAG) {
           functionName = "hierarchical-rag-chat";
           const targetPages = Math.floor(documentPageCount * 0.7);
           console.log(`🔍 Documento grande detectado: ${documentPageCount} páginas → Target: ${targetPages} páginas (70%)`);
-          setProcessingStatus(`🔍 Iniciando análise de ${documentPageCount} páginas (6-8 min estimados)...`);
+          setProcessingStatus(`🔍 Análise de ${documentPageCount} páginas (2-4 min estimados)...`);
         } else {
           functionName = getEdgeFunctionName(internalModel);
         }
