@@ -102,7 +102,7 @@ export class AgenticRAG {
     return syntheses;
   }
 
-  // FASE 4: Consolidação final com streaming
+  // FASE 4: Consolidação final com streaming (hierárquica se necessário)
   async *consolidateAndStream(
     sections: string[],
     userMessage: string,
@@ -110,6 +110,19 @@ export class AgenticRAG {
     totalPages: number
   ): AsyncGenerator<string> {
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // Estimar tokens (aproximadamente 4 chars = 1 token)
+    const totalChars = sections.reduce((sum, s) => sum + s.length, 0);
+    const estimatedTokens = Math.floor(totalChars / 4);
+    
+    console.log(`📊 Tokens estimados: ${estimatedTokens}`);
+    
+    // Se ultrapassar 20K tokens, fazer consolidação progressiva
+    let finalSections = sections;
+    if (estimatedTokens > 20000 && sections.length > 2) {
+      console.log('🔄 Tokens muito altos, fazendo pré-consolidação...');
+      finalSections = await this.preConsolidate(sections);
+    }
     
     const response = await fetch(
       `https://myqgnnqltemfpzdxwybj.supabase.co/functions/v1/rag-consolidate`,
@@ -120,7 +133,7 @@ export class AgenticRAG {
           'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
-          sections,
+          sections: finalSections,
           userMessage,
           fileName,
           totalPages
@@ -128,7 +141,11 @@ export class AgenticRAG {
       }
     );
     
-    if (!response.ok) throw new Error('Consolidation failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro na consolidação:', errorText);
+      throw new Error('Consolidation failed');
+    }
     
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
@@ -153,6 +170,37 @@ export class AgenticRAG {
         }
       }
     }
+  }
+
+  // Pré-consolidar seções em grupos menores
+  private async preConsolidate(sections: string[]): Promise<string[]> {
+    console.log(`🔄 Pré-consolidando ${sections.length} seções em pares...`);
+    
+    const consolidated: string[] = [];
+    
+    // Consolidar em pares
+    for (let i = 0; i < sections.length; i += 2) {
+      if (i + 1 < sections.length) {
+        // Consolidar par
+        const pair = [sections[i], sections[i + 1]];
+        const { data, error } = await supabase.functions.invoke('rag-synthesize-section', {
+          body: {
+            analyses: pair,
+            sectionIndex: Math.floor(i / 2),
+            totalSections: Math.ceil(sections.length / 2)
+          }
+        });
+        
+        if (error) throw new Error(`Pre-consolidation failed: ${error.message}`);
+        consolidated.push(data.synthesis);
+      } else {
+        // Última seção ímpar
+        consolidated.push(sections[i]);
+      }
+    }
+    
+    console.log(`✅ Pré-consolidação completa: ${sections.length} → ${consolidated.length} seções`);
+    return consolidated;
   }
 
   // Helpers

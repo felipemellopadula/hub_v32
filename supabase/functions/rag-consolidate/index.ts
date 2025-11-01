@@ -17,14 +17,33 @@ serve(async (req) => {
 
     console.log(`[RAG Consolidate] Documento: "${fileName}" (${totalPages} páginas, ${sections.length} seções)`);
 
+    // Limitar tamanho das seções para evitar rate limit
+    const totalChars = sections.reduce((sum: number, s: string) => sum + s.length, 0);
+    const estimatedInputTokens = Math.floor(totalChars / 4);
+    
+    console.log(`[RAG Consolidate] Input estimado: ${estimatedInputTokens} tokens`);
+    
+    // Se muito grande, truncar seções proporcionalmente
+    let processedSections = sections;
+    if (estimatedInputTokens > 15000) {
+      const ratio = 15000 / estimatedInputTokens;
+      console.log(`[RAG Consolidate] ⚠️ Truncando seções (ratio: ${ratio.toFixed(2)})`);
+      
+      processedSections = sections.map((s: string) => {
+        const targetLength = Math.floor(s.length * ratio);
+        return s.slice(0, targetLength) + '\n\n[... conteúdo truncado para limitar tokens ...]';
+      });
+    }
+    
     const targetPages = Math.floor(totalPages * 0.7);
+    const maxOutputTokens = Math.min(12000, Math.floor(totalPages * 1400 * 0.7));
     
     const prompt = `Você é um especialista em ANÁLISE DOCUMENTAL PROFUNDA.
 
 📖 DOCUMENTO: "${fileName}" (${totalPages} páginas)
 
 SÍNTESES DAS SEÇÕES:
-${sections.map((s: string, i: number) => `\n[SEÇÃO ${i+1}/${sections.length}]\n${s}`).join('\n\n---\n\n')}
+${processedSections.map((s: string, i: number) => `\n[SEÇÃO ${i+1}/${processedSections.length}]\n${s}`).join('\n\n---\n\n')}
 
 PERGUNTA DO USUÁRIO:
 ${userMessage}
@@ -41,6 +60,8 @@ ${userMessage}
 ⚠️ PRESERVE 70% do conteúdo original
 Use Markdown extensivamente`;
 
+    console.log(`[RAG Consolidate] Tokens output: ${maxOutputTokens}`);
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -50,7 +71,7 @@ Use Markdown extensivamente`;
       body: JSON.stringify({
         model: "gpt-4.1-2025-04-14",
         messages: [{ role: "user", content: prompt }],
-        max_completion_tokens: Math.floor(totalPages * 1400 * 0.7),
+        max_completion_tokens: maxOutputTokens,
         temperature: 0.2,
         stream: true,
       }),
