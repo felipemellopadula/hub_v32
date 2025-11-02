@@ -71,7 +71,14 @@ export class RAGCache {
   
   generateHash(content: string): string {
     // Hash simples baseado em tamanho e primeiros 1000 chars
+    // Usando hash numérico ao invés de btoa para suportar Unicode
     const sample = content.slice(0, 1000);
-    return `${content.length}-${btoa(sample).slice(0, 50)}`;
+    let hash = 0;
+    for (let i = 0; i < sample.length; i++) {
+      const char = sample.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return `${content.length}-${Math.abs(hash).toString(36)}`;
   }
 }
