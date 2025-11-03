@@ -19,14 +19,18 @@ serve(async (req) => {
 
     // Limitar tamanho das seções para evitar rate limit
     const totalChars = sections.reduce((sum: number, s: string) => sum + s.length, 0);
-    const estimatedInputTokens = Math.floor(totalChars / 4);
+    const estimatedInputTokens = Math.floor(totalChars / 3.5); // Mais conservador na estimativa
     
     console.log(`[RAG Consolidate] Input estimado: ${estimatedInputTokens} tokens`);
     
+    // Limites conservadores para ficar bem abaixo de 30K tokens totais
+    const MAX_INPUT_TOKENS = 7000;  // Deixa espaço para prompt template (~2K)
+    const MAX_OUTPUT_TOKENS = 8000;  // Output conservador
+    
     // Se muito grande, truncar seções proporcionalmente
     let processedSections = sections;
-    if (estimatedInputTokens > 15000) {
-      const ratio = 15000 / estimatedInputTokens;
+    if (estimatedInputTokens > MAX_INPUT_TOKENS) {
+      const ratio = MAX_INPUT_TOKENS / estimatedInputTokens;
       console.log(`[RAG Consolidate] ⚠️ Truncando seções (ratio: ${ratio.toFixed(2)})`);
       
       processedSections = sections.map((s: string) => {
@@ -36,7 +40,7 @@ serve(async (req) => {
     }
     
     const targetPages = Math.floor(totalPages * 0.7);
-    const maxOutputTokens = Math.min(12000, Math.floor(totalPages * 1400 * 0.7));
+    const maxOutputTokens = Math.min(MAX_OUTPUT_TOKENS, Math.floor(totalPages * 1000 * 0.5));
     
     const prompt = `Você é um especialista em ANÁLISE DOCUMENTAL PROFUNDA.
 
@@ -72,7 +76,6 @@ Use Markdown extensivamente`;
         model: "gpt-4.1-2025-04-14",
         messages: [{ role: "user", content: prompt }],
         max_completion_tokens: maxOutputTokens,
-        temperature: 0.2,
         stream: true,
       }),
     });
