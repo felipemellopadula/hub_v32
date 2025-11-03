@@ -19,13 +19,13 @@ serve(async (req) => {
 
     // Limitar tamanho das seções para evitar rate limit
     const totalChars = sections.reduce((sum: number, s: string) => sum + s.length, 0);
-    const estimatedInputTokens = Math.floor(totalChars / 3.5); // Mais conservador na estimativa
+    const estimatedInputTokens = Math.floor(totalChars / 3); // Muito conservador
     
     console.log(`[RAG Consolidate] Input estimado: ${estimatedInputTokens} tokens`);
     
-    // Limites conservadores para ficar bem abaixo de 30K tokens totais
-    const MAX_INPUT_TOKENS = 7000;  // Deixa espaço para prompt template (~2K)
-    const MAX_OUTPUT_TOKENS = 8000;  // Output conservador
+    // Limites MUITO conservadores para garantir que fique abaixo de 30K tokens
+    const MAX_INPUT_TOKENS = 4000;  // Input muito reduzido
+    const MAX_OUTPUT_TOKENS = 5000;  // Output reduzido
     
     // Se muito grande, truncar seções proporcionalmente
     let processedSections = sections;

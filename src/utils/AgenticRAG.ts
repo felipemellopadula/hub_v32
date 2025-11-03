@@ -174,7 +174,7 @@ export class AgenticRAG {
     return syntheses;
   }
 
-  // FASE 4: Consolidação hierárquica melhorada
+  // FASE 4: Consolidação hierárquica melhorada com estratégia MUITO mais agressiva
   async *consolidateAndStream(
     sections: string[],
     userMessage: string,
@@ -183,29 +183,25 @@ export class AgenticRAG {
   ): AsyncGenerator<string> {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const totalChars = sections.reduce((sum, s) => sum + s.length, 0);
-    let estimatedTokens = Math.floor(totalChars / 4);
+    console.log(`📊 Tokens estimados: ${this.estimateTokens(sections)}`);
     
-    console.log(`📊 Tokens estimados: ${estimatedTokens}`);
+    // Consolidação hierárquica MUITO mais agressiva
+    let workingSections = sections;
+    let round = 1;
     
-    // Consolidação progressiva em múltiplos níveis
-    let finalSections = sections;
-    let level = 1;
-    
-    while (estimatedTokens > 12000 && finalSections.length > 1) {
-      console.log(`🔄 Nível ${level}: Consolidando ${finalSections.length} seções (${estimatedTokens} tokens)`);
-      finalSections = await this.preConsolidate(finalSections);
+    // Reduzir até ter no máximo 2 seções E menos de 8000 tokens
+    while (workingSections.length > 2 || this.estimateTokens(workingSections) > 8000) {
+      console.log(`🔄 Rodada ${round}: Pré-consolidando ${workingSections.length} seções (${this.estimateTokens(workingSections)} tokens)...`);
+      workingSections = await this.preConsolidate(workingSections);
+      console.log(`✅ Reduzido para ${workingSections.length} seções (${this.estimateTokens(workingSections)} tokens)`);
+      round++;
       
-      const newTotalChars = finalSections.reduce((sum, s) => sum + s.length, 0);
-      const newEstimatedTokens = Math.floor(newTotalChars / 4);
-      
-      if (newEstimatedTokens >= estimatedTokens * 0.9) {
-        console.log('⚠️ Consolidação não reduziu tokens suficiente, prosseguindo');
+      // Limite de segurança para evitar loop infinito
+      if (round > 5) {
+        console.warn('⚠️ Limite de rodadas atingido, truncando seções');
+        workingSections = workingSections.map(s => s.slice(0, 15000));
         break;
       }
-      
-      estimatedTokens = newEstimatedTokens;
-      level++;
     }
     
     const response = await fetch(
@@ -217,7 +213,7 @@ export class AgenticRAG {
           'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
-          sections: finalSections,
+          sections: workingSections,
           userMessage,
           fileName,
           totalPages
@@ -256,32 +252,51 @@ export class AgenticRAG {
     }
   }
 
-  // Pré-consolidar seções
+  // Pré-consolidar seções de forma mais agressiva
   private async preConsolidate(sections: string[]): Promise<string[]> {
-    console.log(`🔄 Pré-consolidando ${sections.length} seções em pares...`);
+    // Agrupar em grupos de 3 se houver muitas seções, senão grupos de 2
+    const groupSize = sections.length > 6 ? 3 : 2;
+    const pairs: string[][] = [];
     
-    const consolidated: string[] = [];
-    
-    for (let i = 0; i < sections.length; i += 2) {
-      if (i + 1 < sections.length) {
-        const pair = [sections[i], sections[i + 1]];
-        const { data, error } = await supabase.functions.invoke('rag-synthesize-section', {
-          body: {
-            analyses: pair,
-            sectionIndex: Math.floor(i / 2),
-            totalSections: Math.ceil(sections.length / 2)
+    for (let i = 0; i < sections.length; i += groupSize) {
+      const group = sections.slice(i, Math.min(i + groupSize, sections.length));
+      pairs.push(group);
+    }
+
+    console.log(`🔄 Consolidando ${sections.length} seções em ${pairs.length} grupos de ~${groupSize}`);
+
+    const consolidated = await Promise.all(
+      pairs.map(async (group, idx) => {
+        if (group.length === 1) return group[0];
+        
+        // Truncar cada seção do grupo se necessário
+        const truncatedGroup = group.map(s => {
+          if (s.length > 20000) {
+            return s.slice(0, 20000) + '\n\n[... conteúdo truncado para limitar tokens ...]';
           }
+          return s;
         });
         
-        if (error) throw new Error(`Pre-consolidation failed: ${error.message}`);
-        consolidated.push(data.synthesis);
-      } else {
-        consolidated.push(sections[i]);
-      }
-    }
-    
-    console.log(`✅ Pré-consolidação: ${sections.length} → ${consolidated.length} seções`);
+        const { data, error } = await supabase.functions.invoke('rag-synthesize-section', {
+          body: {
+            analyses: truncatedGroup,
+            sectionIndex: idx + 1,
+            totalSections: pairs.length
+          }
+        });
+
+        if (error) throw error;
+        return data.synthesis;
+      })
+    );
+
     return consolidated;
+  }
+
+  // Estimar tokens de forma conservadora
+  private estimateTokens(sections: string[]): number {
+    const totalChars = sections.reduce((sum, s) => sum + s.length, 0);
+    return Math.floor(totalChars / 3); // Mais conservador
   }
 
   // Helpers otimizados
