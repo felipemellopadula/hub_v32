@@ -19,13 +19,13 @@ serve(async (req) => {
 
     // VALIDAÇÃO CRÍTICA: Verificar tamanho do input
     const totalChars = sections.reduce((sum: number, s: string) => sum + s.length, 0);
-    const estimatedInputTokens = Math.floor(totalChars / 3.5);
+    const estimatedInputTokens = Math.floor(totalChars / 2.5); // MUITO conservador
     
-    console.log(`[RAG Consolidate] Input estimado: ${estimatedInputTokens} tokens`);
+    console.log(`[RAG Consolidate] Input estimado: ${estimatedInputTokens} tokens (${totalChars} chars)`);
     
-    // HARD LIMIT: Se exceder 20K tokens de input, REJEITAR
-    if (estimatedInputTokens > 20000) {
-      console.error(`❌ INPUT MUITO GRANDE: ${estimatedInputTokens} tokens (limite: 20000)`);
+    // HARD LIMIT: Se exceder 12K tokens de input, REJEITAR
+    if (estimatedInputTokens > 12000) {
+      console.error(`❌ INPUT MUITO GRANDE: ${estimatedInputTokens} tokens (limite: 12000)`);
       return new Response(
         JSON.stringify({ 
           error: `Input muito grande: ${estimatedInputTokens} tokens. O frontend deve reduzir antes de enviar.` 
@@ -34,14 +34,14 @@ serve(async (req) => {
       );
     }
     
-    // Calcular output tokens (conservador)
-    const targetPages = Math.floor(totalPages * 0.6); // 60% do original
-    const maxOutputTokens = Math.min(8000, Math.floor(targetPages * 100)); // ~100 tokens/página
+    // Calcular output tokens (MUITO conservador)
+    const targetPages = Math.min(Math.floor(totalPages * 0.4), 30); // Max 30 páginas
+    const maxOutputTokens = Math.min(5000, Math.floor(targetPages * 80)); // ~80 tokens/página
     
-    const totalEstimatedTokens = estimatedInputTokens + maxOutputTokens + 500; // +500 para prompt
+    const totalEstimatedTokens = estimatedInputTokens + maxOutputTokens + 1000; // +1K para prompt
     console.log(`[RAG Consolidate] Total estimado: ${totalEstimatedTokens} tokens (input: ${estimatedInputTokens}, output: ${maxOutputTokens})`);
     
-    if (totalEstimatedTokens > 29000) {
+    if (totalEstimatedTokens > 25000) {
       console.error(`❌ TOTAL EXCEDE LIMITE: ${totalEstimatedTokens} tokens`);
       return new Response(
         JSON.stringify({ 

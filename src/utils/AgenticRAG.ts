@@ -186,8 +186,8 @@ export class AgenticRAG {
     // NÍVEL 3: Consolidação hierárquica MUITO mais agressiva
     let workingSections = sections;
     let round = 1;
-    const MAX_ROUNDS = 6;
-    const TARGET_TOKENS = 18000; // Alvo de 18K tokens (margem de 12K)
+    const MAX_ROUNDS = 8;
+    const TARGET_TOKENS = 10000; // Alvo de 10K tokens (margem de segurança grande)
     const TARGET_SECTIONS = 2; // Ideal: 2 seções finais
     
     while (round <= MAX_ROUNDS) {
@@ -219,10 +219,11 @@ export class AgenticRAG {
     }
     
     const finalTokens = this.estimateTokens(workingSections);
-    console.log(`📊 [FINAL] ${workingSections.length} seções, ~${finalTokens} tokens → Enviando para consolidação`);
+    const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);
+    console.log(`📊 [FINAL] ${workingSections.length} seções, ~${finalTokens} tokens (${finalChars} chars) → Enviando para consolidação`);
     
-    if (finalTokens > 20000) {
-      throw new Error(`ERRO CRÍTICO: Ainda temos ${finalTokens} tokens! Sistema falhou.`);
+    if (finalTokens > 12000) {
+      throw new Error(`ERRO CRÍTICO: Ainda temos ${finalTokens} tokens (limite: 12000)! Sistema falhou.`);
     }
     
     // Chamar backend para consolidação final
@@ -378,7 +379,7 @@ export class AgenticRAG {
   // Estima tokens de múltiplas seções
   private estimateTokens(sections: string[]): number {
     const totalChars = sections.reduce((sum, s) => sum + s.length, 0);
-    return Math.floor(totalChars / 3); // Estimativa conservadora
+    return Math.floor(totalChars / 2.5); // Estimativa MUITO conservadora
   }
 
   // Helpers otimizados
