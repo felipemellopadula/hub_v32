@@ -23,15 +23,15 @@ serve(async (req) => {
     
     console.log(`[RAG] Total seções: ${totalCharsInSections} chars (~${sectionsTokens} tokens)`);
     
-    // Se as seções já são gigantes, algo deu errado no frontend
-    if (sectionsTokens > 9000) {
-      console.error(`❌ SEÇÕES MUITO GRANDES: ${sectionsTokens} tokens (limite: 9000)`);
+    // Validação: se as seções são gigantes, algo deu errado no frontend
+    if (sectionsTokens > 12000) {
+      console.error(`❌ SEÇÕES MUITO GRANDES: ${sectionsTokens} tokens (limite: 12000)`);
       console.error(`❌ Tamanho individual das seções:`);
       sections.forEach((s: string, i: number) => {
         console.error(`   Seção ${i+1}: ${s.length} chars (~${Math.floor(s.length/2.5)} tokens)`);
       });
       return new Response(
-        JSON.stringify({ error: `Seções não comprimidas: ${sectionsTokens} tokens. Bug no frontend.` }),
+        JSON.stringify({ error: `Seções muito grandes: ${sectionsTokens} tokens. Limite: 12K tokens.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -54,9 +54,9 @@ Task: Análise ~${targetPages}p com visão geral, análise, insights, dados, res
     const promptTokens = Math.floor(promptTemplate.length / 2.5);
     console.log(`[RAG Consolidate] Prompt total: ${promptTokens} tokens (${promptTemplate.length} chars)`);
 
-    // HARD LIMIT baseado no prompt REAL (reduzido após compressão obrigatória)
-    if (promptTokens > 10000) {
-      console.error(`❌ PROMPT MUITO GRANDE: ${promptTokens} tokens (limite: 10000)`);
+    // HARD LIMIT baseado no prompt REAL
+    if (promptTokens > 13000) {
+      console.error(`❌ PROMPT MUITO GRANDE: ${promptTokens} tokens (limite: 13000)`);
       return new Response(
         JSON.stringify({ 
           error: `Prompt muito grande: ${promptTokens} tokens. Reduza o conteúdo antes de enviar.` 
@@ -68,7 +68,7 @@ Task: Análise ~${targetPages}p com visão geral, análise, insights, dados, res
     const totalEstimatedTokens = promptTokens + maxOutputTokens;
     console.log(`[RAG Consolidate] Total estimado: ${totalEstimatedTokens} tokens (prompt: ${promptTokens}, output: ${maxOutputTokens})`);
 
-    if (totalEstimatedTokens > 15000) {
+    if (totalEstimatedTokens > 18000) {
       console.error(`❌ TOTAL EXCEDE LIMITE: ${totalEstimatedTokens} tokens`);
       return new Response(
         JSON.stringify({ 

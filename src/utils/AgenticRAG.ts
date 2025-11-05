@@ -231,67 +231,23 @@ export class AgenticRAG {
     
     console.log(`✅ [FILTRAGEM] ${relevantSections.length} seções relevantes selecionadas`);
     
-    // ✨ NOVA ETAPA 2.5: COMPRESSÃO OBRIGATÓRIA E AGRESSIVA
-    console.log(`🗜️ [COMPRESSÃO OBRIGATÓRIA] Comprimindo ${relevantSections.length} seções...`);
+    // Seções já vêm em tamanho gerenciável de rag-logical-sections (1.5K-3K chars)
+    let workingSections = relevantSections;
     
-    const compressedSections = await Promise.all(
-      relevantSections.map(async (section, idx) => {
-        const targetSize = 2500; // FIXO: max 2500 chars por seção
-        const originalSize = section.length;
-        console.log(`  📉 Seção ${idx + 1}: ${originalSize} → ${targetSize} chars`);
-        
-        try {
-          const { data, error } = await supabase.functions.invoke('rag-compress-section', {
-            body: { 
-              section,
-              targetSize,
-              aggressive: true
-            }
-          });
-          
-          // Verificação CRÍTICA: garantir que temos dados válidos
-          if (error || !data || !data.compressed) {
-            console.error(`❌ Erro ao comprimir seção ${idx + 1}:`, error || 'data.compressed vazio');
-            // Fallback: truncar agressivamente
-            const truncated = section.slice(0, 2000);
-            console.log(`  ⚠️ Fallback truncado: ${originalSize} → ${truncated.length} chars`);
-            return truncated + '\n\n[... conteúdo truncado devido a erro de compressão ...]';
-          }
-          
-          const compressedSize = data.compressed.length;
-          console.log(`  ✅ Seção ${idx + 1} comprimida: ${originalSize} → ${compressedSize} chars (${((compressedSize/originalSize)*100).toFixed(1)}%)`);
-          
-          return data.compressed;
-        } catch (err) {
-          console.error(`❌ Exceção ao comprimir seção ${idx + 1}:`, err);
-          const truncated = section.slice(0, 2000);
-          return truncated + '\n\n[... conteúdo truncado devido a exceção ...]';
-        }
-      })
-    );
-    
-    const totalChars = compressedSections.reduce((sum, s) => sum + s.length, 0);
-    const estimatedTokens = Math.floor(totalChars / 3.5);
-    
-    console.log(`✅ [COMPRESSÃO] ${relevantSections.length} seções: ${totalChars} chars (~${estimatedTokens} tokens)`);
-    
-    // VALIDAÇÃO HARD
-    if (estimatedTokens > 8000) {
-      throw new Error(`ERRO: Mesmo com compressão, ainda temos ${estimatedTokens} tokens (limite: 8000)`);
+    // Limitar quantidade máxima de seções
+    if (workingSections.length > 10) {
+      console.log(`⚠️ Limitando de ${workingSections.length} para 10 seções mais importantes`);
+      workingSections = workingSections.slice(0, 10);
     }
     
-    let workingSections = compressedSections;
-    
-    const finalTokens = this.estimateTokens(workingSections);
     const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);
-    console.log(`📊 [PRÉ-ENVIO] ${workingSections.length} seções, ${finalChars} chars (~${finalTokens} tokens com /3.5)`);
-    
-    // VALIDAÇÃO CRÍTICA: usar mesma fórmula que backend (/2.5)
     const backendEstimate = Math.floor(finalChars / 2.5);
-    console.log(`⚠️ [BACKEND ESTIMATE] Com cálculo do backend (/2.5): ~${backendEstimate} tokens`);
     
-    if (backendEstimate > 9000) {
-      throw new Error(`LIMITE EXCEDIDO: ${backendEstimate} tokens (limite: 9000). Reduza o documento.`);
+    console.log(`📊 [PRÉ-ENVIO] ${workingSections.length} seções, ${finalChars} chars (~${backendEstimate} tokens)`);
+    
+    // HARD LIMIT: Max 10 seções × 3K chars = 30K chars = 12K tokens
+    if (backendEstimate > 12000) {
+      throw new Error(`Documento muito grande: ${backendEstimate} tokens. Limite: 12K tokens.`);
     }
     
     // Log detalhado

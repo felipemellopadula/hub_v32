@@ -37,7 +37,7 @@ ${synthesizedContent}
 Cada seção deve:
 1. Tratar de um tópico/tema específico
 2. Ser independente e compreensível sozinha
-3. Ter entre 3.000 e 8.000 caracteres
+3. Ter entre 1.500 e 3.000 caracteres (mais fácil de comprimir depois)
 4. Incluir TODOS os detalhes importantes daquele tópico
 
 FORMATO DE RESPOSTA (JSON):
@@ -58,7 +58,7 @@ FORMATO DE RESPOSTA (JSON):
 
 ⚠️ Retorne APENAS o JSON, sem texto adicional.`
         }],
-        max_tokens: Math.min(16000, Math.floor(synthesizedContent.length / 2)),
+        max_tokens: Math.min(12000, Math.floor(synthesizedContent.length / 3)),
         response_format: { type: "json_object" }
       }),
     });
