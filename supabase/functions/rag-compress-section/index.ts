@@ -12,10 +12,39 @@ serve(async (req) => {
   }
 
   try {
-    const { section } = await req.json();
+    const { section, targetSize, aggressive } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
+    
+    const finalTargetSize = targetSize || Math.floor(section.length * 0.4);
+    const mode = aggressive ? "EXTREMAMENTE AGRESSIVA" : "INTELIGENTE";
 
-    console.log(`[RAG Compress] Comprimindo seção de ${section.length} caracteres`);
+    console.log(`[RAG Compress] Compressão ${mode}: ${section.length} → ${finalTargetSize} caracteres`);
+
+    const prompt = aggressive 
+      ? `Você é um especialista em COMPRESSÃO EXTREMAMENTE AGRESSIVA de conteúdo.
+
+SEÇÃO PARA COMPRIMIR:
+${section}
+
+TAREFA: Reduza para EXATAMENTE ${finalTargetSize} caracteres, mantendo:
+- APENAS os 3-5 pontos mais importantes
+- Dados numéricos críticos
+- Conclusão principal
+- REMOVA: exemplos, detalhes secundários, repetições
+
+Use Markdown. Seja EXTREMAMENTE conciso.`
+      : `Você é um especialista em COMPRESSÃO INTELIGENTE de conteúdo.
+
+SEÇÃO PARA COMPRIMIR:
+${section}
+
+TAREFA: Reduza esta seção para ~${finalTargetSize} caracteres, mantendo:
+1. ✅ Todos os tópicos principais
+2. ✅ Dados numéricos críticos
+3. ✅ Conclusões e insights chave
+4. ❌ Remova repetições e detalhes secundários
+
+Use Markdown. Seja conciso mas completo.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -27,20 +56,9 @@ serve(async (req) => {
         model: "gpt-4o-mini",
         messages: [{
           role: "user",
-          content: `Você é um especialista em COMPRESSÃO INTELIGENTE de conteúdo.
-
-SEÇÃO PARA COMPRIMIR:
-${section}
-
-TAREFA: Reduza esta seção para 40% do tamanho original (~${Math.floor(section.length * 0.4)} caracteres), mantendo:
-1. ✅ Todos os tópicos principais
-2. ✅ Dados numéricos críticos
-3. ✅ Conclusões e insights chave
-4. ❌ Remova repetições e detalhes secundários
-
-Use Markdown. Seja conciso mas completo.`
+          content: prompt
         }],
-        max_tokens: Math.min(8000, Math.floor(section.length * 0.4 / 3))
+        max_tokens: Math.min(8000, Math.floor(finalTargetSize / 3))
       }),
     });
 

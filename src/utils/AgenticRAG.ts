@@ -229,29 +229,45 @@ export class AgenticRAG {
     // NOVA ETAPA 2: Filtrar apenas seções relevantes
     const relevantSections = await this.filterRelevantSections(logicalSections, userMessage);
     
-    // VALIDAÇÃO: Verificar tamanho após filtragem
-    const totalChars = relevantSections.reduce((sum, s) => sum + s.length, 0);
-    const estimatedTokens = Math.floor(totalChars / 2.5);
+    console.log(`✅ [FILTRAGEM] ${relevantSections.length} seções relevantes selecionadas`);
     
-    console.log(`📊 [PÓS-FILTRAGEM] ${relevantSections.length} seções, ~${estimatedTokens} tokens (${totalChars} chars)`);
+    // ✨ NOVA ETAPA 2.5: COMPRESSÃO OBRIGATÓRIA E AGRESSIVA
+    console.log(`🗜️ [COMPRESSÃO OBRIGATÓRIA] Comprimindo ${relevantSections.length} seções...`);
     
-    // Se AINDA estiver grande demais, aplicar compressão adicional
-    let workingSections = relevantSections;
-    if (estimatedTokens > 10000) {
-      console.log(`⚠️ Ainda muito grande (${estimatedTokens} tokens), aplicando compressão...`);
-      
-      workingSections = await Promise.all(
-        relevantSections.map(async (section) => {
-          if (section.length > 15000) {
-            return await this.compressSection(section);
+    const compressedSections = await Promise.all(
+      relevantSections.map(async (section, idx) => {
+        const targetSize = 2500; // FIXO: max 2500 chars por seção
+        console.log(`  📉 Seção ${idx + 1}: ${section.length} → ${targetSize} chars`);
+        
+        const { data, error } = await supabase.functions.invoke('rag-compress-section', {
+          body: { 
+            section,
+            targetSize,
+            aggressive: true
           }
-          return section;
-        })
-      );
-      
-      const newTokens = this.estimateTokens(workingSections);
-      console.log(`📉 Após compressão: ${estimatedTokens} → ${newTokens} tokens`);
+        });
+        
+        if (error) {
+          console.error(`❌ Erro ao comprimir seção ${idx + 1}:`, error);
+          // Fallback: truncar agressivamente
+          return section.slice(0, 2000) + '\n\n[... truncado devido a erro ...]';
+        }
+        
+        return data.compressed;
+      })
+    );
+    
+    const totalChars = compressedSections.reduce((sum, s) => sum + s.length, 0);
+    const estimatedTokens = Math.floor(totalChars / 3.5);
+    
+    console.log(`✅ [COMPRESSÃO] ${relevantSections.length} seções: ${totalChars} chars (~${estimatedTokens} tokens)`);
+    
+    // VALIDAÇÃO HARD
+    if (estimatedTokens > 8000) {
+      throw new Error(`ERRO: Mesmo com compressão, ainda temos ${estimatedTokens} tokens (limite: 8000)`);
     }
+    
+    let workingSections = compressedSections;
     
     const finalTokens = this.estimateTokens(workingSections);
     const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);

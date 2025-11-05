@@ -47,9 +47,9 @@ ${userMessage}
     const promptTokens = Math.floor(promptTemplate.length / 2.5);
     console.log(`[RAG Consolidate] Prompt total: ${promptTokens} tokens (${promptTemplate.length} chars)`);
 
-    // HARD LIMIT baseado no prompt REAL
-    if (promptTokens > 15000) {
-      console.error(`❌ PROMPT MUITO GRANDE: ${promptTokens} tokens (limite: 15000)`);
+    // HARD LIMIT baseado no prompt REAL (reduzido após compressão obrigatória)
+    if (promptTokens > 10000) {
+      console.error(`❌ PROMPT MUITO GRANDE: ${promptTokens} tokens (limite: 10000)`);
       return new Response(
         JSON.stringify({ 
           error: `Prompt muito grande: ${promptTokens} tokens. Reduza o conteúdo antes de enviar.` 
@@ -61,7 +61,7 @@ ${userMessage}
     const totalEstimatedTokens = promptTokens + maxOutputTokens;
     console.log(`[RAG Consolidate] Total estimado: ${totalEstimatedTokens} tokens (prompt: ${promptTokens}, output: ${maxOutputTokens})`);
 
-    if (totalEstimatedTokens > 20000) {
+    if (totalEstimatedTokens > 15000) {
       console.error(`❌ TOTAL EXCEDE LIMITE: ${totalEstimatedTokens} tokens`);
       return new Response(
         JSON.stringify({ 

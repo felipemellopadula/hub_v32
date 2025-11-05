@@ -1679,6 +1679,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             setProcessingStatus("🔍 Fase 3.6: Filtrando seções relevantes...");
             
             console.log(`🔍 [FASE 3.6] Filtrando seções relevantes para o objetivo...`);
+            console.log(`🗜️ [FASE 3.7] Comprimindo seções filtradas agressivamente...`);
             
             // FASE 4: Consolidação final com streaming
             setProcessingStatus('🎯 Gerando resposta final...');
