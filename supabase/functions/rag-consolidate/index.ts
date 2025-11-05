@@ -15,18 +15,26 @@ serve(async (req) => {
     const { sections, userMessage, fileName, totalPages } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
-    console.log(`[RAG Consolidate] Documento: "${fileName}" (${totalPages} páginas, ${sections.length} seções)`);
+    console.log(`[RAG Consolidate] Recebido: "${fileName}" (${totalPages}p, ${sections.length} seções)`);
     
-    // Log detalhado de cada seção recebida
-    sections.forEach((section: string, idx: number) => {
-      const sectionChars = section.length;
-      const sectionTokens = Math.floor(sectionChars / 2.5);
-      console.log(`  📄 Seção ${idx + 1}: ${sectionChars} chars (~${sectionTokens} tokens)`);
-      console.log(`  📝 Preview: ${section.substring(0, 80)}...`);
-    });
-    
+    // VALIDAÇÃO CRÍTICA: Verificar tamanho REAL das seções recebidas
     const totalCharsInSections = sections.reduce((sum: number, s: string) => sum + s.length, 0);
-    console.log(`[RAG Consolidate] Total chars nas seções: ${totalCharsInSections} (~${Math.floor(totalCharsInSections / 2.5)} tokens)`);
+    const sectionsTokens = Math.floor(totalCharsInSections / 2.5);
+    
+    console.log(`[RAG] Total seções: ${totalCharsInSections} chars (~${sectionsTokens} tokens)`);
+    
+    // Se as seções já são gigantes, algo deu errado no frontend
+    if (sectionsTokens > 9000) {
+      console.error(`❌ SEÇÕES MUITO GRANDES: ${sectionsTokens} tokens (limite: 9000)`);
+      console.error(`❌ Tamanho individual das seções:`);
+      sections.forEach((s: string, i: number) => {
+        console.error(`   Seção ${i+1}: ${s.length} chars (~${Math.floor(s.length/2.5)} tokens)`);
+      });
+      return new Response(
+        JSON.stringify({ error: `Seções não comprimidas: ${sectionsTokens} tokens. Bug no frontend.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
 
     // Calcular output tokens primeiro

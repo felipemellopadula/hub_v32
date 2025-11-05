@@ -284,18 +284,21 @@ export class AgenticRAG {
     
     const finalTokens = this.estimateTokens(workingSections);
     const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);
-    console.log(`📊 [FINAL] ${workingSections.length} seções, ~${finalTokens} tokens (${finalChars} chars) → Enviando para consolidação`);
+    console.log(`📊 [PRÉ-ENVIO] ${workingSections.length} seções, ${finalChars} chars (~${finalTokens} tokens com /3.5)`);
     
-    // Log detalhado de cada seção antes do envio
-    workingSections.forEach((section, idx) => {
-      const sectionTokens = Math.floor(section.length / 3.5);
-      console.log(`  📄 Seção ${idx + 1}: ${section.length} chars (~${sectionTokens} tokens)`);
-      console.log(`  📝 Preview: ${section.substring(0, 100)}...`);
-    });
+    // VALIDAÇÃO CRÍTICA: usar mesma fórmula que backend (/2.5)
+    const backendEstimate = Math.floor(finalChars / 2.5);
+    console.log(`⚠️ [BACKEND ESTIMATE] Com cálculo do backend (/2.5): ~${backendEstimate} tokens`);
     
-    if (finalTokens > 12000) {
-      throw new Error(`ERRO CRÍTICO: Após filtragem ainda temos ${finalTokens} tokens (limite: 12000)! Sistema falhou.`);
+    if (backendEstimate > 9000) {
+      throw new Error(`LIMITE EXCEDIDO: ${backendEstimate} tokens (limite: 9000). Reduza o documento.`);
     }
+    
+    // Log detalhado
+    workingSections.forEach((section, idx) => {
+      console.log(`  📄 Seção ${idx + 1}: ${section.length} chars`);
+      console.log(`  📝 "${section.substring(0, 80)}..."`);
+    });
     
     // Chamar backend para consolidação final
     const { data: { session } } = await supabase.auth.getSession();
