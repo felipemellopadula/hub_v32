@@ -34,26 +34,14 @@ serve(async (req) => {
     const maxOutputTokens = Math.min(5000, Math.floor(targetPages * 80));
     
     // CALCULAR O PROMPT COMPLETO PRIMEIRO
-    const promptTemplate = `Você é um especialista em ANÁLISE DOCUMENTAL PROFUNDA.
+    const promptTemplate = `Análise documental: "${fileName}" (${totalPages} págs)
 
-📖 DOCUMENTO: "${fileName}" (${totalPages} páginas)
+SEÇÕES:
+${sections.map((s: string, i: number) => `[${i+1}] ${s}`).join('\n\n')}
 
-SÍNTESES PRÉ-CONSOLIDADAS:
-${sections.map((s: string, i: number) => `\n[SEÇÃO ${i+1}/${sections.length}]\n${s}`).join('\n\n---\n\n')}
+PERGUNTA: ${userMessage}
 
-PERGUNTA DO USUÁRIO:
-${userMessage}
-
-🎯 MISSÃO: Crie análise final de ~${targetPages} páginas com:
-
-1. 🌍 VISÃO GERAL EXECUTIVA
-2. 📋 ANÁLISE COMPLETA (todos os tópicos)
-3. 🔬 INSIGHTS CRÍTICOS
-4. 📊 DADOS ESTRUTURADOS
-5. 🎯 RESPOSTA DIRETA à pergunta
-6. 💡 CONCLUSÕES e próximos passos
-
-⚠️ Preserve 70% do conteúdo fornecido. Use Markdown.`;
+TAREFA: Análise de ~${targetPages} páginas com visão geral, análise completa, insights, dados estruturados, resposta direta e conclusões. Use Markdown.`;
 
     // VALIDAÇÃO com o prompt REAL
     const promptTokens = Math.floor(promptTemplate.length / 2.5);
