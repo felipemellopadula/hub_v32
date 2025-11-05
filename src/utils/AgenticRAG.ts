@@ -237,23 +237,36 @@ export class AgenticRAG {
     const compressedSections = await Promise.all(
       relevantSections.map(async (section, idx) => {
         const targetSize = 2500; // FIXO: max 2500 chars por seção
-        console.log(`  📉 Seção ${idx + 1}: ${section.length} → ${targetSize} chars`);
+        const originalSize = section.length;
+        console.log(`  📉 Seção ${idx + 1}: ${originalSize} → ${targetSize} chars`);
         
-        const { data, error } = await supabase.functions.invoke('rag-compress-section', {
-          body: { 
-            section,
-            targetSize,
-            aggressive: true
+        try {
+          const { data, error } = await supabase.functions.invoke('rag-compress-section', {
+            body: { 
+              section,
+              targetSize,
+              aggressive: true
+            }
+          });
+          
+          // Verificação CRÍTICA: garantir que temos dados válidos
+          if (error || !data || !data.compressed) {
+            console.error(`❌ Erro ao comprimir seção ${idx + 1}:`, error || 'data.compressed vazio');
+            // Fallback: truncar agressivamente
+            const truncated = section.slice(0, 2000);
+            console.log(`  ⚠️ Fallback truncado: ${originalSize} → ${truncated.length} chars`);
+            return truncated + '\n\n[... conteúdo truncado devido a erro de compressão ...]';
           }
-        });
-        
-        if (error) {
-          console.error(`❌ Erro ao comprimir seção ${idx + 1}:`, error);
-          // Fallback: truncar agressivamente
-          return section.slice(0, 2000) + '\n\n[... truncado devido a erro ...]';
+          
+          const compressedSize = data.compressed.length;
+          console.log(`  ✅ Seção ${idx + 1} comprimida: ${originalSize} → ${compressedSize} chars (${((compressedSize/originalSize)*100).toFixed(1)}%)`);
+          
+          return data.compressed;
+        } catch (err) {
+          console.error(`❌ Exceção ao comprimir seção ${idx + 1}:`, err);
+          const truncated = section.slice(0, 2000);
+          return truncated + '\n\n[... conteúdo truncado devido a exceção ...]';
         }
-        
-        return data.compressed;
       })
     );
     
@@ -272,6 +285,13 @@ export class AgenticRAG {
     const finalTokens = this.estimateTokens(workingSections);
     const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);
     console.log(`📊 [FINAL] ${workingSections.length} seções, ~${finalTokens} tokens (${finalChars} chars) → Enviando para consolidação`);
+    
+    // Log detalhado de cada seção antes do envio
+    workingSections.forEach((section, idx) => {
+      const sectionTokens = Math.floor(section.length / 3.5);
+      console.log(`  📄 Seção ${idx + 1}: ${section.length} chars (~${sectionTokens} tokens)`);
+      console.log(`  📝 Preview: ${section.substring(0, 100)}...`);
+    });
     
     if (finalTokens > 12000) {
       throw new Error(`ERRO CRÍTICO: Após filtragem ainda temos ${finalTokens} tokens (limite: 12000)! Sistema falhou.`);

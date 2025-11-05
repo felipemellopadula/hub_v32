@@ -16,6 +16,18 @@ serve(async (req) => {
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
     console.log(`[RAG Consolidate] Documento: "${fileName}" (${totalPages} páginas, ${sections.length} seções)`);
+    
+    // Log detalhado de cada seção recebida
+    sections.forEach((section: string, idx: number) => {
+      const sectionChars = section.length;
+      const sectionTokens = Math.floor(sectionChars / 2.5);
+      console.log(`  📄 Seção ${idx + 1}: ${sectionChars} chars (~${sectionTokens} tokens)`);
+      console.log(`  📝 Preview: ${section.substring(0, 80)}...`);
+    });
+    
+    const totalCharsInSections = sections.reduce((sum: number, s: string) => sum + s.length, 0);
+    console.log(`[RAG Consolidate] Total chars nas seções: ${totalCharsInSections} (~${Math.floor(totalCharsInSections / 2.5)} tokens)`);
+
 
     // Calcular output tokens primeiro
     const targetPages = Math.min(Math.floor(totalPages * 0.4), 30);
