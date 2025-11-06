@@ -58,6 +58,12 @@ serve(async (req) => {
     const targetPages = Math.min(Math.floor(totalPages * 0.4), 30);
     const maxOutputTokens = Math.min(5000, Math.floor(targetPages * 80));
     
+    // ADICIONAR LOGGING ANTES DO TEMPLATE para identificar a variável gigante
+    console.log(`[PRE-TEMPLATE] fileName length: ${fileName.length}`);
+    console.log(`[PRE-TEMPLATE] userMessage length: ${userMessage.length}`);
+    console.log(`[PRE-TEMPLATE] totalPages: ${totalPages}`);
+    console.log(`[PRE-TEMPLATE] targetPages: ${targetPages}`);
+    
     // CALCULAR O PROMPT COMPLETO PRIMEIRO (mais defensivo)
     const sectionsText = sections.map((s: string, i: number) => {
       const content = String(s); // Forçar string
