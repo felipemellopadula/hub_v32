@@ -12,10 +12,27 @@ serve(async (req) => {
   }
 
   try {
-    const { sections, userMessage, fileName, totalPages } = await req.json();
+    const { sections: rawSections, userMessage, fileName, totalPages } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
+    // SANITIZAR: Garantir que sections são strings puras
+    const sections = rawSections.map((s: any) => {
+      if (typeof s === 'string') return s;
+      if (typeof s === 'object' && s.content) return String(s.content);
+      return String(s);
+    });
+
     console.log(`[RAG Consolidate] Recebido: "${fileName}" (${totalPages}p, ${sections.length} seções)`);
+    
+    // DEBUG: Ver estrutura REAL das seções
+    console.log(`[DEBUG] Tipo de sections[0]:`, typeof sections[0]);
+    console.log(`[DEBUG] sections[0] preview:`, JSON.stringify(sections[0]).substring(0, 500));
+    console.log(`[DEBUG] Todas as seções:`, sections.map((s: any, i: number) => ({
+      index: i,
+      type: typeof s,
+      length: typeof s === 'string' ? s.length : JSON.stringify(s).length,
+      preview: typeof s === 'string' ? s.substring(0, 100) : JSON.stringify(s).substring(0, 100)
+    })));
     
     // VALIDAÇÃO CRÍTICA: Verificar tamanho REAL das seções recebidas
     const totalCharsInSections = sections.reduce((sum: number, s: string) => sum + s.length, 0);
@@ -41,10 +58,24 @@ serve(async (req) => {
     const targetPages = Math.min(Math.floor(totalPages * 0.4), 30);
     const maxOutputTokens = Math.min(5000, Math.floor(targetPages * 80));
     
-    // CALCULAR O PROMPT COMPLETO PRIMEIRO
+    // CALCULAR O PROMPT COMPLETO PRIMEIRO (mais defensivo)
+    const sectionsText = sections.map((s: string, i: number) => {
+      const content = String(s); // Forçar string
+      return `[${i+1}] ${content}`;
+    }).join('\n\n');
+
+    // Validar antes de usar
+    const sectionsTextLength = sectionsText.length;
+    console.log(`[RAG] sectionsText gerado: ${sectionsTextLength} chars`);
+
+    if (sectionsTextLength > 100000) {
+      console.error(`❌ SECTIONS TEXT GIGANTE: ${sectionsTextLength} chars`);
+      throw new Error('Bug detectado: sectionsText muito grande');
+    }
+
     const promptTemplate = `Doc: "${fileName}" (${totalPages}p)
 
-${sections.map((s: string, i: number) => `[${i+1}] ${s}`).join('\n\n')}
+${sectionsText}
 
 Q: ${userMessage}
 

@@ -206,7 +206,11 @@ export class AgenticRAG {
     
     if (error) throw new Error(`Filtering failed: ${error.message}`);
     
-    const filteredSections = data.sections.map((s: any) => s.content);
+    const filteredSections = data.sections.map((s: any) => {
+      const content = typeof s === 'string' ? s : s.content;
+      // Garantir que é string pura, sem objetos aninhados
+      return String(content);
+    });
     
     console.log(`✅ [FILTRAGEM] ${sections.length} → ${filteredSections.length} seções relevantes`);
     console.log(`💡 [RACIOCÍNIO] ${data.reasoning}`);
@@ -244,6 +248,13 @@ export class AgenticRAG {
     const backendEstimate = Math.floor(finalChars / 2.5);
     
     console.log(`📊 [PRÉ-ENVIO] ${workingSections.length} seções, ${finalChars} chars (~${backendEstimate} tokens)`);
+    console.log(`[DEBUG] Tipos das seções:`, workingSections.map((s, i) => ({
+      index: i,
+      type: typeof s,
+      isString: typeof s === 'string',
+      constructor: s?.constructor?.name,
+      length: s.length
+    })));
     
     // HARD LIMIT: Max 10 seções × 3K chars = 30K chars = 12K tokens
     if (backendEstimate > 12000) {
