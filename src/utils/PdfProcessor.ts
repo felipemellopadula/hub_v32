@@ -18,6 +18,21 @@ const loadTesseract = async () => {
   return tesseractLib;
 };
 
+export interface LayoutElement {
+  type: 'header' | 'paragraph' | 'table' | 'list' | 'figure';
+  level?: number;
+  content: string;
+  position: string;
+}
+
+export interface ExtractedTable {
+  id: string;
+  headers: string[];
+  rows: string[][];
+  caption?: string;
+  position: string;
+}
+
 export interface PdfProcessResult {
   success: boolean;
   content?: string;
@@ -25,6 +40,8 @@ export interface PdfProcessResult {
   pageCount?: number;
   isPasswordProtected?: boolean;
   fileSize?: number;
+  layout?: LayoutElement[];
+  tables?: ExtractedTable[];
 }
 
 export class PdfProcessor {
@@ -37,7 +54,9 @@ export class PdfProcessor {
   static async processPdf(
     file: File, 
     useFullOCR: boolean = false,
-    onProgress?: (current: number, total: number, status: string) => void
+    onProgress?: (current: number, total: number, status: string) => void,
+    useLayoutRecognition: boolean = true,
+    useTableExtraction: boolean = true
   ): Promise<PdfProcessResult> {
     try {
       // Verificar tamanho do arquivo
@@ -81,6 +100,8 @@ export class PdfProcessor {
       let fullText = '';
       let hasImages = false;
       let processedPages = 0;
+      const allLayouts: LayoutElement[] = [];
+      const allTables: ExtractedTable[] = [];
 
       // Processar páginas em lotes para PDFs grandes
       for (let batchStart = 1; batchStart <= numPages; batchStart += this.BATCH_SIZE) {
@@ -89,6 +110,49 @@ export class PdfProcessor {
 
         for (let pageNum = batchStart; pageNum <= batchEnd; pageNum++) {
           const page = await pdfDocument.getPage(pageNum);
+          
+          // FASE 1: Layout Recognition (se habilitado)
+          let pageLayout: LayoutElement[] = [];
+          let pageTables: ExtractedTable[] = [];
+          
+          if (useLayoutRecognition || useTableExtraction) {
+            try {
+              const viewport = page.getViewport({ scale: 1.5 });
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d')!;
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              await page.render({
+                canvasContext: context,
+                viewport: viewport,
+              }).promise;
+
+              const imageData = canvas.toDataURL('image/jpeg', 0.85);
+              
+              // Layout recognition
+              if (useLayoutRecognition && pageNum <= 30) { // Processar apenas primeiras 30 páginas para não gastar muito
+                if (onProgress) {
+                  onProgress(processedPages, numPages, `Analisando estrutura da página ${pageNum}...`);
+                }
+                
+                // TODO: Chamar edge function quando pronto
+                // const layoutResponse = await fetch('edge-function-url', { ... });
+              }
+              
+              // Table extraction
+              if (useTableExtraction && pageNum <= 50) {
+                if (onProgress) {
+                  onProgress(processedPages, numPages, `Extraindo tabelas da página ${pageNum}...`);
+                }
+                
+                // TODO: Chamar edge function quando pronto
+                // const tablesResponse = await fetch('edge-function-url', { ... });
+              }
+            } catch (visionError) {
+              console.warn(`Erro na análise visual da página ${pageNum}:`, visionError);
+            }
+          }
           
           // Tentar extrair texto primeiro
           const textContent = await page.getTextContent();
@@ -133,6 +197,10 @@ export class PdfProcessor {
             }
           }
           
+          // Adicionar layouts e tabelas aos arrays globais
+          if (pageLayout.length > 0) allLayouts.push(...pageLayout);
+          if (pageTables.length > 0) allTables.push(...pageTables);
+          
           processedPages++;
           
           // Callback de progresso
@@ -165,7 +233,9 @@ export class PdfProcessor {
         success: true,
         content: fullText.trim(),
         pageCount: numPages,
-        fileSize: Math.round(file.size / (1024 * 1024) * 100) / 100
+        fileSize: Math.round(file.size / (1024 * 1024) * 100) / 100,
+        layout: allLayouts.length > 0 ? allLayouts : undefined,
+        tables: allTables.length > 0 ? allTables : undefined
       };
 
     } catch (error) {

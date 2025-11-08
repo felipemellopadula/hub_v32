@@ -6,17 +6,70 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface ExtractedTable {
+  id: string;
+  headers: string[];
+  rows: string[][];
+  caption?: string;
+}
+
 interface CleanMarkdownRendererProps {
   content: string;
   isUser?: boolean;
+  tables?: ExtractedTable[];
 }
 
-const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, isUser }) => {
+const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, isUser, tables }) => {
   const [copiedStates, setCopiedStates] = React.useState<{ [key: number]: boolean }>({});
 
   if (isUser) {
     return <div className="whitespace-pre-wrap">{content}</div>;
   }
+
+  // Render extracted tables if present
+  const renderExtractedTables = () => {
+    if (!tables || tables.length === 0) return null;
+    
+    return (
+      <div className="my-4 space-y-4">
+        <h3 className="text-base font-semibold text-foreground">📊 Tabelas Extraídas</h3>
+        {tables.map((table, idx) => (
+          <div key={idx} className="overflow-x-auto border border-border rounded-lg">
+            {table.caption && (
+              <div className="px-4 py-2 bg-muted/30 border-b border-border">
+                <p className="text-sm font-medium">{table.caption}</p>
+              </div>
+            )}
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
+                <tr>
+                  {table.headers.map((header, hIdx) => (
+                    <th
+                      key={hIdx}
+                      className="px-4 py-2 text-left text-xs font-semibold text-foreground uppercase tracking-wider"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {table.rows.map((row, rIdx) => (
+                  <tr key={rIdx} className="hover:bg-muted/20">
+                    {row.map((cell, cIdx) => (
+                      <td key={cIdx} className="px-4 py-2 text-sm text-foreground">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const copyCode = async (code: string, index: number) => {
     try {
@@ -34,6 +87,7 @@ const CleanMarkdownRenderer: React.FC<CleanMarkdownRendererProps> = ({ content, 
 
   return (
     <div className="markdown-content text-foreground">
+      {renderExtractedTables()}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

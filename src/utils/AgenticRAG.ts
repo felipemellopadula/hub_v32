@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { RAGCache } from "./RAGCache";
+import { ChunkingStrategies, type DocType } from "./ChunkingStrategies";
+import type { ExtractedTable } from "./PdfProcessor";
 
 interface ChunkProgress {
   current: number;
@@ -9,29 +11,59 @@ interface ChunkProgress {
 
 export class AgenticRAG {
   private cache = new RAGCache();
+  private docType: DocType = 'general';
+  private tables: ExtractedTable[] = [];
 
-  // FASE 1: Chunking no frontend com validação
-  createChunks(content: string, totalPages: number): string[] {
+  /**
+   * FASE 2: Detectar tipo do documento (se não fornecido)
+   */
+  async detectDocumentType(content: string, fileName: string): Promise<DocType> {
+    try {
+      const { data, error } = await supabase.functions.invoke('detect-doc-type', {
+        body: { contentSample: content.substring(0, 5000), fileName }
+      });
+      
+      if (error) {
+        console.warn('⚠️ Doc type detection failed, using general:', error);
+        return 'general';
+      }
+      
+      this.docType = data.type;
+      console.log(`📋 Document type: ${data.type} (${data.confidence}% confidence)`);
+      console.log(`💡 Reasoning: ${data.reasoning}`);
+      
+      return data.type;
+    } catch (error) {
+      console.warn('⚠️ Doc type detection error:', error);
+      return 'general';
+    }
+  }
+
+  /**
+   * FASE 3: Armazenar tabelas extraídas
+   */
+  setExtractedTables(tables: ExtractedTable[]) {
+    this.tables = tables;
+    console.log(`📊 ${tables.length} tables stored for RAG context`);
+  }
+
+  // FASE 1: Chunking adaptativo no frontend
+  createChunks(content: string, totalPages: number, docType?: DocType): string[] {
+    // Usar tipo de documento atual ou fornecido
+    const effectiveDocType = docType || this.docType;
+    
     const chunkPages = this.getChunkSize(totalPages);
     const chunkSize = chunkPages * 3500;
     const MAX_CHUNK_SIZE = 120000; // 120K chars (~30K tokens)
-    
     const finalChunkSize = Math.min(chunkSize, MAX_CHUNK_SIZE);
-    const overlapSize = Math.floor(finalChunkSize * 0.15);
     
-    console.log(`📚 Criando chunks: ${totalPages} páginas → ${chunkPages} páginas/chunk (max ${finalChunkSize} chars)`);
+    console.log(`📚 Chunking: ${totalPages} pages | Type: ${effectiveDocType} | Max: ${finalChunkSize} chars`);
     
-    const chunks: string[] = [];
-    let position = 0;
+    // Usar estratégia adaptativa
+    const chunkedResults = ChunkingStrategies.getStrategy(effectiveDocType, content, finalChunkSize);
+    const chunks = chunkedResults.map(chunk => chunk.content);
     
-    while (position < content.length) {
-      const end = Math.min(position + finalChunkSize, content.length);
-      chunks.push(content.slice(position, end));
-      position += (finalChunkSize - overlapSize);
-      if (end === content.length) break;
-    }
-    
-    console.log(`✅ ${chunks.length} chunks criados`);
+    console.log(`✅ ${chunks.length} chunks created using ${effectiveDocType} strategy`);
     return chunks;
   }
 
@@ -227,6 +259,23 @@ export class AgenticRAG {
   ): AsyncGenerator<string> {
     console.log(`🎯 [CONSOLIDAÇÃO] Iniciando com ${sections.length} seções sintetizadas`);
     
+    // Preparar contexto de tabelas (se existirem)
+    let tablesContext = '';
+    if (this.tables.length > 0) {
+      tablesContext = `\n\n## TABELAS EXTRAÍDAS DO DOCUMENTO\n\n`;
+      this.tables.forEach(table => {
+        tablesContext += `### ${table.caption || table.id}\n`;
+        tablesContext += `Headers: ${table.headers.join(' | ')}\n`;
+        tablesContext += `Rows: ${table.rows.length}\n`;
+        tablesContext += `Sample data:\n`;
+        table.rows.slice(0, 3).forEach(row => {
+          tablesContext += `  ${row.join(' | ')}\n`;
+        });
+        tablesContext += '\n';
+      });
+      console.log(`📊 Added ${this.tables.length} tables to context (${tablesContext.length} chars)`);
+    }
+    
     // NOVA ETAPA 1: Criar seções lógicas
     const logicalSections = await this.createLogicalSections(sections);
     
@@ -292,7 +341,8 @@ export class AgenticRAG {
           sections: workingSections,
           userMessage,
           fileName,
-          totalPages
+          totalPages,
+          tablesContext: tablesContext || undefined
         })
       }
     );

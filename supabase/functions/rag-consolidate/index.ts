@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sections: rawSections, userMessage, fileName, totalPages } = await req.json();
+    const { sections: rawSections, userMessage, fileName, totalPages, tablesContext } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
     // SANITIZAR: Garantir que sections são strings puras
@@ -81,11 +81,11 @@ serve(async (req) => {
 
     const promptTemplate = `Doc: "${fileName}" (${totalPages}p)
 
-${sectionsText}
+${tablesContext ? tablesContext + '\n\n' : ''}${sectionsText}
 
 Q: ${userMessage}
 
-Task: Análise ~${targetPages}p com visão geral, análise, insights, dados, resposta e conclusões. Markdown.`;
+Task: Análise ~${targetPages}p com visão geral, análise, insights, dados${tablesContext ? ' (USE OS DADOS DAS TABELAS quando relevante)' : ''}, resposta e conclusões. Markdown.`;
 
     // VALIDAÇÃO com o prompt REAL
     const promptTokens = Math.floor(promptTemplate.length / 2.5);
