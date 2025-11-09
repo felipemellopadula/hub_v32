@@ -136,8 +136,24 @@ export class PdfProcessor {
                   onProgress(processedPages, numPages, `Analisando estrutura da página ${pageNum}...`);
                 }
                 
-                // TODO: Chamar edge function quando pronto
-                // const layoutResponse = await fetch('edge-function-url', { ... });
+                try {
+                  const { supabase } = await import('@/integrations/supabase/client');
+                  const { data: layoutData, error: layoutError } = await supabase.functions.invoke('deepdoc-layout', {
+                    body: { 
+                      imageData,
+                      pageNumber: pageNum 
+                    }
+                  });
+                  
+                  if (!layoutError && layoutData?.layout?.elements) {
+                    pageLayout = layoutData.layout.elements;
+                    console.log(`✅ Layout page ${pageNum}: ${pageLayout.length} elements detected`);
+                  } else {
+                    console.warn(`⚠️ Layout error page ${pageNum}:`, layoutError);
+                  }
+                } catch (layoutErr) {
+                  console.warn(`⚠️ Layout exception page ${pageNum}:`, layoutErr);
+                }
               }
               
               // Table extraction
@@ -146,8 +162,24 @@ export class PdfProcessor {
                   onProgress(processedPages, numPages, `Extraindo tabelas da página ${pageNum}...`);
                 }
                 
-                // TODO: Chamar edge function quando pronto
-                // const tablesResponse = await fetch('edge-function-url', { ... });
+                try {
+                  const { supabase } = await import('@/integrations/supabase/client');
+                  const { data: tablesData, error: tablesError } = await supabase.functions.invoke('extract-tables', {
+                    body: { 
+                      imageData,
+                      pageNumber: pageNum 
+                    }
+                  });
+                  
+                  if (!tablesError && tablesData?.tables) {
+                    pageTables = tablesData.tables;
+                    console.log(`✅ Tables page ${pageNum}: ${pageTables.length} tables detected`);
+                  } else {
+                    console.warn(`⚠️ Tables error page ${pageNum}:`, tablesError);
+                  }
+                } catch (tablesErr) {
+                  console.warn(`⚠️ Tables exception page ${pageNum}:`, tablesErr);
+                }
               }
             } catch (visionError) {
               console.warn(`Erro na análise visual da página ${pageNum}:`, visionError);
