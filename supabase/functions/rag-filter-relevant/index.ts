@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { sections, userMessage } = await req.json();
+    const { sections, userMessage, maxSections = 15 } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
-    console.log(`[RAG Filter] Filtrando ${sections.length} seções para objetivo do usuário`);
+    console.log(`[RAG Filter] Filtrando ${sections.length} seções para objetivo do usuário (max: ${maxSections})`);
 
     // Criar sumário compacto das seções para o LLM analisar
     const sectionsSummary = sections.map((s: any, i: number) => {
@@ -48,7 +48,7 @@ Critérios de seleção:
 - Seções diretamente relacionadas ao objetivo
 - Seções com dados/exemplos necessários
 - Seções com contexto crítico
-- Máximo de 15 seções (priorize as mais importantes)
+- Máximo de ${maxSections} seções (priorize as mais importantes)
 
 FORMATO DE RESPOSTA (JSON):
 {

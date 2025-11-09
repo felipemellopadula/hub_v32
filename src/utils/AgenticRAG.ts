@@ -225,14 +225,19 @@ export class AgenticRAG {
   // NÍVEL 4: Filtragem por relevância (NOVA FASE)
   async filterRelevantSections(
     sections: any[],
-    userMessage: string
+    userMessage: string,
+    totalPages: number
   ): Promise<string[]> {
     console.log(`🔍 [FILTRAGEM] Filtrando ${sections.length} seções para objetivo do usuário`);
+    
+    // FASE 4: Passar maxSections dinâmico
+    const maxSections = totalPages > 50 ? 30 : 15;
     
     const { data, error } = await supabase.functions.invoke('rag-filter-relevant', {
       body: {
         sections,
-        userMessage
+        userMessage,
+        maxSections
       }
     });
     
@@ -279,18 +284,19 @@ export class AgenticRAG {
     // NOVA ETAPA 1: Criar seções lógicas
     const logicalSections = await this.createLogicalSections(sections);
     
-    // NOVA ETAPA 2: Filtrar apenas seções relevantes
-    const relevantSections = await this.filterRelevantSections(logicalSections, userMessage);
+    // NOVA ETAPA 2: Filtrar apenas seções relevantes (FASE 4: passa totalPages)
+    const relevantSections = await this.filterRelevantSections(logicalSections, userMessage, totalPages);
     
     console.log(`✅ [FILTRAGEM] ${relevantSections.length} seções relevantes selecionadas`);
     
     // Seções já vêm em tamanho gerenciável de rag-logical-sections (1.5K-3K chars)
     let workingSections = relevantSections;
     
-    // Limitar quantidade máxima de seções
-    if (workingSections.length > 15) {
-      console.log(`⚠️ Limitando de ${workingSections.length} para 15 seções mais importantes`);
-      workingSections = workingSections.slice(0, 15);
+    // FASE 2: Limitar quantidade máxima de seções (dinâmico por tamanho do doc)
+    const maxSections = totalPages > 50 ? 30 : 15;
+    if (workingSections.length > maxSections) {
+      console.log(`⚠️ Limitando de ${workingSections.length} para ${maxSections} seções (doc com ${totalPages}p)`);
+      workingSections = workingSections.slice(0, maxSections);
     }
     
     const finalChars = workingSections.reduce((sum, s) => sum + s.length, 0);
@@ -305,18 +311,18 @@ export class AgenticRAG {
       length: s.length
     })));
     
-    // HARD LIMIT: Max 15 seções × 3K chars = 45K chars = 15K tokens
-    if (backendEstimate > 15000) {
-      console.warn(`⚠️ Tokens estimados (${backendEstimate}) excedem 15K. Reduzindo para 12 seções.`);
-      workingSections = workingSections.slice(0, 12);
+    // FASE 2: HARD LIMIT aumentado para 20K tokens
+    if (backendEstimate > 20000) {
+      console.warn(`⚠️ Tokens estimados (${backendEstimate}) excedem 20K. Reduzindo para ${maxSections - 5} seções.`);
+      workingSections = workingSections.slice(0, maxSections - 5);
       
       // Recalcular após redução
       const reducedChars = workingSections.reduce((sum, s) => sum + s.length, 0);
       const reducedEstimate = Math.floor(reducedChars / 2.5);
       console.log(`✅ Reduzido para: ${workingSections.length} seções, ${reducedChars} chars (~${reducedEstimate} tokens)`);
       
-      if (reducedEstimate > 15000) {
-        throw new Error(`Documento muito grande mesmo após redução: ${reducedEstimate} tokens. Limite: 15K tokens.`);
+      if (reducedEstimate > 20000) {
+        throw new Error(`Documento muito grande mesmo após redução: ${reducedEstimate} tokens. Limite: 20K tokens.`);
       }
     }
     
