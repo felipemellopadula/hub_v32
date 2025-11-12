@@ -3065,12 +3065,44 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                               description: `${fileName} processado com Vision API (qualidade máxima)`,
                             });
                           } else {
-                            setFileProcessingStatus((prev) => new Map(prev.set(fileName, "error")));
-                            toast({
-                              title: "Erro no processamento Vision API",
-                              description: result.error || "Tente novamente ou use HTML Parsing",
-                              variant: "destructive",
-                            });
+                            // Fallback automático para HTML parsing
+                            console.warn('⚠️ Vision API falhou, usando HTML parsing como fallback');
+                            
+                            const fallbackResult = await WordProcessor.processWord(file);
+                            
+                            if (fallbackResult.success && fallbackResult.content) {
+                              setProcessedDocuments(
+                                (prev) =>
+                                  new Map(
+                                    prev.set(fileName, {
+                                      content: fallbackResult.content!,
+                                      type: "word",
+                                      fileSize: file.size,
+                                      pages: fallbackResult.pageCount,
+                                      layout: fallbackResult.layout,
+                                      tables: fallbackResult.tables,
+                                    }),
+                                  ),
+                              );
+                              setProcessedWords((prev) => new Map(prev).set(fileName, fallbackResult.content || ""));
+                              setFileProcessingStatus((prev) => new Map(prev.set(fileName, "completed")));
+                              
+                              if (!attachedFiles.some(f => f.name === fileName)) {
+                                setAttachedFiles((prev) => [...prev, file]);
+                              }
+                              
+                              toast({
+                                title: "Processado com HTML parsing",
+                                description: `Vision API indisponível. Usando HTML parsing (${fallbackResult.pageCount} páginas detectadas)`,
+                              });
+                            } else {
+                              setFileProcessingStatus((prev) => new Map(prev.set(fileName, "error")));
+                              toast({
+                                title: "Erro no processamento",
+                                description: "Ambos os métodos falharam. Tente converter para PDF primeiro.",
+                                variant: "destructive",
+                              });
+                            }
                           }
                         }
                       }}

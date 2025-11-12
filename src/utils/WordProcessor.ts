@@ -123,7 +123,10 @@ export class WordProcessor {
         .join('\n\n');
 
       const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
-      const estimatedPages = Math.ceil(wordCount / 400);
+      const wordBasedPages = Math.ceil(wordCount / 400);
+      const sizeBasedPages = Math.ceil(file.size / 30000); // 30KB por página (média com imagens/tabelas)
+      const estimatedPages = Math.max(wordBasedPages, sizeBasedPages); // Usar o maior
+      console.log(`📊 Estimativa: ${wordBasedPages}p (palavras) vs ${sizeBasedPages}p (tamanho) → ${estimatedPages}p`);
       
       if (onProgress) {
         onProgress(5, 5, 'Processamento concluído!');
