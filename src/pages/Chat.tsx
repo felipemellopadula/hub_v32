@@ -1587,11 +1587,19 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         if (wordFiles.length > 0 && !documentContent) {
           const wordName = wordFiles[0].name;
           const wordContent = processedWords.get(wordName);
+          const wordDoc = processedDocuments.get(wordName);
           
-          if (wordContent) {
+          if (wordContent && wordDoc?.pages) {
             documentContent = wordContent;
-            documentPageCount = Math.ceil(wordContent.length / 3500); // Estimar páginas
+            documentPageCount = wordDoc.pages;
             documentFileName = wordName;
+            console.log(`📄 Word document: ${documentPageCount} páginas reais (armazenado)`);
+          } else if (wordContent) {
+            // Fallback se pages não foi armazenado
+            documentContent = wordContent;
+            documentPageCount = Math.ceil(wordContent.split(/\s+/).length / 400);
+            documentFileName = wordName;
+            console.warn(`⚠️ Word sem pageCount armazenado, estimando: ${documentPageCount} páginas`);
           }
         }
 
