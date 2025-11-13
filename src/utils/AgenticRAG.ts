@@ -240,7 +240,7 @@ export class AgenticRAG {
     console.log(`🔍 [FILTRAGEM] Filtrando ${sections.length} seções para objetivo do usuário`);
     
     // FASE 4: Passar maxSections dinâmico
-    const maxSections = totalPages > 50 ? 30 : 15;
+    const maxSections = totalPages > 100 ? 40 : totalPages > 50 ? 30 : 20;
     
     const { data, error } = await supabase.functions.invoke('rag-filter-relevant', {
       body: {

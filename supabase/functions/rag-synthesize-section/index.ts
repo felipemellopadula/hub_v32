@@ -17,22 +17,25 @@ serve(async (req) => {
 
     console.log(`[RAG Section ${sectionIndex + 1}/${totalSections}] Sintetizando ${analyses.length} análises`);
 
-    const prompt = `Você é um sintetizador especializado em INTEGRAÇÃO DE INFORMAÇÕES.
+    const prompt = `Você é um sintetizador especializado em INTEGRAÇÃO DETALHADA DE INFORMAÇÕES.
 
 SEÇÃO [${sectionIndex + 1} de ${totalSections}]
 
 ANÁLISES DOS CHUNKS:
 ${analyses.join('\n\n---\n\n')}
 
-🎯 MISSÃO: Crie uma síntese integrada que:
-1. Una todas as análises em narrativa coerente
-2. Preserve TODOS os detalhes importantes
-3. Elimine apenas redundâncias exatas
-4. Mantenha dados, exemplos e conceitos
-5. Preserve terminologia técnica
+🎯 MISSÃO: Crie uma SÍNTESE COMPLETA E DETALHADA que:
+1. Una todas as análises em narrativa coerente e completa
+2. Preserve TODOS os detalhes, dados e exemplos importantes
+3. Mantenha TODOS os conceitos técnicos e terminologia específica
+4. Elimine apenas redundâncias exatas e repetições literais
+5. Organize por temas/tópicos quando possível
+6. Preserve estatísticas, números, percentuais e métricas
+7. Inclua todos os insights, conclusões e recomendações
 
-⚠️ PRESERVE 80% do conteúdo das análises
-Use Markdown extensivamente`;
+⚠️ IMPORTANTE: Esta é uma SÍNTESE DETALHADA, não um resumo. Preserve 85-90% do conteúdo das análises.
+Use Markdown extensivamente para organizar a informação.`;
+
 
     // Retry logic
     const MAX_RETRIES = 2;

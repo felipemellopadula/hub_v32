@@ -34,23 +34,26 @@ ${synthesizedContent}
 
 🎯 MISSÃO: Divida este conteúdo em SEÇÕES LÓGICAS autocontidas.
 
+IMPORTANTE: Crie entre 15-25 seções para documentos grandes. Preserve o máximo de detalhe em cada seção.
+
 Cada seção deve:
 1. Tratar de um tópico/tema específico
 2. Ser independente e compreensível sozinha
-3. Ter entre 1.500 e 3.000 caracteres (mais fácil de comprimir depois)
+3. Ter entre 2.000 e 4.000 caracteres (seções mais robustas)
 4. Incluir TODOS os detalhes importantes daquele tópico
+5. Preservar dados numéricos, exemplos e conceitos técnicos
 
 FORMATO DE RESPOSTA (JSON):
 {
   "sections": [
     {
       "title": "Título da Seção 1",
-      "content": "Conteúdo completo da seção 1...",
+      "content": "Conteúdo completo e detalhado da seção 1...",
       "keywords": ["palavra-chave1", "palavra-chave2"]
     },
     {
       "title": "Título da Seção 2",
-      "content": "Conteúdo completo da seção 2...",
+      "content": "Conteúdo completo e detalhado da seção 2...",
       "keywords": ["palavra-chave3", "palavra-chave4"]
     }
   ]
@@ -58,7 +61,7 @@ FORMATO DE RESPOSTA (JSON):
 
 ⚠️ Retorne APENAS o JSON, sem texto adicional.`
         }],
-        max_tokens: Math.min(20000, Math.floor(synthesizedContent.length / 2.5)),
+        max_tokens: Math.min(20000, Math.floor(synthesizedContent.length / 2)),
         response_format: { type: "json_object" }
       }),
     });

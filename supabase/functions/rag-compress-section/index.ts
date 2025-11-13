@@ -33,18 +33,21 @@ TAREFA: Reduza para EXATAMENTE ${finalTargetSize} caracteres, mantendo:
 - REMOVA: exemplos, detalhes secundários, repetições
 
 Use Markdown. Seja EXTREMAMENTE conciso.`
-      : `Você é um especialista em COMPRESSÃO INTELIGENTE de conteúdo.
+      : `Você é um especialista em CONDENSAÇÃO INTELIGENTE de conteúdo.
 
-SEÇÃO PARA COMPRIMIR:
+SEÇÃO PARA CONDENSAR:
 ${section}
 
-TAREFA: Reduza esta seção para ~${finalTargetSize} caracteres, mantendo:
-1. ✅ Todos os tópicos principais
-2. ✅ Dados numéricos críticos
-3. ✅ Conclusões e insights chave
-4. ❌ Remova repetições e detalhes secundários
+TAREFA: Condense esta seção para ~${finalTargetSize} caracteres, preservando:
+1. ✅ TODOS os tópicos e subtópicos principais
+2. ✅ TODOS os dados numéricos, estatísticas e exemplos importantes
+3. ✅ TODOS os conceitos técnicos e terminologia específica
+4. ✅ Conclusões, insights e recomendações chave
+5. ❌ Remova APENAS redundâncias óbvias e detalhes triviais
 
-Use Markdown. Seja conciso mas completo.`;
+IMPORTANTE: Esta é uma CONDENSAÇÃO, não um resumo extremo. Preserve o máximo de informação útil possível.
+
+Use Markdown. Seja completo dentro do limite de caracteres.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -58,7 +61,7 @@ Use Markdown. Seja conciso mas completo.`;
           role: "user",
           content: prompt
         }],
-        max_tokens: Math.min(8000, Math.floor(finalTargetSize / 3))
+        max_tokens: Math.min(8000, Math.floor(finalTargetSize / 2.5))
       }),
     });
 
