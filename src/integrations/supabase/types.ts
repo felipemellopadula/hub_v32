@@ -425,6 +425,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_user_tokens: {
+        Args: { p_new_token_amount: number; p_user_email: string }
+        Returns: Json
+      }
       delete_all_storage_files: {
         Args: { bucket_name: string }
         Returns: number
