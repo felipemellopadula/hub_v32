@@ -62,8 +62,8 @@ export class AgenticRAG {
     const effectiveDocType = docType || this.docType;
     
     const chunkPages = this.getChunkSize(totalPages);
-    const chunkSize = chunkPages * 3500;
-    const MAX_CHUNK_SIZE = 120000; // 120K chars (~30K tokens)
+    const chunkSize = chunkPages * 4500; // +1000 chars por página
+    const MAX_CHUNK_SIZE = 150000; // 150K chars (~37.5K tokens) - Tier 2 aguenta!
     const finalChunkSize = Math.min(chunkSize, MAX_CHUNK_SIZE);
     
     console.log(`📚 Chunking: ${totalPages} pages | Type: ${effectiveDocType} | Max: ${finalChunkSize} chars`);
@@ -97,7 +97,7 @@ export class AgenticRAG {
       }
     }
 
-    const BATCH_SIZE = 2; // Reduzido para evitar rate limit
+    const BATCH_SIZE = 6; // Tier 2 aguenta! Processar em paralelo
     const results: string[] = [];
     const failedChunks: number[] = [];
     
@@ -452,13 +452,23 @@ export class AgenticRAG {
   }
 
   private groupIntoSections(analyses: string[]): string[][] {
-    const SECTION_SIZE = Math.ceil(analyses.length / 3);
-    const sections: string[][] = [];
+    // Lógica progressiva: quanto mais análises, menos agrupamento
+    let SECTION_SIZE: number;
     
+    if (analyses.length <= 4) {
+      SECTION_SIZE = 1; // 1 análise = 1 seção (docs pequenos)
+    } else if (analyses.length <= 10) {
+      SECTION_SIZE = 2; // 2 análises por seção (docs médios)
+    } else {
+      SECTION_SIZE = Math.ceil(analyses.length / 6); // Max 6 seções (docs grandes)
+    }
+    
+    const sections: string[][] = [];
     for (let i = 0; i < analyses.length; i += SECTION_SIZE) {
       sections.push(analyses.slice(i, i + SECTION_SIZE));
     }
     
+    console.log(`📊 Agrupando ${analyses.length} análises em ${sections.length} seções (${SECTION_SIZE} análises/seção)`);
     return sections;
   }
 }
