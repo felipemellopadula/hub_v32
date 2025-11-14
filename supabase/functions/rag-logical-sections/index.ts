@@ -24,7 +24,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini-2025-04-14",
         messages: [{
           role: "user",
           content: `Você é um especialista em ESTRUTURAÇÃO DE DOCUMENTOS.
@@ -61,7 +61,7 @@ FORMATO DE RESPOSTA (JSON):
 
 ⚠️ Retorne APENAS o JSON, sem texto adicional.`
         }],
-        max_tokens: Math.min(16000, Math.floor(synthesizedContent.length / 2)),
+        max_completion_tokens: Math.min(16000, Math.floor(synthesizedContent.length / 2)),
         response_format: { type: "json_object" }
       }),
     });

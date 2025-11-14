@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sections, userMessage, maxSections = 15 } = await req.json();
+    const { sections, userMessage, maxSections = 35 } = await req.json();
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
 
     console.log(`[RAG Filter] Filtrando ${sections.length} seções para objetivo do usuário (max: ${maxSections})`);
@@ -31,7 +31,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini-2025-04-14",
         messages: [{
           role: "user",
           content: `Você é um especialista em RECUPERAÇÃO DE INFORMAÇÃO (RAG).
@@ -58,7 +58,7 @@ FORMATO DE RESPOSTA (JSON):
 
 ⚠️ Retorne APENAS o JSON, sem texto adicional.`
         }],
-        max_tokens: 500,
+        max_completion_tokens: 1500,
         response_format: { type: "json_object" }
       }),
     });

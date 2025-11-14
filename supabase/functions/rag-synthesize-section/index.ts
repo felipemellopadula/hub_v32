@@ -50,10 +50,9 @@ Use Markdown extensivamente para organizar a informação.`;
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4.1-2025-04-14",
+            model: "gpt-4.1-mini-2025-04-14",
             messages: [{ role: "user", content: prompt }],
             max_completion_tokens: 16000,
-            temperature: 0.2,
           }),
         });
 

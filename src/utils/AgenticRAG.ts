@@ -240,7 +240,7 @@ export class AgenticRAG {
     console.log(`🔍 [FILTRAGEM] Filtrando ${sections.length} seções para objetivo do usuário`);
     
     // FASE 4: Passar maxSections dinâmico
-    const maxSections = totalPages > 100 ? 40 : totalPages > 50 ? 30 : 20;
+    const maxSections = totalPages > 100 ? 50 : totalPages > 50 ? 35 : 25;
     
     const { data, error } = await supabase.functions.invoke('rag-filter-relevant', {
       body: {
@@ -316,7 +316,7 @@ export class AgenticRAG {
     let workingSections = relevantSections;
     
     // FASE 2: Limitar quantidade máxima de seções (dinâmico por tamanho do doc)
-    const maxSections = totalPages > 50 ? 30 : 15;
+    const maxSections = totalPages > 50 ? 35 : 20;
     if (workingSections.length > maxSections) {
       console.log(`⚠️ Limitando de ${workingSections.length} para ${maxSections} seções (doc com ${totalPages}p)`);
       workingSections = workingSections.slice(0, maxSections);
@@ -334,9 +334,9 @@ export class AgenticRAG {
       length: s.length
     })));
     
-    // FASE 2: HARD LIMIT aumentado para 20K tokens
-    if (backendEstimate > 20000) {
-      console.warn(`⚠️ Tokens estimados (${backendEstimate}) excedem 20K. Reduzindo para ${maxSections - 5} seções.`);
+    // FASE 2: HARD LIMIT aumentado para 30K tokens
+    if (backendEstimate > 30000) {
+      console.warn(`⚠️ Tokens estimados (${backendEstimate}) excedem 30K. Reduzindo para ${maxSections - 10} seções.`);
       workingSections = workingSections.slice(0, maxSections - 5);
       
       // Recalcular após redução
@@ -344,8 +344,8 @@ export class AgenticRAG {
       const reducedEstimate = Math.floor(reducedChars / 2.5);
       console.log(`✅ Reduzido para: ${workingSections.length} seções, ${reducedChars} chars (~${reducedEstimate} tokens)`);
       
-      if (reducedEstimate > 20000) {
-        throw new Error(`Documento muito grande mesmo após redução: ${reducedEstimate} tokens. Limite: 20K tokens.`);
+      if (reducedEstimate > 30000) {
+        throw new Error(`Documento muito grande mesmo após redução: ${reducedEstimate} tokens. Limite: 30K tokens.`);
       }
     }
     
