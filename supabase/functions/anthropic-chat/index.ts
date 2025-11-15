@@ -170,6 +170,8 @@ serve(async (req) => {
           role: 'user',
           content: consolidationPrompt
         }];
+        
+        responsePrefix = `📊 Documento processado em ${chunks.length} partes e consolidado.\n\n`;
       }
     }
     
