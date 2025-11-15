@@ -21,8 +21,8 @@ export const WordTablesPreview = ({ tables, fileName }: WordTablesPreviewProps) 
   if (!tables || tables.length === 0) return null;
 
   return (
-    <Card className="mt-3 border-muted">
-      <CardHeader className="pb-3">
+    <Card className="mt-3 border-muted max-h-[400px] flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="h-4 w-4 text-primary" />
           <CardTitle className="text-sm">Tabelas Extraídas</CardTitle>
@@ -31,8 +31,9 @@ export const WordTablesPreview = ({ tables, fileName }: WordTablesPreviewProps) 
           {tables.length} {tables.length === 1 ? "tabela encontrada" : "tabelas encontradas"} em {fileName}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {tables.map((table, idx) => (
+      <ScrollArea className="flex-1 min-h-0">
+        <CardContent className="space-y-4">
+          {tables.map((table, idx) => (
           <div key={table.id} className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
@@ -75,7 +76,8 @@ export const WordTablesPreview = ({ tables, fileName }: WordTablesPreviewProps) 
             )}
           </div>
         ))}
-      </CardContent>
+        </CardContent>
+      </ScrollArea>
     </Card>
   );
 };
