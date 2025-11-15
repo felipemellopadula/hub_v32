@@ -54,9 +54,9 @@ serve(async (req) => {
     }
 
 
-    // Calcular output tokens primeiro (FASE 1: aumentado para 60% e máx 50 páginas)
+    // Calcular output tokens primeiro (FASE 2: 700 tokens/página para conteúdo RICO)
     const targetPages = Math.min(Math.floor(totalPages * 0.6), 50);
-    const maxOutputTokens = Math.min(16000, Math.floor(targetPages * 400));
+    const maxOutputTokens = Math.min(16000, Math.floor(targetPages * 700)); // 700 tokens/página = conteúdo denso e detalhado
     
     // ADICIONAR LOGGING ANTES DO TEMPLATE para identificar a variável gigante
     console.log(`[PRE-TEMPLATE] fileName length: ${fileName.length}`);
@@ -79,13 +79,48 @@ serve(async (req) => {
       throw new Error('Bug detectado: sectionsText muito grande');
     }
 
-    const promptTemplate = `Doc: "${fileName}" (${totalPages}p)
+    const promptTemplate = `Você é um ESPECIALISTA EM ANÁLISE DOCUMENTAL que produz relatórios EXTREMAMENTE DETALHADOS e COMPLETOS.
 
-${tablesContext ? tablesContext + '\n\n' : ''}${sectionsText}
+📄 DOCUMENTO: "${fileName}" (${totalPages} páginas)
+${tablesContext ? '\n' + tablesContext + '\n' : ''}
 
-Q: ${userMessage}
+📊 CONTEÚDO SINTETIZADO DO DOCUMENTO:
+${sectionsText}
 
-Task: Análise ~${targetPages}p com visão geral, análise, insights, dados${tablesContext ? ' (USE OS DADOS DAS TABELAS quando relevante)' : ''}, resposta e conclusões. Markdown.`;
+❓ PERGUNTA/OBJETIVO DO USUÁRIO:
+"${userMessage}"
+
+🎯 SUA MISSÃO: Produzir uma análise COMPLETA e EXTREMAMENTE DETALHADA de aproximadamente ${targetPages} páginas que:
+
+1. **ESTRUTURA OBRIGATÓRIA:**
+   - Visão geral completa do documento
+   - Análise PROFUNDA de cada seção relevante (não resuma, EXPANDA!)
+   - Insights e conexões entre conceitos
+   - Dados, estatísticas e exemplos concretos${tablesContext ? ' (USE EXTENSIVAMENTE OS DADOS DAS TABELAS!)' : ''}
+   - Implicações práticas e aplicações
+   - Resposta COMPLETA ao objetivo do usuário
+   - Conclusões e recomendações finais
+
+2. **EXIGÊNCIAS DE CONTEÚDO:**
+   - ⚠️ PRESERVE 90-95% dos detalhes das seções fornecidas
+   - EXPANDA cada ponto importante com explicações completas
+   - Inclua TODOS os exemplos, casos práticos e dados numéricos
+   - Mantenha TODA a terminologia técnica e conceitos específicos
+   - Use múltiplos parágrafos para cada tópico importante
+   - NUNCA resuma - sempre detalhe e aprofunde!
+
+3. **FORMATO:**
+   - Use Markdown com headers (##, ###), listas, tabelas
+   - Organize hierarquicamente por tópicos e subtópicos
+   - Parágrafos densos e informativos (3-5 sentenças cada)
+   - Seções claramente delimitadas
+
+4. **OBJETIVO DE TAMANHO:**
+   - Produza aproximadamente ${targetPages} páginas de conteúdo DENSO
+   - Cada seção deve ter múltiplos parágrafos detalhados
+   - NÃO ECONOMIZE em detalhes - seja COMPLETO!
+
+⚠️ CRÍTICO: Esta é uma análise COMPLETA E APROFUNDADA. Não um resumo! Preserve máxima informação e detalhe.`;
 
     // VALIDAÇÃO com o prompt REAL
     const promptTokens = Math.floor(promptTemplate.length / 2.5);

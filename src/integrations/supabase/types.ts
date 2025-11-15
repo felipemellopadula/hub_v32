@@ -35,6 +35,140 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          messages: Json
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          messages?: Json
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          messages?: Json
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_documents: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          file_name: string
+          file_type: string
+          file_url: string | null
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          file_name: string
+          file_type: string
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_type?: string
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_logs: {
+        Row: {
+          agent_type: string
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          session_id: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          agent_type: string
+          id?: string
+          level: string
+          message: string
+          metadata?: Json | null
+          session_id?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          agent_type?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          session_id?: string | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_searches: {
+        Row: {
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          query: string
+          results: Json | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          query: string
+          results?: Json | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          query?: string
+          results?: Json | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -88,6 +222,306 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      files: {
+        Row: {
+          analyzed: boolean | null
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          filename: string
+          id: string
+          uploaded_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          analyzed?: boolean | null
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          filename: string
+          id?: string
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          analyzed?: boolean | null
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          filename?: string
+          id?: string
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_tools_logs: {
+        Row: {
+          executed_at: string | null
+          id: string
+          tool_data: Json
+          tool_name: string
+          user_id: string | null
+        }
+        Insert: {
+          executed_at?: string | null
+          id?: string
+          tool_data: Json
+          tool_name: string
+          user_id?: string | null
+        }
+        Update: {
+          executed_at?: string | null
+          id?: string
+          tool_data?: Json
+          tool_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tools_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metrics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          metric_type: string
+          module_name: string
+          timestamp: string | null
+          user_id: string | null
+          value: number | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          module_name: string
+          timestamp?: string | null
+          user_id?: string | null
+          value?: number | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          module_name?: string
+          timestamp?: string | null
+          user_id?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      miniagent_files: {
+        Row: {
+          extracted_content: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          metadata: Json | null
+          processed: boolean | null
+          session_id: string | null
+          storage_path: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          extracted_content?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          metadata?: Json | null
+          processed?: boolean | null
+          session_id?: string | null
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          extracted_content?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          metadata?: Json | null
+          processed?: boolean | null
+          session_id?: string | null
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: []
+      }
+      miniagent_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string | null
+        }
+        Relationships: []
+      }
+      miniagent_sessions: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          stats: Json
+          status: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          stats?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          stats?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      miniagent_tools_logs: {
+        Row: {
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          input_data: Json | null
+          metadata: Json | null
+          output_data: Json | null
+          session_id: string | null
+          success: boolean | null
+          tool_name: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          input_data?: Json | null
+          metadata?: Json | null
+          output_data?: Json | null
+          session_id?: string | null
+          success?: boolean | null
+          tool_name: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          input_data?: Json | null
+          metadata?: Json | null
+          output_data?: Json | null
+          session_id?: string | null
+          success?: boolean | null
+          tool_name?: string
+        }
+        Relationships: []
+      }
+      minimax_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          prompt: string
+          response: string
+          response_time: number | null
+          session_id: string | null
+          thinking_process: string | null
+          tool_calls: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          prompt: string
+          response: string
+          response_time?: number | null
+          session_id?: string | null
+          thinking_process?: string | null
+          tool_calls?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          prompt?: string
+          response?: string
+          response_time?: number | null
+          session_id?: string | null
+          thinking_process?: string | null
+          tool_calls?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "minimax_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minimax_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -147,6 +581,47 @@ export type Database = {
             columns: ["current_subscription_id"]
             isOneToOne: false
             referencedRelation: "stripe_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          session_type: string
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          session_type: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          session_type?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -298,6 +773,33 @@ export type Database = {
         }
         Relationships: []
       }
+      system_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          created_at: string | null
+          id: string
+          module_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: Json
+          created_at?: string | null
+          id?: string
+          module_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          created_at?: string | null
+          id?: string
+          module_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       token_usage: {
         Row: {
           ai_response_content: string | null
@@ -417,6 +919,36 @@ export type Database = {
           resolution?: string | null
           user_id?: string
           video_url?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
