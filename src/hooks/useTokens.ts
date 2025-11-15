@@ -10,7 +10,7 @@ const MODEL_COSTS = {
   // Claude 4 models (Anthropic)
   'claude-opus-4-1-20250805': 15000,
   'claude-sonnet-4-5': 10000,
-  'claude-3-5-haiku-20241022': 2500,
+  'claude-haiku-4-5': 2500,
   'grok-4-0709': 15000,
   'grok-3': 10000,
   'grok-3-mini': 3000,
@@ -166,7 +166,7 @@ export const useTokens = () => {
       'o4-mini': 'o4 Mini',
       'claude-opus-4-1-20250805': 'Claude Opus 4.1',
       'claude-sonnet-4-5': 'Claude Sonnet 4.5',
-      'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+      'claude-haiku-4-5': 'Claude Haiku 4.5',
       'grok-4-0709': 'Grok 4',
       'grok-3': 'Grok 3', 
       'grok-3-mini': 'Grok 3 Mini',

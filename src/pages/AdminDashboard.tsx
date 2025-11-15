@@ -97,7 +97,7 @@ const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models
   "claude-opus-4-1-20250805": { input: 15.0, output: 30.0 },
   "claude-sonnet-4-5": { input: 3.0, output: 6.0 },
-  "claude-3-5-haiku-20241022": { input: 0.8, output: 4.0 },
+  "claude-haiku-4-5": { input: 1.0, output: 5.0 },
 
   // Legacy models with exact version numbers
   "claude-3-opus-20240229": { input: 15.0, output: 75.0 },
@@ -109,6 +109,7 @@ const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   "claude-opus-4": { input: 15.0, output: 30.0 },
   "claude-sonnet-4": { input: 3.0, output: 6.0 },
   "claude-3-5-sonnet": { input: 3.0, output: 15.0 },
+  "claude-haiku-4": { input: 1.0, output: 5.0 },
   "claude-3-5-haiku": { input: 0.8, output: 4.0 },
   "claude-haiku-3.5": { input: 0.8, output: 4.0 },
   "claude-3-opus": { input: 15.0, output: 75.0 },
@@ -274,7 +275,7 @@ const AdminDashboard = () => {
         const matchedKey =
           Object.keys(CLAUDE_PRICING).find(
             (key) => modelKey.includes(key.toLowerCase()) || key.toLowerCase().includes(modelKey),
-          ) || "claude-3-5-haiku";
+          ) || "claude-haiku-4-5";
 
         // Convert from per million tokens to per individual token: $X per 1M tokens = $X / 1,000,000 per token
         const pricePerMillion = CLAUDE_PRICING[matchedKey][type];
