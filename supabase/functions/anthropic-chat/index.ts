@@ -108,6 +108,7 @@ serve(async (req) => {
 
     let processedMessages = messages;
     let chunkResponses: string[] = [];
+    let responsePrefix = '';
 
     // If message is too large, process ALL chunks with Map-Reduce
     if (estimatedTokens > limits.input * 0.4) {
