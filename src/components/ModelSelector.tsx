@@ -20,7 +20,7 @@ const modelsByProvider = {
     { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'fast' as const },
   ],
   'OpenAI': [
-    { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI', category: 'premium' as const },
+    { id: 'gpt-5.1', name: 'GPT-5.1', provider: 'OpenAI', category: 'premium' as const },
     { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', category: 'standard' as const },
     { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI', category: 'fast' as const },
     { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'OpenAI', category: 'premium' as const },

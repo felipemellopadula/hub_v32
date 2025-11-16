@@ -334,7 +334,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     
     // Lista de modelos que suportam visão
     const visionModels = [
-      'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', // OpenAI vision models
+      'gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', // OpenAI vision models
       'claude-opus-4-1-20250805', 'claude-sonnet-4-5', 'claude-haiku-4-5', // Anthropic
       'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', // Google
       'grok-4', 'grok-3', 'grok-3-mini' // xAI - todos suportam visão

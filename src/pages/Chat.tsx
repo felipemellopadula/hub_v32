@@ -1435,7 +1435,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           // Suporte à visão para alguns modelos
           if (imageFiles.length > 0) {
             const visionModels = [
-              "gpt-5",
+              "gpt-5.1",
               "gpt-5-mini",
               "gpt-5-nano",
               "gpt-4.1",

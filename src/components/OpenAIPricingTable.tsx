@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const OPENAI_MODELS = [
   {
-    name: 'GPT-5',
+    name: 'GPT-5.1',
     inputPrice: '$1.25',
     outputPrice: '$10.00',
     inputCostPerToken: '$0.00000125',

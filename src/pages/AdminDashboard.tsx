@@ -38,7 +38,7 @@ interface AdminStats {
 
 // OpenAI pricing per million tokens (USD) - Updated from user's table
 const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
-  "gpt-5": { input: 1.25, output: 10.0 },
+  "gpt-5.1": { input: 1.25, output: 10.0 },
   "gpt-5-mini": { input: 0.25, output: 2.0 },
   "gpt-5-nano": { input: 0.05, output: 0.4 },
   "gpt-4.1": { input: 3.0, output: 12.0 },
