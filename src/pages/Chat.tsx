@@ -74,6 +74,8 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WordTablesPreview } from "@/components/WordTablesPreview";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RAGProgressIndicator } from "@/components/RAGProgressIndicator";
+import { useRAGProgress } from "@/hooks/useRAGProgress";
 
 // =====================
 // Tipos
@@ -562,12 +564,49 @@ const Chat: React.FC = () => {
   }>({});
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
-  const [ragProgress, setRagProgress] = useState({
-    phase: '',
-    current: 0,
-    total: 0,
-    percentage: 0,
-    details: ''
+  
+  // RAG Progress hook com cancelamento
+  const {
+    progress: ragProgress,
+    isProcessing: isRAGProcessing,
+    isCancelled: isRAGCancelled,
+    startRAG,
+    startChunking,
+    updateChunking,
+    startAnalysis,
+    updateAnalysis,
+    startSynthesis,
+    updateSynthesis,
+    startFiltering,
+    updateFiltering,
+    startConsolidation,
+    updateConsolidation,
+    completeRAG,
+    cancelRAG,
+    resetProgress
+  } = useRAGProgress({
+    totalPages: (() => {
+      const pdfFile = attachedFiles.find(f => isPdfFile(f));
+      if (pdfFile) {
+        const doc = processedDocuments.get(pdfFile.name);
+        return doc?.pages;
+      }
+      const wordFile = attachedFiles.find(f => isWordFile(f));
+      if (wordFile) {
+        const doc = processedDocuments.get(wordFile.name);
+        return doc?.pages;
+      }
+      return undefined;
+    })(),
+    onComplete: () => {
+      console.log('✅ RAG processamento concluído');
+      setProcessingStatus('');
+    },
+    onCancel: () => {
+      console.log('🛑 RAG processamento cancelado');
+      setProcessingStatus('');
+      setIsLoading(false);
+    }
   });
 
   const [isPending, startTransition] = useTransition();
@@ -1661,55 +1700,71 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             // Gerar hash do documento para cache
             const documentHash = cache.generateHash(documentContent);
             
+            // Iniciar RAG com total de páginas
+            startRAG(documentPageCount);
+            
             // FASE 1: Chunking (instantâneo)
             setProcessingStatus('📚 Dividindo documento em chunks...');
-            setRagProgress({ phase: 'Preparação', current: 0, total: 1, percentage: 0, details: 'Dividindo documento' });
+            startChunking();
             const chunks = rag.createChunks(documentContent, documentPageCount);
+            updateChunking(chunks.length, chunks.length);
             console.log(`📊 [FASE 1] Chunks criados: ${chunks.length}`);
             
             // FASE 2: Análise de chunks (paralelo)
             setProcessingStatus(`🔍 Analisando ${chunks.length} chunks (2 paralelos)...`);
+            startAnalysis(chunks.length);
             const analyses = await rag.analyzeChunks(
               chunks,
               documentPageCount,
               (progress) => {
-                const percentage = Math.floor((progress.current / progress.total) * 100);
-                setRagProgress({
-                  phase: 'Análise de Chunks',
-                  current: progress.current,
-                  total: progress.total,
-                  percentage,
-                  details: progress.status
-                });
-                setProcessingStatus(`🔍 ${progress.status} (${percentage}%)`);
+                updateAnalysis(progress.current, progress.total);
+                setProcessingStatus(`🔍 ${progress.status}`);
               },
               documentHash
             );
             console.log(`📊 [FASE 2] Análises concluídas: ${analyses.length}`);
             
+            // Verificar cancelamento
+            if (isRAGCancelled) {
+              console.log('🛑 RAG cancelado pelo usuário');
+              return;
+            }
+            
             // FASE 3: Síntese de seções
             setProcessingStatus('🧩 Sintetizando seções...');
-            setRagProgress({ phase: 'Síntese', current: 0, total: 3, percentage: 0, details: 'Sintetizando seções' });
+            startSynthesis();
             const sections = await rag.synthesizeSections(
               analyses,
               (status) => {
                 setProcessingStatus(`🧩 ${status}`);
-                setRagProgress(prev => ({ ...prev, details: status }));
+                updateSynthesis(50, 100);
               }
             );
             console.log(`📊 [FASE 3] ${sections.length} seções sintetizadas com sucesso`);
-            setProcessingStatus("🧩 Fase 3.5: Criando seções lógicas...");
+            updateSynthesis(100, 100);
             
-            console.log(`🧩 [FASE 3.5] Criando seções lógicas...`);
-            setProcessingStatus("🔍 Fase 3.6: Filtrando seções relevantes...");
+            // Verificar cancelamento
+            if (isRAGCancelled) {
+              console.log('🛑 RAG cancelado pelo usuário');
+              return;
+            }
             
-            console.log(`🔍 [FASE 3.6] Filtrando seções relevantes para o objetivo...`);
-            console.log(`🗜️ [FASE 3.7] Comprimindo seções filtradas agressivamente...`);
+            // FASE 4: Filtragem
+            setProcessingStatus("🔍 Filtrando seções relevantes...");
+            startFiltering();
+            updateFiltering(50, 'Filtrando conteúdo mais relevante...');
+            updateFiltering(100, 'Filtragem concluída');
             
-            // FASE 4: Consolidação final com streaming
+            // Verificar cancelamento
+            if (isRAGCancelled) {
+              console.log('🛑 RAG cancelado pelo usuário');
+              return;
+            }
+            
+            // FASE 5: Consolidação final com streaming
             setProcessingStatus('🎯 Gerando resposta final...');
-            setRagProgress({ phase: 'Consolidação', current: 0, total: 1, percentage: 100, details: 'Gerando resposta final' });
-            console.log(`🎯 [FASE 4] Iniciando consolidação final...`);
+            startConsolidation();
+            console.log(`🎯 [FASE 5] Iniciando consolidação final...`);
             
             const newMessage: Message = {
               id: (Date.now() + 1).toString(),
@@ -1760,8 +1815,10 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               setIsStreamingResponse(false);
             });
             
+            // Completar RAG
+            updateConsolidation(100, 'Resposta gerada com sucesso');
+            completeRAG();
             setProcessingStatus('');
-            setRagProgress({ phase: '', current: 0, total: 0, percentage: 0, details: '' });
             console.log('✅ Processamento Agentic RAG concluído');
             
           } catch (error: any) {
@@ -1789,7 +1846,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             });
             
             setProcessingStatus('');
-            setRagProgress({ phase: '', current: 0, total: 0, percentage: 0, details: '' });
+            resetProgress();
             setIsLoading(false);
             setIsStreamingResponse(false);
           }
@@ -2955,21 +3012,32 @@ Forneça uma resposta abrangente que integre informações de todos os documento
               )}
 
               {/* UI de Progresso do RAG */}
-              {ragProgress.phase && (
-                <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-card/95 backdrop-blur border border-border rounded-lg shadow-lg p-4 w-[90%] max-w-md z-50">
-                  <div className="text-sm font-medium mb-2 text-foreground">{ragProgress.phase}</div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    {ragProgress.details}
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2 mb-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${ragProgress.percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-right text-muted-foreground">
-                    {ragProgress.current}/{ragProgress.total} ({ragProgress.percentage}%)
-                  </div>
+              {ragProgress && isRAGProcessing && (
+                <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[95%] sm:w-[90%] max-w-2xl z-50">
+                  <RAGProgressIndicator
+                    progress={ragProgress}
+                    documentName={(() => {
+                      const pdfFile = attachedFiles.find(f => isPdfFile(f));
+                      if (pdfFile) return pdfFile.name;
+                      const wordFile = attachedFiles.find(f => isWordFile(f));
+                      if (wordFile) return wordFile.name;
+                      return undefined;
+                    })()}
+                    totalPages={(() => {
+                      const pdfFile = attachedFiles.find(f => isPdfFile(f));
+                      if (pdfFile) {
+                        const doc = processedDocuments.get(pdfFile.name);
+                        return doc?.pages;
+                      }
+                      const wordFile = attachedFiles.find(f => isWordFile(f));
+                      if (wordFile) {
+                        const doc = processedDocuments.get(wordFile.name);
+                        return doc?.pages;
+                      }
+                      return undefined;
+                    })()}
+                    onCancel={cancelRAG}
+                  />
                 </div>
               )}
 
