@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   FileText, 
   Scissors, 
@@ -9,7 +10,8 @@ import {
   Filter, 
   Check, 
   Loader2,
-  Clock
+  Clock,
+  StopCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +26,18 @@ export interface RAGProgress {
   completedSteps?: number;
 }
 
+interface PhaseEstimate {
+  phase: RAGPhase;
+  estimatedSeconds: number;
+  status: 'completed' | 'current' | 'pending';
+}
+
 interface RAGProgressIndicatorProps {
   progress: RAGProgress;
   documentName?: string;
   totalPages?: number;
   className?: string;
+  onCancel?: () => void;
 }
 
 const phaseConfig: Record<RAGPhase, {
@@ -80,12 +89,22 @@ export const RAGProgressIndicator = ({
   progress, 
   documentName, 
   totalPages,
-  className 
+  className,
+  onCancel
 }: RAGProgressIndicatorProps) => {
   const phases: RAGPhase[] = ['chunking', 'analysis', 'synthesis', 'filtering', 'consolidation'];
   const currentPhaseIndex = phases.indexOf(progress.phase);
   const config = phaseConfig[progress.phase];
   const Icon = config.icon;
+
+  // Estimativas de tempo base por fase (em segundos por página)
+  const timeEstimates: Record<RAGPhase, number> = {
+    chunking: 0.1,
+    analysis: 2.0,
+    synthesis: 1.5,
+    filtering: 0.8,
+    consolidation: 1.0
+  };
 
   const getPhaseStatus = (phase: RAGPhase): 'completed' | 'current' | 'pending' => {
     const phaseIndex = phases.indexOf(phase);
@@ -94,11 +113,23 @@ export const RAGProgressIndicator = ({
     return 'pending';
   };
 
+  const getPhaseEstimates = (): PhaseEstimate[] => {
+    if (!totalPages) return [];
+    
+    return phases.map((phase) => ({
+      phase,
+      estimatedSeconds: Math.ceil(timeEstimates[phase] * totalPages),
+      status: getPhaseStatus(phase)
+    }));
+  };
+
+  const phaseEstimates = getPhaseEstimates();
+
   return (
     <Card className={cn("w-full border-primary/20 shadow-lg", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
+          <div className="space-y-1 flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               Processamento RAG em Andamento
@@ -109,12 +140,25 @@ export const RAGProgressIndicator = ({
               </CardDescription>
             )}
           </div>
-          {progress.estimatedTimeRemaining !== undefined && (
-            <Badge variant="outline" className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3" />
-              ~{formatTime(progress.estimatedTimeRemaining)}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {progress.estimatedTimeRemaining !== undefined && (
+              <Badge variant="outline" className="flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                ~{formatTime(progress.estimatedTimeRemaining)}
+              </Badge>
+            )}
+            {onCancel && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onCancel}
+                className="flex items-center gap-1.5"
+              >
+                <StopCircle className="h-4 w-4" />
+                Cancelar
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       
@@ -145,54 +189,62 @@ export const RAGProgressIndicator = ({
           </div>
         </div>
 
-        {/* Timeline de Todas as Fases */}
+        {/* Timeline de Todas as Fases com Estimativas */}
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground mb-3">Pipeline de Processamento</p>
           <div className="space-y-2">
-            {phases.map((phase, index) => {
-              const phaseStatus = getPhaseStatus(phase);
-              const phaseConf = phaseConfig[phase];
+            {phaseEstimates.map((estimate, index) => {
+              const phaseConf = phaseConfig[estimate.phase];
               const PhaseIcon = phaseConf.icon;
               
               return (
                 <div 
-                  key={phase}
+                  key={estimate.phase}
                   className={cn(
                     "flex items-center gap-3 p-2 rounded-md transition-all",
-                    phaseStatus === 'current' && "bg-primary/5",
-                    phaseStatus === 'completed' && "opacity-60"
+                    estimate.status === 'current' && "bg-primary/5",
+                    estimate.status === 'completed' && "opacity-60"
                   )}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className={cn(
                       "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                      phaseStatus === 'completed' 
+                      estimate.status === 'completed' 
                         ? "border-green-500 bg-green-500 text-white"
-                        : phaseStatus === 'current'
+                        : estimate.status === 'current'
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-muted bg-background text-muted-foreground"
                     )}>
-                      {phaseStatus === 'completed' ? (
+                      {estimate.status === 'completed' ? (
                         <Check className="h-3 w-3" />
-                      ) : phaseStatus === 'current' ? (
+                      ) : estimate.status === 'current' ? (
                         <PhaseIcon className="h-3 w-3" />
                       ) : (
                         <span className="text-[10px] font-medium">{index + 1}</span>
                       )}
                     </div>
-                    <span className={cn(
-                      "text-xs font-medium truncate",
-                      phaseStatus === 'current' && "text-foreground",
-                      phaseStatus === 'completed' && "text-muted-foreground line-through",
-                      phaseStatus === 'pending' && "text-muted-foreground"
-                    )}>
-                      {phaseConf.label}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={cn(
+                          "text-xs font-medium truncate",
+                          estimate.status === 'current' && "text-foreground",
+                          estimate.status === 'completed' && "text-muted-foreground line-through",
+                          estimate.status === 'pending' && "text-muted-foreground"
+                        )}>
+                          {phaseConf.label}
+                        </span>
+                        {estimate.status === 'pending' && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            ~{formatTime(estimate.estimatedSeconds)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  {phaseStatus === 'current' && (
+                  {estimate.status === 'current' && (
                     <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />
                   )}
-                  {phaseStatus === 'completed' && (
+                  {estimate.status === 'completed' && (
                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-5 shrink-0">
                       Concluído
                     </Badge>
