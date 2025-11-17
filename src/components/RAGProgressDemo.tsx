@@ -12,6 +12,7 @@ export const RAGProgressDemo = () => {
   const {
     progress,
     isProcessing,
+    isCancelled,
     startRAG,
     startChunking,
     updateChunking,
@@ -24,72 +25,93 @@ export const RAGProgressDemo = () => {
     startConsolidation,
     updateConsolidation,
     completeRAG,
+    cancelRAG,
     resetProgress
   } = useRAGProgress({
     totalPages,
     onComplete: () => {
       console.log('RAG processing completed!');
+    },
+    onCancel: () => {
+      console.log('RAG processing cancelled by user');
     }
   });
 
   const simulateRAGProcess = async () => {
     startRAG(totalPages);
     
-    // Simular Chunking
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const totalChunks = Math.ceil(totalPages / 20);
-    startChunking(totalChunks);
-    
-    for (let i = 1; i <= totalChunks; i++) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateChunking(i, totalChunks);
-    }
-    
-    // Simular Analysis
-    await new Promise(resolve => setTimeout(resolve, 500));
-    startAnalysis(totalChunks);
-    
-    for (let i = 1; i <= totalChunks; i++) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      updateAnalysis(i, totalChunks);
-    }
-    
-    // Simular Synthesis
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const totalSections = Math.ceil(totalChunks / 3);
-    startSynthesis(totalSections);
-    
-    for (let i = 1; i <= totalSections; i++) {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      updateSynthesis(i, totalSections);
-    }
-    
-    // Simular Filtering
-    await new Promise(resolve => setTimeout(resolve, 500));
-    startFiltering(totalSections);
-    
-    for (let i = 0; i <= 100; i += 20) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      updateFiltering(i, `Analisando relevância das seções (${i}%)...`);
-    }
-    
-    // Simular Consolidation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    startConsolidation();
-    
-    for (let i = 0; i <= 100; i += 25) {
+    try {
+      // Simular Chunking
       await new Promise(resolve => setTimeout(resolve, 500));
-      updateConsolidation(i, i === 100 ? 'Resposta gerada com sucesso!' : 'Consolidando informações...');
+      if (isCancelled) return;
+      
+      const totalChunks = Math.ceil(totalPages / 20);
+      startChunking(totalChunks);
+      
+      for (let i = 1; i <= totalChunks; i++) {
+        if (isCancelled) return;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        updateChunking(i, totalChunks);
+      }
+      
+      // Simular Analysis
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isCancelled) return;
+      startAnalysis(totalChunks);
+      
+      for (let i = 1; i <= totalChunks; i++) {
+        if (isCancelled) return;
+        await new Promise(resolve => setTimeout(resolve, 800));
+        updateAnalysis(i, totalChunks);
+      }
+      
+      // Simular Synthesis
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isCancelled) return;
+      const totalSections = Math.ceil(totalChunks / 3);
+      startSynthesis(totalSections);
+      
+      for (let i = 1; i <= totalSections; i++) {
+        if (isCancelled) return;
+        await new Promise(resolve => setTimeout(resolve, 600));
+        updateSynthesis(i, totalSections);
+      }
+      
+      // Simular Filtering
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isCancelled) return;
+      startFiltering(totalSections);
+      
+      for (let i = 0; i <= 100; i += 20) {
+        if (isCancelled) return;
+        await new Promise(resolve => setTimeout(resolve, 400));
+        updateFiltering(i, `Analisando relevância das seções (${i}%)...`);
+      }
+      
+      // Simular Consolidation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isCancelled) return;
+      startConsolidation();
+      
+      for (let i = 0; i <= 100; i += 25) {
+        if (isCancelled) return;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        updateConsolidation(i, i === 100 ? 'Resposta gerada com sucesso!' : 'Consolidando informações...');
+      }
+      
+      // Completar
+      if (!isCancelled) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        completeRAG();
+        
+        // Auto-reset após 3 segundos
+        setTimeout(() => {
+          resetProgress();
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error during RAG simulation:', error);
     }
-    
-    // Completar
-    await new Promise(resolve => setTimeout(resolve, 500));
-    completeRAG();
-    
-    // Auto-reset após 3 segundos
-    setTimeout(() => {
-      resetProgress();
-    }, 3000);
   };
 
   return (
@@ -130,7 +152,7 @@ export const RAGProgressDemo = () => {
           <div className="p-4 bg-muted rounded-lg text-sm space-y-1">
             <p><strong>Documento:</strong> {documentName}</p>
             <p><strong>Total de Páginas:</strong> {totalPages}</p>
-            <p><strong>Status:</strong> {isProcessing ? 'Processando...' : 'Aguardando'}</p>
+            <p><strong>Status:</strong> {isCancelled ? 'Cancelado' : isProcessing ? 'Processando...' : 'Aguardando'}</p>
           </div>
         </CardContent>
       </Card>
@@ -140,6 +162,7 @@ export const RAGProgressDemo = () => {
           progress={progress}
           documentName={documentName}
           totalPages={totalPages}
+          onCancel={isProcessing ? cancelRAG : undefined}
         />
       )}
     </div>

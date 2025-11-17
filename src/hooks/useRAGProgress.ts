@@ -4,11 +4,13 @@ import { RAGProgress, RAGPhase } from '@/components/RAGProgressIndicator';
 interface UseRAGProgressOptions {
   totalPages?: number;
   onComplete?: () => void;
+  onCancel?: () => void;
 }
 
 export const useRAGProgress = (options: UseRAGProgressOptions = {}) => {
   const [progress, setProgress] = useState<RAGProgress | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   // Estimativas de tempo base por fase (em segundos por página)
   const timeEstimates = {
@@ -180,14 +182,28 @@ export const useRAGProgress = (options: UseRAGProgressOptions = {}) => {
     }
   }, [options]);
 
+  const cancelRAG = useCallback(() => {
+    setIsCancelled(true);
+    setIsProcessing(false);
+    setProgress(prev => prev ? {
+      ...prev,
+      currentStep: 'Processamento cancelado pelo usuário'
+    } : null);
+    if (options.onCancel) {
+      options.onCancel();
+    }
+  }, [options]);
+
   const resetProgress = useCallback(() => {
     setProgress(null);
     setIsProcessing(false);
+    setIsCancelled(false);
   }, []);
 
   return {
     progress,
     isProcessing,
+    isCancelled,
     startRAG,
     startChunking,
     updateChunking,
@@ -200,6 +216,7 @@ export const useRAGProgress = (options: UseRAGProgressOptions = {}) => {
     startConsolidation,
     updateConsolidation,
     completeRAG,
+    cancelRAG,
     resetProgress
   };
 };
