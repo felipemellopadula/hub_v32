@@ -73,8 +73,7 @@ Texto:`;
           { role: 'system', content: 'Você é um assistente de escrita especializado em criar conteúdo em português do Brasil.' },
           { role: 'user', content: enhancedPrompt }
         ],
-        max_tokens: 2048,
-        temperature: 0.7
+        max_completion_tokens: 2048
       }),
     });
 
