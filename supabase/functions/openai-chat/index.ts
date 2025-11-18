@@ -178,7 +178,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = "gpt-5-mini-2025-08-07", files = [], conversationHistory = [] } = await req.json();
+    const { message, model = "gpt-5-mini-2025-08-07", files = [], conversationHistory = [], hasLargeDocument = false } = await req.json();
 
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openAIApiKey) {
@@ -192,8 +192,13 @@ serve(async (req) => {
 
     // ✅ TIER-2-MAXOUT-PLUS: Threshold dinâmico baseado no modelo
     const threshold = getMapReduceThreshold(model);
-    const needsMapReduce = estimatedTokens > threshold;
-    console.log(`📊 Map-Reduce ${needsMapReduce ? 'ATIVADO ✅' : 'DESATIVADO ❌'} (threshold: ${threshold} tokens, modelo: ${model})`);
+    const needsMapReduce = hasLargeDocument && estimatedTokens > threshold;
+    
+    console.log(`📊 Map-Reduce Decision:`);
+    console.log(`  - Estimated tokens: ${estimatedTokens}`);
+    console.log(`  - Threshold: ${threshold}`);
+    console.log(`  - Has large document: ${hasLargeDocument}`);
+    console.log(`  - Result: ${needsMapReduce ? 'ATIVADO ✅' : 'DESATIVADO ❌'}`);
 
     if (needsMapReduce) {
       console.log(`🗂️ Large document detected (${estimatedTokens} tokens) - using Map-Reduce approach`);

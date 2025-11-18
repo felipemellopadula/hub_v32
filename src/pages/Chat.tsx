@@ -1871,6 +1871,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           files: fileData.length > 0 ? fileData : undefined,
           conversationHistory,
           contextEnabled: true,
+          hasLargeDocument: false,
         };
         
         const controller = new AbortController();
@@ -1892,11 +1893,21 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         });
 
         if (response.status === 429) {
-          toast({
-            title: "⏳ Muitas requisições",
-            description: "A API OpenAI está com rate limit. Aguarde 2 minutos e tente novamente.",
-            variant: "destructive",
-          });
+          const errorData = await response.json().catch(() => ({}));
+          
+          if (errorData.error?.code === 'insufficient_quota') {
+            toast({
+              title: "❌ Créditos insuficientes",
+              description: "A API OpenAI está sem créditos. Recarregue sua conta OpenAI.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "⏳ Limite de requisições atingido",
+              description: "Aguarde 1-2 minutos antes de tentar novamente. A OpenAI limita requisições por minuto.",
+              variant: "destructive",
+            });
+          }
           setIsLoading(false);
           setProcessingStatus("");
           return;
@@ -2657,6 +2668,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             contextEnabled: true,
             isComparison: true,
             comparisonContext: `Este é um pedido de comparação com o modelo ${modelToCompare}. A mesma pergunta foi feita anteriormente a outro modelo. Forneça uma resposta completa e detalhada, focando em análise profunda e insights únicos que você pode oferecer.`,
+            hasLargeDocument: false,
           },
         });
 
