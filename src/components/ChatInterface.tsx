@@ -49,6 +49,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pasteAreaRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const isCallingRef = useRef(false); // ✅ Proteção contra múltiplas chamadas simultâneas
 
   // Handle clipboard paste for images - enhanced version
   const handlePaste = async (event: ClipboardEvent) => {
@@ -298,6 +299,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   };
 
   const handleSendMessage = async () => {
+    // ✅ PROTEÇÃO: Prevenir múltiplas chamadas simultâneas (race condition fix)
+    if (isCallingRef.current) {
+      console.log('⚠️ handleSendMessage já está em execução, ignorando chamada duplicada');
+      return;
+    }
+    
+    isCallingRef.current = true;
+    
     console.log('=== HANDLE SEND MESSAGE START ===');
     console.log('handleSendMessage called:', {
       inputValue: inputValue.trim(),
@@ -310,12 +319,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     
     if ((!inputValue.trim() && !fileContent && !attachedFiles.length) || !selectedModel) {
       console.log('Exiting early - missing input or model');
+      isCallingRef.current = false; // ✅ Resetar flag antes de sair
       return;
     }
 
     // Check token balance first
     const hasTokens = await checkTokenBalance(selectedModel);
     if (!hasTokens) {
+      isCallingRef.current = false; // ✅ Resetar flag antes de sair
       return;
     }
 
@@ -419,6 +430,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           };
           setMessages(prev => [...prev, errorMessage]);
         } finally {
+          isCallingRef.current = false; // ✅ Resetar flag antes do return
           setIsLoading(false);
         }
         return;
@@ -587,6 +599,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         prev.filter(msg => msg.id !== botMessageId).concat(errorMessage)
       );
     } finally {
+      isCallingRef.current = false; // ✅ Sempre resetar flag, mesmo em caso de erro
       setIsLoading(false);
     }
   };
@@ -784,7 +797,9 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                 handlePaste(e.nativeEvent);
               }}
               placeholder={
-                isProcessingFile
+                isLoading || isCallingRef.current
+                  ? "Processando..." // ✅ Feedback claro durante processamento
+                  : isProcessingFile
                   ? "Processando arquivo..."
                   : hasAttachedFile && fileName
                   ? `Arquivo anexado: ${fileName}. Digite sua pergunta...`
@@ -794,20 +809,29 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
               }
               disabled={!selectedModel || isProcessingFile}
               onKeyPress={(e) => {
-                console.log('Key pressed:', e.key);
-                if (e.key === 'Enter' && !isProcessingFile) {
+                if (e.key === 'Enter' && !isProcessingFile && !isCallingRef.current) {
                   e.preventDefault();
+                  e.stopPropagation(); // ✅ Prevenir propagação para outros handlers
                   handleSendMessage();
                 }
               }}
               className="flex-1 bg-background border-border"
             />
             <Button 
-              onClick={() => {
-                console.log('Send button clicked!');
-                handleSendMessage();
+              onClick={(e) => {
+                e.preventDefault(); // ✅ Prevenir comportamento padrão
+                e.stopPropagation(); // ✅ Parar propagação do evento
+                if (!isCallingRef.current) {
+                  handleSendMessage();
+                }
               }}
-              disabled={(!inputValue.trim() && !hasAttachedFile && !attachedFiles.length) || !selectedModel || isLoading || isProcessingFile}
+              disabled={
+                (!inputValue.trim() && !hasAttachedFile && !attachedFiles.length) || 
+                !selectedModel || 
+                isLoading || 
+                isProcessingFile ||
+                isCallingRef.current // ✅ Desabilitar durante execução
+              }
               className="bg-primary hover:bg-primary-glow text-primary-foreground"
             >
               <Send className="h-4 w-4" />
