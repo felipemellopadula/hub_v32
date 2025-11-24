@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Mapeamento de IDs de modelos para nomes oficiais da OpenAI API
+const mapModelToOpenAI = (model: string): string => {
+  const modelMap: Record<string, string> = {
+    'gpt-5.1': 'gpt-5',
+    'gpt-5-mini': 'gpt-5-mini',
+    'gpt-5-nano': 'gpt-5-nano',
+    'gpt-4.1': 'gpt-4.1',
+    'gpt-4.1-mini': 'gpt-4.1-mini',
+    'gpt-4.1-nano': 'gpt-4.1-nano',
+    'o4-mini': 'o4-mini',
+    'o3': 'o3',
+    'gpt-4o-mini': 'gpt-4o-mini',
+    'gpt-4o': 'gpt-4o',
+  };
+  
+  const mapped = modelMap[model] || model;
+  console.log(`🔄 Model mapping: ${model} → ${mapped}`);
+  return mapped;
+};
+
 // Função auxiliar para estimar tokens
 const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
@@ -50,9 +70,10 @@ const processChunk = async (
   console.log(`🔍 Processing chunk ${chunkIndex + 1}/${totalChunks}...`);
   
   const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
+  const apiModel = mapModelToOpenAI(model);
   
   const requestBody: any = {
-    model,
+    model: apiModel,
     messages: [
       {
         role: "system",
@@ -133,9 +154,10 @@ Agora, crie uma resposta FINAL consolidada e profunda (12.000-16.000 palavras, a
 Pergunta/contexto original do usuário: ${originalMessage}`;
 
   const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
+  const apiModel = mapModelToOpenAI(model);
   
   const requestBody: any = {
-    model,
+    model: apiModel,
     messages: [
       {
         role: "system",
@@ -178,7 +200,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = "gpt-5-mini-2025-08-07", files = [], conversationHistory = [] } = await req.json();
+    const { message, model = "gpt-5-mini", files = [], conversationHistory = [] } = await req.json();
 
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openAIApiKey) {
@@ -300,13 +322,14 @@ serve(async (req) => {
       });
     }
 
-    console.log(`🚀 Sending request to OpenAI with model: ${model}`);
+    const apiModel = mapModelToOpenAI(model);
+    console.log(`🚀 Sending request to OpenAI with model: ${apiModel}`);
 
     // Determinar parâmetros baseado no modelo
     const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
     
     const requestBody: any = {
-      model,
+      model: apiModel,
       messages,
       stream: true,
     };
