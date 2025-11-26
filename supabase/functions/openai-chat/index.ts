@@ -31,15 +31,68 @@ const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
 };
 
-// ✅ TIER-2-MAXOUT-PLUS: Threshold dinâmico baseado no modelo
-const getMapReduceThreshold = (model: string): number => {
-  if (model.includes('gpt-4o')) return 20000; // ~50 páginas para modelos com contexto maior
-  if (model.includes('gpt-4')) return 15000;  // ~40 páginas (padrão)
-  return 10000; // ~25 páginas para modelos menores
+// ✅ TIER-2-MAXOUT: Limites de output por modelo (max_completion_tokens)
+const getModelOutputLimits = (model: string): number => {
+  // GPT-5 family - máximo output de 128k
+  if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 128000;
+  
+  // GPT-5 Mini - máximo output de 32k
+  if (model.includes('gpt-5-mini')) return 32768;
+  
+  // GPT-5 Nano - máximo output de 16k
+  if (model.includes('gpt-5-nano')) return 16384;
+  
+  // GPT-4.1 family - máximo output de 32k
+  if (model.includes('gpt-4.1')) return 32768;
+  
+  // o3 e o4-mini - máximo output de 100k
+  if (model.includes('o3') || model.includes('o4-mini')) return 100000;
+  
+  // GPT-4o family (legacy) - máximo output de 16k
+  if (model.includes('gpt-4o')) return 16384;
+  
+  return 16384; // Default fallback
 };
 
-// Função para dividir texto em chunks inteligentes
-const chunkText = (text: string, maxChunkTokens: number): string[] => {
+// ✅ TIER-2-MAXOUT: Limites de input/context por modelo
+const getModelInputLimits = (model: string): number => {
+  if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 400000;
+  if (model.includes('gpt-5-mini')) return 200000;
+  if (model.includes('gpt-5-nano')) return 100000;
+  if (model.includes('gpt-4.1')) return 1047576; // 1M+ tokens!
+  if (model.includes('o3') || model.includes('o4-mini')) return 200000;
+  if (model.includes('gpt-4o')) return 128000;
+  return 128000;
+};
+
+// ✅ TIER-2-MAXOUT: Threshold dinâmico baseado no contexto do modelo
+const getMapReduceThreshold = (model: string): number => {
+  // GPT-4.1 tem contexto de 1M tokens - threshold altíssimo
+  if (model.includes('gpt-4.1')) return 500000;
+  
+  // GPT-5 tem contexto de 400k - threshold alto
+  if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 200000;
+  
+  // GPT-5 Mini/o3/o4-mini - contexto de 200k
+  if (model.includes('gpt-5-mini') || model.includes('o3') || model.includes('o4')) return 100000;
+  
+  // GPT-4o family
+  if (model.includes('gpt-4o')) return 60000;
+  
+  return 50000;
+};
+
+// ✅ TIER-2-MAXOUT: Chunk size dinâmico baseado no modelo
+const getChunkSize = (model: string): number => {
+  if (model.includes('gpt-4.1')) return 200000; // Chunks enormes para 1M context
+  if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 100000;
+  if (model.includes('gpt-5-mini') || model.includes('o3') || model.includes('o4')) return 50000;
+  return 20000;
+};
+
+// ✅ TIER-2-MAXOUT: Função para dividir texto em chunks inteligentes com tamanho dinâmico
+const chunkText = (text: string, model: string): string[] => {
+  const maxChunkTokens = getChunkSize(model);
   const estimatedTokens = estimateTokens(text);
   const numChunks = Math.ceil(estimatedTokens / maxChunkTokens);
   
@@ -54,7 +107,7 @@ const chunkText = (text: string, maxChunkTokens: number): string[] => {
     chunks.push(text.slice(start, end));
   }
   
-  console.log(`📚 Divided into ${chunks.length} chunks (avg ${Math.ceil(estimateTokens(chunks[0]))} tokens each)`);
+  console.log(`📚 TIER-2-MAXOUT: Divided into ${chunks.length} chunks (${maxChunkTokens} tokens each, model: ${model})`);
   return chunks;
 };
 
@@ -72,6 +125,9 @@ const processChunk = async (
   const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
   const apiModel = mapModelToOpenAI(model);
   
+  const maxOutputLimit = getModelOutputLimits(model);
+  const chunkOutputTokens = Math.min(maxOutputLimit, Math.floor(maxOutputLimit * 0.5)); // 50% do limite para chunks
+  
   const requestBody: any = {
     model: apiModel,
     messages: [
@@ -88,13 +144,13 @@ const processChunk = async (
   };
 
   if (!isNewerModel) {
-    requestBody.max_tokens = 16384; // ✅ TIER 2: Máximo output para chunks Map-Reduce
+    requestBody.max_tokens = chunkOutputTokens;
     requestBody.temperature = 0.7;
   } else {
-    requestBody.max_completion_tokens = 16384; // ✅ TIER 2: Máximo output para chunks Map-Reduce
+    requestBody.max_completion_tokens = chunkOutputTokens;
   }
   
-  console.log(`📝 Output config for chunk ${chunkIndex + 1}: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
+  console.log(`📝 TIER-2-MAXOUT chunk ${chunkIndex + 1}: max_completion_tokens=${chunkOutputTokens} (limit: ${maxOutputLimit})`);
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -156,6 +212,9 @@ Pergunta/contexto original do usuário: ${originalMessage}`;
   const isNewerModel = model.includes("gpt-5") || model.includes("gpt-4.1") || model.includes("o3") || model.includes("o4");
   const apiModel = mapModelToOpenAI(model);
   
+  const maxOutputLimit = getModelOutputLimits(model);
+  const consolidationOutputTokens = Math.min(maxOutputLimit, Math.floor(maxOutputLimit * 0.8)); // 80% do limite para consolidação final
+  
   const requestBody: any = {
     model: apiModel,
     messages: [
@@ -172,11 +231,13 @@ Pergunta/contexto original do usuário: ${originalMessage}`;
   };
 
   if (!isNewerModel) {
-    requestBody.max_tokens = 16384;
+    requestBody.max_tokens = consolidationOutputTokens;
     requestBody.temperature = 0.7;
   } else {
-    requestBody.max_completion_tokens = 16384;
+    requestBody.max_completion_tokens = consolidationOutputTokens;
   }
+  
+  console.log(`📝 TIER-2-MAXOUT consolidation: max_completion_tokens=${consolidationOutputTokens} (limit: ${maxOutputLimit})`);
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -222,8 +283,8 @@ serve(async (req) => {
       
       try {
         // MAP PHASE: Dividir em chunks e processar cada um
-        const chunks = chunkText(message, 20000); // ✅ TIER 2: ~20k tokens por chunk (~50 páginas)
-        console.log(`📚 Processing ${chunks.length} chunks in parallel...`);
+        const chunks = chunkText(message, model); // ✅ TIER-2-MAXOUT: Chunk size dinâmico baseado no modelo
+        console.log(`📚 TIER-2-MAXOUT: Processing ${chunks.length} chunks in parallel...`);
         
         const chunkPromises = chunks.map((chunk, i) => 
           processChunk(chunk, i, chunks.length, model, openAIApiKey, 1)
@@ -334,16 +395,19 @@ serve(async (req) => {
       stream: true,
     };
 
-    // ✅ TIER-2-MAXOUT-PLUS: Output dinâmico baseado no tamanho do input
+    // ✅ TIER-2-MAXOUT: Output dinâmico inteligente baseado no modelo e input
+    const maxOutputLimit = getModelOutputLimits(model);
+    const maxInputLimit = getModelInputLimits(model);
+    
     const maxOutputTokens = Math.min(
-      16384, // Máximo absoluto (Tier 2)
+      maxOutputLimit,
       Math.max(
-        8000,  // Mínimo garantido
-        16384 - Math.floor(estimatedTokens * 1.2) // Margem de segurança para evitar overflow
+        Math.floor(maxOutputLimit * 0.5), // Mínimo 50% do limite do modelo
+        maxOutputLimit - Math.floor(estimatedTokens * 0.1) // Reserva 10% para safety margin
       )
     );
     
-    console.log(`💡 Dynamic output: ${maxOutputTokens} tokens (input: ${estimatedTokens} tokens, ratio: ${(maxOutputTokens/estimatedTokens).toFixed(1)}x)`);
+    console.log(`💡 TIER-2-MAXOUT: Dynamic output=${maxOutputTokens} (limit: ${maxOutputLimit}, input: ${estimatedTokens}, context: ${maxInputLimit})`);
 
     // Apenas modelos antigos suportam max_tokens e temperature
     if (!isNewerModel) {
@@ -354,7 +418,7 @@ serve(async (req) => {
       requestBody.max_completion_tokens = maxOutputTokens;
     }
     
-    console.log(`📝 Direct streaming output config: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
+    console.log(`📝 Direct streaming config: max_completion_tokens=${requestBody.max_completion_tokens || requestBody.max_tokens}`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
