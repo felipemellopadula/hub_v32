@@ -410,7 +410,7 @@ serve(async (req) => {
                         'gpt-image-1': 0.167, 'gemini-flash': 0.039, 'qwen-image': 0.0058,
                         'ideogram-3.0': 0.06, 'flux.1-kontext-max': 0.08, 'seedream-4.0': 0.03,
                         'runware:100@1': 0.04, 'runware:101@1': 0.04, 'openai:1@1': 0.167,
-                        'google:4@1': 0.039, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
+                        'google:4@1': 0.039, 'google:5@1': 0.08, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
                         'bytedance:5@0': 0.03, 'runware:108@1': 0.0058,
                       };
                       
@@ -423,6 +423,9 @@ serve(async (req) => {
                       } else if (model === 'google:4@1') {
                         modelForTracking = 'gemini-flash-image';
                         modelCost = IMAGE_COSTS['google:4@1'] || 0.039;
+                      } else if (model === 'google:5@1') {
+                        modelForTracking = 'nano-banana-2-pro';
+                        modelCost = IMAGE_COSTS['google:5@1'] || 0.08;
                       } else if (model === 'runware:108@1') {
                         modelForTracking = 'qwen-image';
                         modelCost = IMAGE_COSTS['qwen-image'] || 0.0058;
