@@ -18,6 +18,9 @@ verify_jwt = true
 [functions.edit-image-nano-banana]
 verify_jwt = true
 
+[functions.edit-image-nano-banana-pro]
+verify_jwt = true
+
 [functions.send-contact-email]
 verify_jwt = false
 
