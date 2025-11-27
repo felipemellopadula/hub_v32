@@ -93,33 +93,33 @@ const NANO_BANANA_PRO_QUALITY_SETTINGS = [
   { id: "1:1-1k", label: "1:1 (1K / Square)", width: 1024, height: 1024, steps: 15 },
   { id: "1:1-2k", label: "1:1 (2K / Square)", width: 2048, height: 2048, steps: 15 },
   { id: "1:1-4k", label: "1:1 (4K / Square)", width: 4096, height: 4096, steps: 15 },
-  { id: "3:2-1k", label: "3:2 (1K / Landscape)", width: 1248, height: 832, steps: 15 },
-  { id: "3:2-2k", label: "3:2 (2K / Landscape)", width: 2496, height: 1664, steps: 15 },
-  { id: "3:2-4k", label: "3:2 (4K / Landscape)", width: 4992, height: 3328, steps: 15 },
-  { id: "2:3-1k", label: "2:3 (1K / Portrait)", width: 832, height: 1248, steps: 15 },
-  { id: "2:3-2k", label: "2:3 (2K / Portrait)", width: 1664, height: 2496, steps: 15 },
-  { id: "2:3-4k", label: "2:3 (4K / Portrait)", width: 2730, height: 4096, steps: 15 },
-  { id: "4:3-1k", label: "4:3 (1K / Landscape)", width: 1184, height: 880, steps: 15 },
-  { id: "4:3-2k", label: "4:3 (2K / Landscape)", width: 2304, height: 1728, steps: 15 },
-  { id: "4:3-4k", label: "4:3 (4K / Landscape)", width: 4608, height: 3456, steps: 15 },
-  { id: "3:4-1k", label: "3:4 (1K / Portrait)", width: 880, height: 1184, steps: 15 },
-  { id: "3:4-2k", label: "3:4 (2K / Portrait)", width: 1728, height: 2304, steps: 15 },
-  { id: "3:4-4k", label: "3:4 (4K / Portrait)", width: 3072, height: 4096, steps: 15 },
-  { id: "4:5-1k", label: "4:5 (1K / Portrait)", width: 896, height: 1120, steps: 15 },
-  { id: "4:5-2k", label: "4:5 (2K / Portrait)", width: 1792, height: 2240, steps: 15 },
-  { id: "4:5-4k", label: "4:5 (4K / Portrait)", width: 3584, height: 4480, steps: 15 },
-  { id: "5:4-1k", label: "5:4 (1K / Landscape)", width: 1120, height: 896, steps: 15 },
-  { id: "5:4-2k", label: "5:4 (2K / Landscape)", width: 2240, height: 1792, steps: 15 },
-  { id: "5:4-4k", label: "5:4 (4K / Landscape)", width: 4480, height: 3584, steps: 15 },
-  { id: "9:16-1k", label: "9:16 (1K / Portrait)", width: 752, height: 1392, steps: 15 },
-  { id: "9:16-2k", label: "9:16 (2K / Portrait)", width: 1440, height: 2560, steps: 15 },
-  { id: "9:16-4k", label: "9:16 (4K / Portrait)", width: 2880, height: 5120, steps: 15 },
-  { id: "16:9-1k", label: "16:9 (1K / Landscape)", width: 1392, height: 752, steps: 15 },
-  { id: "16:9-2k", label: "16:9 (2K / Landscape)", width: 2560, height: 1440, steps: 15 },
-  { id: "16:9-4k", label: "16:9 (4K / Landscape)", width: 5120, height: 2880, steps: 15 },
-  { id: "21:9-1k", label: "21:9 (1K / Landscape)", width: 1568, height: 672, steps: 15 },
-  { id: "21:9-2k", label: "21:9 (2K / Landscape)", width: 3136, height: 1344, steps: 15 },
-  { id: "21:9-4k", label: "21:9 (4K / Landscape)", width: 5120, height: 2194, steps: 15 },
+  { id: "3:2-1k", label: "3:2 (1K / Landscape)", width: 1264, height: 848, steps: 15 },
+  { id: "3:2-2k", label: "3:2 (2K / Landscape)", width: 2528, height: 1696, steps: 15 },
+  { id: "3:2-4k", label: "3:2 (4K / Landscape)", width: 5056, height: 3392, steps: 15 },
+  { id: "2:3-1k", label: "2:3 (1K / Portrait)", width: 848, height: 1264, steps: 15 },
+  { id: "2:3-2k", label: "2:3 (2K / Portrait)", width: 1696, height: 2528, steps: 15 },
+  { id: "2:3-4k", label: "2:3 (4K / Portrait)", width: 3392, height: 5056, steps: 15 },
+  { id: "4:3-1k", label: "4:3 (1K / Landscape)", width: 1200, height: 896, steps: 15 },
+  { id: "4:3-2k", label: "4:3 (2K / Landscape)", width: 2400, height: 1792, steps: 15 },
+  { id: "4:3-4k", label: "4:3 (4K / Landscape)", width: 4800, height: 3584, steps: 15 },
+  { id: "3:4-1k", label: "3:4 (1K / Portrait)", width: 896, height: 1200, steps: 15 },
+  { id: "3:4-2k", label: "3:4 (2K / Portrait)", width: 1792, height: 2400, steps: 15 },
+  { id: "3:4-4k", label: "3:4 (4K / Portrait)", width: 3584, height: 4800, steps: 15 },
+  { id: "4:5-1k", label: "4:5 (1K / Portrait)", width: 928, height: 1152, steps: 15 },
+  { id: "4:5-2k", label: "4:5 (2K / Portrait)", width: 1856, height: 2304, steps: 15 },
+  { id: "4:5-4k", label: "4:5 (4K / Portrait)", width: 3712, height: 4608, steps: 15 },
+  { id: "5:4-1k", label: "5:4 (1K / Landscape)", width: 1152, height: 928, steps: 15 },
+  { id: "5:4-2k", label: "5:4 (2K / Landscape)", width: 2304, height: 1856, steps: 15 },
+  { id: "5:4-4k", label: "5:4 (4K / Landscape)", width: 4608, height: 3712, steps: 15 },
+  { id: "9:16-1k", label: "9:16 (1K / Portrait)", width: 768, height: 1376, steps: 15 },
+  { id: "9:16-2k", label: "9:16 (2K / Portrait)", width: 1536, height: 2752, steps: 15 },
+  { id: "9:16-4k", label: "9:16 (4K / Portrait)", width: 3072, height: 5504, steps: 15 },
+  { id: "16:9-1k", label: "16:9 (1K / Landscape)", width: 1376, height: 768, steps: 15 },
+  { id: "16:9-2k", label: "16:9 (2K / Landscape)", width: 2752, height: 1536, steps: 15 },
+  { id: "16:9-4k", label: "16:9 (4K / Landscape)", width: 5504, height: 3072, steps: 15 },
+  { id: "21:9-1k", label: "21:9 (1K / Landscape)", width: 1584, height: 672, steps: 15 },
+  { id: "21:9-2k", label: "21:9 (2K / Landscape)", width: 3168, height: 1344, steps: 15 },
+  { id: "21:9-4k", label: "21:9 (4K / Landscape)", width: 6336, height: 2688, steps: 15 },
 ];
 
 const QWEN_QUALITY_SETTINGS = [
@@ -134,7 +134,7 @@ const MODELS = [
   { id: "runware:108@1", label: "Qwen-Image" },
   { id: "bfl:3@1", label: "FLUX.1 Kontext [max]" },
   { id: "google:4@1", label: "Gemini Flash Image 2.5" },
-  { id: "google:5@1", label: "Nano Banana 2 Pro" },
+  { id: "google:4@2", label: "Nano Banana 2 Pro" },
   { id: "bytedance:5@0", label: "Seedream 4.0" },
 ];
 
@@ -174,7 +174,7 @@ const Image2Page = () => {
       model === "ideogram:4@1" ||
       model === "bfl:3@1" ||
       model === "google:4@1" ||
-      model === "google:5@1" ||
+      model === "google:4@2" ||
       model === "bytedance:5@0",
     [model],
   );
@@ -183,7 +183,7 @@ const Image2Page = () => {
     if (model === "bfl:3@1") return KONTEXT_QUALITY_SETTINGS;
     if (model === "ideogram:4@1") return IDEOGRAM_QUALITY_SETTINGS;
     if (model === "google:4@1") return GEMINI_QUALITY_SETTINGS;
-    if (model === "google:5@1") return NANO_BANANA_PRO_QUALITY_SETTINGS;
+    if (model === "google:4@2") return NANO_BANANA_PRO_QUALITY_SETTINGS;
     if (model === "bytedance:5@0") return SEEDREAM_QUALITY_SETTINGS;
     if (model === "runware:108@1") return QWEN_QUALITY_SETTINGS;
     return QUALITY_SETTINGS;
@@ -270,14 +270,6 @@ const Image2Page = () => {
       return;
     }
 
-    // Validação: Modelos Nano Banana requerem imagem anexada
-    if ((model === "google:4@1" || model === "google:5@1") && !selectedFile) {
-      toast.error("Este modelo requer uma imagem anexada", {
-        description: "Nano Banana funciona editando/transformando imagens existentes. Por favor, anexe uma imagem.",
-      });
-      return;
-    }
-
     setIsGenerating(true);
     try {
       let finalPrompt = prompt;
@@ -343,33 +335,15 @@ const Image2Page = () => {
       }
 
       if (inputImageBase64 && canAttachImage) {
-        // Decidir qual edge function chamar baseado no modelo
-        let edgeFunction = "edit-image";
-        let editBody: any = {
-          model,
-          positivePrompt: finalPrompt,
-          inputImage: inputImageBase64, // Runware espera 'inputImage'
-          width: selectedQualityInfo.width,
-          height: selectedQualityInfo.height,
-        };
-
-        // Nano Banana models usam Lovable AI
-        if (model === "google:4@1") {
-          edgeFunction = "edit-image-nano-banana";
-          editBody = {
-            prompt: finalPrompt,
-            imageBase64: inputImageBase64
-          };
-        } else if (model === "google:5@1") {
-          edgeFunction = "edit-image-nano-banana-pro";
-          editBody = {
-            prompt: finalPrompt,
-            imageBase64: inputImageBase64
-          };
-        }
-
-        const { data: editData, error: editError } = await supabase.functions.invoke(edgeFunction, {
-          body: editBody,
+        // Usar edit-image da Runware para todos os modelos (incluindo Google)
+        const { data: editData, error: editError } = await supabase.functions.invoke("edit-image", {
+          body: {
+            model,
+            positivePrompt: finalPrompt,
+            inputImage: inputImageBase64,
+            width: selectedQualityInfo.width,
+            height: selectedQualityInfo.height,
+          },
         });
         if (editError) {
           console.error("Erro detalhado ao editar imagem:", editError);
