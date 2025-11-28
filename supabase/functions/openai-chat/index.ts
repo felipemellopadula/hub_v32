@@ -350,6 +350,7 @@ serve(async (req) => {
         });
       });
       console.log(`💾 Cache-eligible context: ${conversationHistory.length} messages in history`);
+    }
 
     // Processar arquivos (imagens para visão)
     if (files && files.length > 0) {
