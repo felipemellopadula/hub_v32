@@ -77,7 +77,9 @@ serve(async (req) => {
     
     console.log('isGoogleModel:', isGoogleModel, 'isHighResModel:', isHighResModel, 'isSeedream:', isSeedreamModel, 'isQwen:', isQwenModel);
     
-    if (!isGoogleModel) {
+    // Apenas processar dimensões para modelos que suportam width/height
+    // Nano Banana 2 Pro (google:4@2) suporta dimensões customizadas
+    if (!isGoogleModel || isNanoBanana2Pro) {
       // Para Ideogram, usar dimensões específicas suportadas pela API
       if (model === 'ideogram:4@1') {
         console.log('Ideogram detectado - aplicando mapeamento de dimensões suportadas');
