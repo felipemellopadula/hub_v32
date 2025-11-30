@@ -27,7 +27,7 @@ serve(async (req) => {
     console.log('Editando imagem com Runware:', { model, width, height, promptLength: positivePrompt.length });
 
     const isGoogleModel = model && model.startsWith('google:');
-    const isNanoBanana2Pro = model === 'gemini_3_pro_image_preview';
+    const isNanoBanana2Pro = model === 'google:4@2';
     
     let runwarePayload: any[] = [
       {

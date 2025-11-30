@@ -134,7 +134,7 @@ const MODELS = [
   { id: "runware:108@1", label: "Qwen-Image" },
   { id: "bfl:3@1", label: "FLUX.1 Kontext [max]" },
   { id: "google:4@1", label: "Gemini Flash Image 2.5" },
-  { id: "gemini_3_pro_image_preview", label: "Nano Banana 2 Pro" },
+  { id: "google:4@2", label: "Nano Banana 2 Pro" },
   { id: "bytedance:5@0", label: "Seedream 4.0" },
 ];
 
@@ -174,7 +174,7 @@ const Image2Page = () => {
       model === "ideogram:4@1" ||
       model === "bfl:3@1" ||
       model === "google:4@1" ||
-      model === "gemini_3_pro_image_preview" ||
+      model === "google:4@2" ||
       model === "bytedance:5@0",
     [model],
   );
@@ -183,7 +183,7 @@ const Image2Page = () => {
     if (model === "bfl:3@1") return KONTEXT_QUALITY_SETTINGS;
     if (model === "ideogram:4@1") return IDEOGRAM_QUALITY_SETTINGS;
     if (model === "google:4@1") return GEMINI_QUALITY_SETTINGS;
-    if (model === "gemini_3_pro_image_preview") return NANO_BANANA_PRO_QUALITY_SETTINGS;
+    if (model === "google:4@2") return NANO_BANANA_PRO_QUALITY_SETTINGS;
     if (model === "bytedance:5@0") return SEEDREAM_QUALITY_SETTINGS;
     if (model === "runware:108@1") return QWEN_QUALITY_SETTINGS;
     return QUALITY_SETTINGS;

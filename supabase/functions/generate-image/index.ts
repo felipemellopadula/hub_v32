@@ -66,10 +66,10 @@ serve(async (req) => {
     
     // Modelos Google (como google:4@1 - Gemini Flash) não suportam width/height
     const isGoogleModel = model.startsWith('google:');
-    // Nano Banana 2 Pro (gemini_3_pro_image_preview) suporta dimensões customizadas, diferente do Gemini Flash (google:4@1)
-    const isNanoBanana2Pro = model === 'gemini_3_pro_image_preview';
+    // Nano Banana 2 Pro (google:4@2) suporta dimensões customizadas, diferente do Gemini Flash (google:4@1)
+    const isNanoBanana2Pro = model === 'google:4@2';
     // Modelos que suportam dimensões altas - Seedream especificamente suporta até 6048x6048
-    const isHighResModel = model === 'bytedance:5@0' || model === 'ideogram:4@1' || model === 'bfl:3@1' || model === 'gemini_3_pro_image_preview';
+    const isHighResModel = model === 'bytedance:5@0' || model === 'ideogram:4@1' || model === 'bfl:3@1' || model === 'google:4@2';
     // Seedream tem limite específico maior
     const isSeedreamModel = model === 'bytedance:5@0';
     // Qwen-Image tem limite de pixels: máximo 1048576 pixels (1024x1024)
@@ -286,7 +286,7 @@ serve(async (req) => {
     };
 
     // Apenas adicionar width/height para modelos que suportam
-    // Nano Banana 2 Pro (gemini_3_pro_image_preview) suporta width/height, diferente do Gemini Flash (google:4@1)
+    // Nano Banana 2 Pro (google:4@2) suporta width/height, diferente do Gemini Flash (google:4@1)
     if (!isGoogleModel || isNanoBanana2Pro) {
       inferenceObject.width = width;
       inferenceObject.height = height;
@@ -434,7 +434,7 @@ serve(async (req) => {
                         'gpt-image-1': 0.167, 'gemini-flash': 0.039, 'qwen-image': 0.0058,
                         'ideogram-3.0': 0.06, 'flux.1-kontext-max': 0.08, 'seedream-4.0': 0.03,
                         'runware:100@1': 0.04, 'runware:101@1': 0.04, 'openai:1@1': 0.167,
-                        'google:4@1': 0.039, 'gemini_3_pro_image_preview': 0.08, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
+                        'google:4@1': 0.039, 'google:4@2': 0.08, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
                         'bytedance:5@0': 0.03, 'runware:108@1': 0.0058,
                       };
                       
@@ -447,9 +447,9 @@ serve(async (req) => {
                       } else if (model === 'google:4@1') {
                         modelForTracking = 'gemini-flash-image';
                         modelCost = IMAGE_COSTS['google:4@1'] || 0.039;
-                      } else if (model === 'gemini_3_pro_image_preview') {
+                      } else if (model === 'google:4@2') {
                         modelForTracking = 'nano-banana-2-pro';
-                        modelCost = IMAGE_COSTS['gemini_3_pro_image_preview'] || 0.08;
+                        modelCost = IMAGE_COSTS['google:4@2'] || 0.08;
                       } else if (model === 'runware:108@1') {
                         modelForTracking = 'qwen-image';
                         modelCost = IMAGE_COSTS['qwen-image'] || 0.0058;
