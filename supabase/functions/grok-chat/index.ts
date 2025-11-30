@@ -88,8 +88,9 @@ serve(async (req) => {
     });
     
     // Build messages array with conversation history if context is enabled
-    let messages = [];
+    let messages: any[] = [];
     let chunkResponses: string[] = [];
+    let cachedTokens = 0;
     
     // If document is large, process in chunks with Map-Reduce
     if (estimatedTokens > limits.input * 0.6) {
@@ -145,10 +146,25 @@ serve(async (req) => {
       if (contextEnabled && conversationHistory.length > 0) {
         console.log('Building conversation context with', conversationHistory.length, 'previous messages');
         const recentHistory = conversationHistory.slice(-3);
-        messages = recentHistory.map((historyMsg: any) => ({
-          role: historyMsg.role,
-          content: historyMsg.content
-        }));
+        
+        // For grok-4.1-fast, add cache_control to enable prompt caching (75% discount)
+        const useCache = model === 'grok-4.1-fast' && recentHistory.length > 0;
+        
+        messages = recentHistory.map((historyMsg: any, index: number) => {
+          const msg: any = {
+            role: historyMsg.role,
+            content: historyMsg.content
+          };
+          
+          // Add cache_control to the last message in history to cache the conversation
+          if (useCache && index === recentHistory.length - 1) {
+            msg.cache_control = { type: "ephemeral" };
+            cachedTokens = Math.ceil((historyMsg.content?.length || 0) / 3.2);
+            console.log('🔄 Cache enabled for conversation history:', cachedTokens, 'tokens');
+          }
+          
+          return msg;
+        });
       }
       
       messages.push({
@@ -217,14 +233,30 @@ serve(async (req) => {
           // Calculate token usage - 3.2 characters = 1 token (optimized for Portuguese)
           const inputTokens = Math.ceil((finalMessage?.length || 0) / 3.2);
           const outputTokens = Math.ceil(generatedText.length / 3.2);
-          const totalTokens = inputTokens + outputTokens;
+          
+          // Apply 75% discount to cached tokens for grok-4.1-fast
+          // Cached tokens cost $0.05/1M (75% discount from $0.20/1M)
+          const uncachedInputTokens = Math.max(0, inputTokens - cachedTokens);
+          const cachedInputCost = (cachedTokens / 1000000) * 0.05; // $0.05 per 1M cached tokens
+          const uncachedInputCost = (uncachedInputTokens / 1000000) * 0.20; // $0.20 per 1M regular input tokens
+          
+          // For billing purposes, convert cached tokens to "effective" tokens at regular price
+          // effectiveTokens = (cachedCost + uncachedCost) / regularPrice
+          const effectiveInputTokens = Math.ceil(
+            ((cachedInputCost + uncachedInputCost) / 0.20) * 1000000
+          );
+          
+          const totalTokens = effectiveInputTokens + outputTokens;
           
           console.log('Recording Grok token usage:', {
             userId,
             model,
             inputTokens,
+            cachedTokens,
+            effectiveInputTokens,
             outputTokens,
-            totalTokens
+            totalTokens,
+            savedTokens: cachedTokens > 0 ? Math.ceil(cachedTokens * 0.75) : 0
           });
 
           // Save token usage to database
@@ -234,7 +266,7 @@ serve(async (req) => {
               user_id: userId,
               model_name: model,
               tokens_used: totalTokens,
-              input_tokens: inputTokens,
+              input_tokens: effectiveInputTokens,
               output_tokens: outputTokens,
               message_content: messages[messages.length - 1]?.content?.length > 1000 
                 ? messages[messages.length - 1]?.content.substring(0, 1000) + '...' 
