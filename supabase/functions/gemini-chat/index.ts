@@ -181,6 +181,7 @@ serve(async (req) => {
     // Build contents array with conversation history if context is enabled
     let contents = [];
     let chunkResponses: string[] = [];
+    let cachedTokens = 0;
     
     // If document is large, process in chunks with Map-Reduce
     if (estimatedTokens > mapReduceThreshold) {
@@ -258,15 +259,23 @@ serve(async (req) => {
             console.log('📚 Previous document context preserved');
           }
         } else {
-          // Small document: normal history
+          // Small document: normal history with caching support
           console.log('Building conversation context with', conversationHistory.length, 'previous messages');
           
           const recentHistory = conversationHistory.slice(-3);
-          recentHistory.forEach((historyMsg: any) => {
+          recentHistory.forEach((historyMsg: any, index: number) => {
             const role = historyMsg.role === 'assistant' ? 'model' : 'user';
+            const messageContent = historyMsg.content;
+            
+            // Track tokens for caching (last message in history gets cached)
+            if (index === recentHistory.length - 1 && role === 'user') {
+              cachedTokens = estimateTokenCount(messageContent);
+              console.log('🔄 Cache enabled for conversation history:', cachedTokens, 'tokens');
+            }
+            
             contents.push({
               role: role,
-              parts: [{ text: historyMsg.content }]
+              parts: [{ text: messageContent }]
             });
           });
         }
@@ -333,14 +342,22 @@ serve(async (req) => {
           // Calculate token usage - 3.2 characters = 1 token (optimized for Portuguese)
           const inputTokens = Math.ceil((finalMessage?.length || 0) / 3.2);
           const outputTokens = Math.ceil(generatedText.length / 3.2);
-          const totalTokens = inputTokens + outputTokens;
+          
+          // Apply 75% discount on cached tokens (similar to Grok)
+          // Cached tokens cost only 25% of normal price
+          const regularInputTokens = inputTokens - cachedTokens;
+          const effectiveInputTokens = regularInputTokens + Math.ceil(cachedTokens * 0.25);
+          const totalTokens = effectiveInputTokens + outputTokens;
           
           console.log('Recording Gemini token usage:', {
             userId,
             model: actualModel,
             inputTokens,
+            cachedTokens,
+            effectiveInputTokens,
             outputTokens,
             totalTokens,
+            savedTokens: cachedTokens > 0 ? Math.ceil(cachedTokens * 0.75) : 0,
             messageLength: message?.length || 0,
             responseLength: generatedText.length
           });
@@ -352,7 +369,7 @@ serve(async (req) => {
               user_id: userId,
               model_name: actualModel,
               tokens_used: totalTokens, // Keep for compatibility
-              input_tokens: inputTokens, // Real input tokens
+              input_tokens: effectiveInputTokens, // Effective input tokens with cache discount
               output_tokens: outputTokens, // Real output tokens
               message_content: message?.length > 1000 
                 ? message.substring(0, 1000) + '...' 
