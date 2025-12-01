@@ -200,9 +200,16 @@ serve(async (req) => {
       }
     }
     
+    // Calculate dynamic max_tokens based on context
+    // For consolidation: use 50% of output limit (more conservative)
+    // For normal responses: use 80% of output limit (maximize output)
+    const maxTokens = chunkResponses.length > 0 
+      ? Math.min(Math.floor(limits.output * 0.5), limits.output) // Consolidation
+      : Math.min(Math.floor(limits.output * 0.8), limits.output); // Normal response
+    
     const requestBody = {
       model: model,
-      max_tokens: Math.min(4096, limits.output),
+      max_tokens: maxTokens,
       messages: processedMessages
     };
 

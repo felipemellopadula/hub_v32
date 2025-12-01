@@ -57,12 +57,12 @@ export default function Transcribe() {
       return;
     }
 
-    // Validar tamanho (25MB)
-    const maxSize = 25 * 1024 * 1024;
+    // Validar tamanho (100MB - Tier 2 OpenAI com chunking automático)
+    const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 25MB",
+        description: "O arquivo deve ter no máximo 100MB",
         variant: "destructive",
       });
       return;
@@ -191,7 +191,7 @@ export default function Transcribe() {
                 Upload de Áudio
               </CardTitle>
               <CardDescription>
-                Faça upload do arquivo de áudio que deseja transcrever (máximo 25MB)
+                Faça upload do arquivo de áudio que deseja transcrever (máximo 100MB)
               </CardDescription>
             </CardHeader>
             <CardContent>

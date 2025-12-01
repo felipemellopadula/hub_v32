@@ -302,7 +302,7 @@ serve(async (req) => {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 8192,
+          maxOutputTokens: Math.min(Math.floor(limits.output * 0.8), limits.output),
         }
       }),
     });
