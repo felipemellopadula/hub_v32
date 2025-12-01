@@ -35,6 +35,49 @@ function processBase64Chunks(base64String: string, chunkSize = 32768) {
   return result;
 }
 
+async function splitAudioIntoChunks(binaryAudio: Uint8Array, fileName: string): Promise<Blob[]> {
+  const chunkSize = 20 * 1024 * 1024; // 20MB per chunk
+  const chunks: Blob[] = [];
+  
+  for (let i = 0; i < binaryAudio.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, binaryAudio.length);
+    const chunk = binaryAudio.slice(i, end);
+    chunks.push(new Blob([chunk], { type: 'audio/webm' }));
+  }
+  
+  console.log(`📦 Audio split into ${chunks.length} chunks`);
+  return chunks;
+}
+
+async function transcribeAudioChunk(
+  audioBlob: Blob, 
+  fileName: string, 
+  chunkIndex: number, 
+  totalChunks: number
+): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', audioBlob, `${fileName}_part${chunkIndex + 1}`);
+  formData.append('model', 'whisper-1');
+  formData.append('timestamp_granularities[]', 'segment');
+  formData.append('response_format', 'verbose_json');
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Whisper API error for chunk ${chunkIndex + 1}: ${await response.text()}`);
+  }
+
+  const result = await response.json();
+  console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} transcribed`);
+  return result;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -50,40 +93,74 @@ serve(async (req) => {
     console.log('Transcribing audio file:', fileName)
     
     const binaryAudio = processBase64Chunks(audio)
+    const audioSizeMB = binaryAudio.length / (1024 * 1024);
+    console.log(`📊 Audio size: ${audioSizeMB.toFixed(2)}MB`);
     
-    // Primeiro, fazer a transcrição básica com timestamps
-    const formData = new FormData()
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' })
-    formData.append('file', blob, fileName || 'audio.webm')
-    formData.append('model', 'whisper-1')
-    formData.append('timestamp_granularities[]', 'segment')
-    formData.append('response_format', 'verbose_json')
+    let allTranscriptions: any[] = [];
+    let timeOffset = 0;
+    
+    // Check if we need to split into chunks (larger than 25MB)
+    if (audioSizeMB > 25) {
+      console.log('🔄 Large file detected, using chunking strategy...');
+      const chunks = await splitAudioIntoChunks(binaryAudio, fileName || 'audio.webm');
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkResult = await transcribeAudioChunk(chunks[i], fileName || 'audio.webm', i, chunks.length);
+        
+        // Adjust timestamps based on chunk position
+        if (chunkResult.segments) {
+          const adjustedSegments = chunkResult.segments.map((seg: any) => ({
+            ...seg,
+            start: seg.start + timeOffset,
+            end: seg.end + timeOffset
+          }));
+          allTranscriptions.push(...adjustedSegments);
+          
+          // Update time offset for next chunk (use last segment's end time)
+          if (chunkResult.segments.length > 0) {
+            const lastSegment = chunkResult.segments[chunkResult.segments.length - 1];
+            timeOffset = lastSegment.end + timeOffset;
+          }
+        }
+      }
+    } else {
+      // Process as single file (original logic)
+      console.log('📝 Single file processing');
+      const formData = new FormData();
+      const blob = new Blob([binaryAudio], { type: 'audio/webm' });
+      formData.append('file', blob, fileName || 'audio.webm');
+      formData.append('model', 'whisper-1');
+      formData.append('timestamp_granularities[]', 'segment');
+      formData.append('response_format', 'verbose_json');
 
-    const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      },
-      body: formData,
-    })
+      const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        },
+        body: formData,
+      });
 
-    if (!transcriptionResponse.ok) {
-      throw new Error(`OpenAI Whisper API error: ${await transcriptionResponse.text()}`)
+      if (!transcriptionResponse.ok) {
+        throw new Error(`OpenAI Whisper API error: ${await transcriptionResponse.text()}`);
+      }
+
+      const transcriptionResult = await transcriptionResponse.json();
+      allTranscriptions = transcriptionResult.segments || [];
+      console.log('✅ Single file transcription completed');
     }
 
-    const transcriptionResult = await transcriptionResponse.json()
-    console.log('Whisper transcription completed')
-
-    // Agora usar GPT-4.1-mini para separar interlocutores e melhorar a formatação
-    const segments = transcriptionResult.segments || []
-    let rawText = transcriptionResult.text || ''
-
-    if (segments.length > 0) {
-      rawText = segments.map((segment: any) => 
+    // Build raw text from all transcriptions
+    let rawText = '';
+    if (allTranscriptions.length > 0) {
+      rawText = allTranscriptions.map((segment: any) => 
         `[${Math.floor(segment.start)}s] ${segment.text}`
-      ).join('\n')
+      ).join('\n');
     }
+    
+    console.log(`📝 Total segments: ${allTranscriptions.length}`);
 
+    // Use GPT-4.1-mini for speaker separation and formatting
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
