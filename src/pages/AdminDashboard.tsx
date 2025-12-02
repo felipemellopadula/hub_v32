@@ -13,8 +13,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Shield, AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Shield, AlertTriangle, RefreshCw, ChevronDown, Download, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// Extend jsPDF type for autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: typeof autoTable;
+  }
+}
 
 interface TokenUsage {
   id: string;
@@ -34,6 +44,16 @@ interface AdminStats {
   totalProfit: number;
   totalUsers: number;
   totalTokens: number;
+}
+
+interface UserReport {
+  user_id: string;
+  email: string;
+  totalCost: number;
+  totalRevenue: number;
+  totalProfit: number;
+  totalTokens: number;
+  transactionCount: number;
 }
 
 // OpenAI pricing per million tokens (USD) - Updated from user's table
@@ -139,6 +159,7 @@ const AdminDashboard = () => {
     "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos"
   >("todos");
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year" | "all">("all");
+  const [userReports, setUserReports] = useState<UserReport[]>([]);
 
   const getDateFilterRange = (period: "today" | "week" | "month" | "year" | "all") => {
     const now = new Date();
@@ -742,6 +763,201 @@ const AdminDashboard = () => {
     };
   };
 
+  const calculateUserReports = (
+    data: TokenUsage[],
+    providerFilter: "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos" = "todos",
+    period: "today" | "week" | "month" | "year" | "all" = "all",
+  ): UserReport[] => {
+    let filteredData = data;
+
+    // Filter by period
+    const dateRange = getDateFilterRange(period);
+    if (dateRange) {
+      filteredData = filteredData.filter((usage) => {
+        const usageDate = new Date(usage.created_at);
+        return usageDate >= dateRange.start && usageDate <= dateRange.end;
+      });
+    }
+
+    // Filter by provider
+    if (providerFilter !== "todos") {
+      filteredData = filteredData.filter((usage) => {
+        const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+        const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+        const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+        const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+        const isImageModel = Object.keys(IMAGE_PRICING).some((key) =>
+          usage.model_name.toLowerCase().includes(key.toLowerCase()),
+        );
+
+        if (providerFilter === "gemini") return isGeminiModel;
+        if (providerFilter === "claude") return isClaudeModel;
+        if (providerFilter === "grok") return isGrokModel;
+        if (providerFilter === "deepseek") return isDeepSeekModel;
+        if (providerFilter === "image") return isImageModel;
+        return !isGeminiModel && !isClaudeModel && !isGrokModel && !isDeepSeekModel && !isImageModel;
+      });
+    }
+
+    // Group by user
+    const userMap = new Map<string, UserReport>();
+
+    filteredData.forEach((usage) => {
+      if (!usage.user_id) return;
+
+      let inputTokens: number;
+      let outputTokens: number;
+      let cost = 0;
+
+      const isImageModel =
+        Object.keys(IMAGE_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+        usage.model_name === "google:4@1";
+      const isVideoModel = Object.keys(VIDEO_PRICING).some((key) =>
+        usage.model_name.toLowerCase().includes(key.toLowerCase()),
+      );
+
+      if (isVideoModel) {
+        const videoModelKey =
+          Object.keys(VIDEO_PRICING).find((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+          "bytedance:1@1";
+        cost = VIDEO_PRICING[videoModelKey].cost;
+        inputTokens = 1;
+        outputTokens = 1;
+      } else if (isImageModel) {
+        const imageModelKey =
+          Object.keys(IMAGE_PRICING).find((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+          "gpt-image-1";
+        cost = IMAGE_PRICING[imageModelKey]?.cost || 0.02;
+        inputTokens = 1;
+        outputTokens = 1;
+      } else {
+        if (usage.input_tokens !== null && usage.output_tokens !== null) {
+          inputTokens = usage.input_tokens;
+          outputTokens = usage.output_tokens;
+        } else {
+          const inputCharacters = usage.message_content?.length || 0;
+          inputTokens = charsToTokens(inputCharacters);
+          outputTokens = Math.floor(inputTokens * 2.5);
+        }
+
+        const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+        const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+        const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+        const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+        let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" = "openai";
+
+        if (isGeminiModel) provider = "gemini";
+        else if (isClaudeModel) provider = "claude";
+        else if (isGrokModel) provider = "grok";
+        else if (isDeepSeekModel) provider = "deepseek";
+
+        const inputCost = inputTokens * getCostPerToken(usage.model_name, "input", provider);
+        const outputCost = outputTokens * getCostPerToken(usage.model_name, "output", provider);
+        cost = inputCost + outputCost;
+      }
+
+      const revenue = cost * 3;
+      const profit = revenue - cost;
+      const totalTokens = inputTokens + outputTokens;
+
+      const existing = userMap.get(usage.user_id);
+      if (existing) {
+        existing.totalCost += cost;
+        existing.totalRevenue += revenue;
+        existing.totalProfit += profit;
+        existing.totalTokens += totalTokens;
+        existing.transactionCount += 1;
+      } else {
+        userMap.set(usage.user_id, {
+          user_id: usage.user_id,
+          email: usage.user_id, // Will be updated with actual email if available
+          totalCost: cost,
+          totalRevenue: revenue,
+          totalProfit: profit,
+          totalTokens: totalTokens,
+          transactionCount: 1,
+        });
+      }
+    });
+
+    return Array.from(userMap.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Email/User ID", "Custo Total (USD)", "Receita Total (USD)", "Lucro Total (USD)", "Tokens", "Transações"];
+    const rows = userReports.map((report) => [
+      report.email,
+      report.totalCost.toFixed(4),
+      report.totalRevenue.toFixed(4),
+      report.totalProfit.toFixed(4),
+      report.totalTokens.toString(),
+      report.transactionCount.toString(),
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `relatorio-usuarios-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Relatório Detalhado de Uso por Usuário", 14, 22);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+    
+    // Provider filter info
+    const providerText = selectedProvider === "todos" ? "Todos os provedores" : 
+      selectedProvider === "openai" ? "OpenAI" :
+      selectedProvider === "gemini" ? "Google Gemini" :
+      selectedProvider === "claude" ? "Anthropic Claude" :
+      selectedProvider === "grok" ? "xAI Grok" :
+      selectedProvider === "deepseek" ? "DeepSeek" :
+      selectedProvider === "image" ? "Imagem" :
+      selectedProvider === "video" ? "Vídeo" : selectedProvider;
+    
+    const periodText = selectedPeriod === "all" ? "Todos os períodos" :
+      selectedPeriod === "today" ? "Hoje" :
+      selectedPeriod === "week" ? "Última semana" :
+      selectedPeriod === "month" ? "Último mês" :
+      selectedPeriod === "year" ? "Último ano" : selectedPeriod;
+    
+    doc.text(`Filtros: ${providerText} - ${periodText}`, 14, 36);
+    
+    // Table
+    autoTable(doc, {
+      startY: 42,
+      head: [["Email/User ID", "Custo (USD)", "Receita (USD)", "Lucro (USD)", "Tokens", "Trans."]],
+      body: userReports.map((report) => [
+        report.email.substring(0, 30),
+        `$${report.totalCost.toFixed(4)}`,
+        `$${report.totalRevenue.toFixed(4)}`,
+        `$${report.totalProfit.toFixed(4)}`,
+        report.totalTokens.toLocaleString(),
+        report.transactionCount.toString(),
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+    
+    doc.save(`relatorio-usuarios-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
@@ -769,6 +985,10 @@ const AdminDashboard = () => {
           console.log("Calculated stats for", selectedProvider, ":", calculatedStats);
           setAdminStats(calculatedStats);
           setRecentUsage(allUsage.slice(0, 15)); // Show last 15 transactions
+          
+          // Calculate user reports
+          const reports = calculateUserReports(allUsage, selectedProvider, selectedPeriod);
+          setUserReports(reports);
         }
       } catch (error) {
         console.error("Error fetching admin data:", error);
@@ -975,7 +1195,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Recent Usage */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>
               Transações Recentes
@@ -1183,6 +1403,67 @@ const AdminDashboard = () => {
                 </p>
               );
             })()}
+          </CardContent>
+        </Card>
+
+        {/* User Reports */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <CardTitle>Relatório Detalhado por Usuário</CardTitle>
+              <div className="flex gap-2">
+                <Button onClick={exportToCSV} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button onClick={exportToPDF} variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {userReports.length > 0 ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email/User ID</TableHead>
+                      <TableHead className="text-right">Custo Total</TableHead>
+                      <TableHead className="text-right">Receita Total</TableHead>
+                      <TableHead className="text-right">Lucro Total</TableHead>
+                      <TableHead className="text-right">Tokens</TableHead>
+                      <TableHead className="text-right">Transações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userReports.map((report) => (
+                      <TableRow key={report.user_id}>
+                        <TableCell className="font-medium">
+                          {report.email.length > 30 ? `${report.email.substring(0, 30)}...` : report.email}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          ${report.totalCost.toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          ${report.totalRevenue.toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-right text-primary font-medium">
+                          ${report.totalProfit.toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-right">{report.totalTokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{report.transactionCount}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum relatório disponível para os filtros selecionados
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
