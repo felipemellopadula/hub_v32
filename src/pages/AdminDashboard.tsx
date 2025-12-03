@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminStatsCards } from "@/components/AdminStatsCards";
+import { AdminAlerts } from "@/components/AdminAlerts";
 import { StorageCleanup } from "@/components/StorageCleanup";
 import { OpenAIPricingTable } from "@/components/OpenAIPricingTable";
 import { GrokPricingTable } from "@/components/GrokPricingTable";
@@ -154,12 +155,64 @@ const AdminDashboard = () => {
     totalTokens: 0,
   });
   const [recentUsage, setRecentUsage] = useState<TokenUsage[]>([]);
+  const [allUsageData, setAllUsageData] = useState<TokenUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<
     "openai" | "gemini" | "claude" | "grok" | "deepseek" | "image" | "video" | "todos"
   >("todos");
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year" | "all">("all");
   const [userReports, setUserReports] = useState<UserReport[]>([]);
+
+  // Function to calculate cost for a single usage record (for alerts)
+  const calculateSingleCost = useCallback((usage: TokenUsage): number => {
+    const isImageModel =
+      Object.keys(IMAGE_PRICING).some((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+      usage.model_name === "google:4@1";
+    const isVideoModel = Object.keys(VIDEO_PRICING).some((key) =>
+      usage.model_name.toLowerCase().includes(key.toLowerCase()),
+    );
+
+    if (isVideoModel) {
+      const videoModelKey =
+        Object.keys(VIDEO_PRICING).find((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+        "bytedance:1@1";
+      return VIDEO_PRICING[videoModelKey].cost;
+    }
+
+    if (isImageModel) {
+      const imageModelKey =
+        Object.keys(IMAGE_PRICING).find((key) => usage.model_name.toLowerCase().includes(key.toLowerCase())) ||
+        "gpt-image-1";
+      return IMAGE_PRICING[imageModelKey]?.cost || 0.02;
+    }
+
+    let inputTokens: number;
+    let outputTokens: number;
+
+    if (usage.input_tokens !== null && usage.output_tokens !== null) {
+      inputTokens = usage.input_tokens;
+      outputTokens = usage.output_tokens;
+    } else {
+      const inputCharacters = usage.message_content?.length || 0;
+      inputTokens = charsToTokens(inputCharacters);
+      outputTokens = Math.floor(inputTokens * 2.5);
+    }
+
+    const isGeminiModel = usage.model_name.toLowerCase().includes("gemini");
+    const isClaudeModel = usage.model_name.toLowerCase().includes("claude");
+    const isGrokModel = usage.model_name.toLowerCase().includes("grok");
+    const isDeepSeekModel = usage.model_name.toLowerCase().includes("deepseek");
+    let provider: "openai" | "gemini" | "claude" | "grok" | "deepseek" = "openai";
+
+    if (isGeminiModel) provider = "gemini";
+    else if (isClaudeModel) provider = "claude";
+    else if (isGrokModel) provider = "grok";
+    else if (isDeepSeekModel) provider = "deepseek";
+
+    const inputCost = inputTokens * getCostPerToken(usage.model_name, "input", provider);
+    const outputCost = outputTokens * getCostPerToken(usage.model_name, "output", provider);
+    return inputCost + outputCost;
+  }, []);
 
   const getDateFilterRange = (period: "today" | "week" | "month" | "year" | "all") => {
     const now = new Date();
@@ -985,6 +1038,7 @@ const AdminDashboard = () => {
           console.log("Calculated stats for", selectedProvider, ":", calculatedStats);
           setAdminStats(calculatedStats);
           setRecentUsage(allUsage.slice(0, 15)); // Show last 15 transactions
+          setAllUsageData(allUsage); // Store all usage data for alerts
           
           // Calculate user reports
           const reports = calculateUserReports(allUsage, selectedProvider, selectedPeriod);
@@ -1109,6 +1163,15 @@ const AdminDashboard = () => {
             </span>
           </AlertDescription>
         </Alert>
+
+        {/* Admin Alerts System */}
+        <div className="mb-4 sm:mb-6">
+          <AdminAlerts
+            usageData={allUsageData}
+            totalCost={adminStats.totalCost}
+            calculateCost={calculateSingleCost}
+          />
+        </div>
 
         {/* Period Filter */}
         <div className="mb-4 sm:mb-6">
