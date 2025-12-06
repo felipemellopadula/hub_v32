@@ -46,14 +46,16 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = 'deepseek-chat', files } = await req.json();
+    const { message, model = 'deepseek-chat', files, streamReasoning = false } = await req.json();
 
     // Determine actual API model and mode
     const isThinkingOnlyMode = model === 'deepseek-reasoner-thinking-only';
     const apiModel = isThinkingOnlyMode ? 'deepseek-reasoner' : model;
+    const isReasonerModel = apiModel === 'deepseek-reasoner';
 
     console.log(`DeepSeek Chat - Modelo: ${model} (API: ${apiModel})`);
     console.log(`Modo Thinking Only: ${isThinkingOnlyMode}`);
+    console.log(`Stream Reasoning: ${streamReasoning}`);
     console.log(`Tamanho da mensagem: ${message.length} caracteres`);
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
@@ -162,7 +164,7 @@ serve(async (req) => {
         ],
         max_tokens: 8000,
         temperature: apiModel === 'deepseek-reasoner' ? undefined : 0.7, // Reasoner não suporta temperature
-        stream: true // Usar stream para melhor performance
+        stream: true // Sempre usar stream
       }),
     });
 
@@ -172,7 +174,62 @@ serve(async (req) => {
       throw new Error(`Erro da API DeepSeek: ${response.status} - ${errorData}`);
     }
 
-    // Para stream response
+    // Se streamReasoning está ativado e é um modelo reasoner, fazer streaming real para o cliente
+    if (streamReasoning && isReasonerModel && response.body) {
+      console.log('🔄 Iniciando streaming real-time de raciocínio...');
+      
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      
+      const transformStream = new TransformStream({
+        async transform(chunk, controller) {
+          const text = decoder.decode(chunk, { stream: true });
+          const lines = text.split('\n');
+          
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+            
+            const data = trimmedLine.slice(6);
+            if (data === '[DONE]') {
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              continue;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.choices?.[0]?.delta) {
+                const delta = parsed.choices[0].delta;
+                
+                // Enviar evento SSE formatado para o cliente
+                const sseEvent = {
+                  type: delta.reasoning_content ? 'reasoning' : 'content',
+                  content: delta.content || '',
+                  reasoning: delta.reasoning_content || ''
+                };
+                
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+              }
+            } catch (e) {
+              // Ignorar erros de parsing
+            }
+          }
+        }
+      });
+      
+      const readableStream = response.body.pipeThrough(transformStream);
+      
+      return new Response(readableStream, {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        },
+      });
+    }
+
+    // Para stream response (modo normal sem streaming de reasoning para cliente)
     if (response.body) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();

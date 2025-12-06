@@ -522,12 +522,16 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         messagePreview: messageContent.substring(0, 300) + '...'
       });
 
-    // Prepare files for sending if we have PDF/Word content
-    const requestBody: any = {
-      message: messageContent,
-      model: selectedModel,
-      hasLargeDocument: filePages > 20, // ✅ Marcar como documento grande se >20 páginas
-    };
+      // Check if this is a DeepSeek Reasoner model that supports streaming reasoning
+      const isDeepSeekReasonerModel = selectedModel === 'deepseek-reasoner' || selectedModel === 'deepseek-reasoner-thinking-only';
+      
+      // Prepare files for sending if we have PDF/Word content
+      const requestBody: any = {
+        message: messageContent,
+        model: selectedModel,
+        hasLargeDocument: filePages > 20,
+        streamReasoning: isDeepSeekReasonerModel, // Enable streaming reasoning for reasoner models
+      };
 
       // Add files if we processed any PDF/Word documents
       if (attachedFiles.length > 0 && (fileName?.endsWith('.pdf') || fileName?.endsWith('.docx') || fileName?.endsWith('.doc'))) {
@@ -544,50 +548,158 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         model: selectedModel,
         messageLength: messageContent.length,
         hasFiles: !!requestBody.files,
-        filesCount: requestBody.files?.length || 0
+        filesCount: requestBody.files?.length || 0,
+        streamReasoning: requestBody.streamReasoning
       });
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: requestBody
-      });
+      // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
+      if (isDeepSeekReasonerModel) {
+        console.log('🧠 Using streaming mode for DeepSeek Reasoner...');
+        
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
 
-      console.log('=== FUNCTION RESPONSE DEBUG ===');
-      console.log('data:', data);
-      console.log('error:', error);
-      console.log('data type:', typeof data);
-      console.log('data keys:', data ? Object.keys(data) : 'null');
-      console.log('data.response exists?', data?.response ? 'YES' : 'NO');
-      console.log('data.message exists?', data?.message ? 'YES' : 'NO');
-      console.log('data.reasoning exists?', data?.reasoning ? 'YES' : 'NO');
-      
-      if (error) {
-        console.error('Function error details:', error);
-        throw new Error(error.message || 'Erro ao enviar mensagem');
+        if (!response.ok) {
+          throw new Error(`Erro na requisição: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        
+        // Check if it's a streaming response
+        if (contentType?.includes('text/event-stream') && response.body) {
+          console.log('📥 Receiving SSE stream...');
+          
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let fullContent = '';
+          let fullReasoning = '';
+          let buffer = '';
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+              
+              for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+                
+                const data = trimmedLine.slice(6);
+                if (data === '[DONE]') continue;
+                
+                try {
+                  const parsed = JSON.parse(data);
+                  
+                  if (parsed.type === 'reasoning' && parsed.reasoning) {
+                    fullReasoning += parsed.reasoning;
+                    setThinkingContent(fullReasoning);
+                  }
+                  
+                  if (parsed.type === 'content' && parsed.content) {
+                    fullContent += parsed.content;
+                    // Update message content in real-time
+                    setMessages(prev => 
+                      prev.map(msg => 
+                        msg.id === botMessageId 
+                          ? { ...msg, content: fullContent }
+                          : msg
+                      )
+                    );
+                  }
+                } catch (e) {
+                  // Ignore parse errors
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+          
+          // Final update with reasoning
+          const finalContent = fullContent || fullReasoning || 'Resposta vazia recebida.';
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, content: finalContent, reasoning: fullReasoning || null }
+                : msg
+            )
+          );
+          
+          await consumeTokens(selectedModel, messageContent);
+        } else {
+          // JSON response (non-streaming fallback)
+          console.log('📦 Processing JSON response (non-streaming)');
+          const data = await response.json();
+          
+          const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia recebida.';
+          const reasoningContent = data.reasoning || null;
+          
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, content: aiMessageContent, reasoning: reasoningContent }
+                : msg
+            )
+          );
+          
+          await consumeTokens(selectedModel, messageContent);
+        }
+      } else {
+        // Non-reasoner models use normal invoke
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: requestBody
+        });
+
+        console.log('=== FUNCTION RESPONSE DEBUG ===');
+        console.log('data:', data);
+        console.log('error:', error);
+        console.log('data type:', typeof data);
+        console.log('data keys:', data ? Object.keys(data) : 'null');
+        console.log('data.response exists?', data?.response ? 'YES' : 'NO');
+        console.log('data.message exists?', data?.message ? 'YES' : 'NO');
+        console.log('data.reasoning exists?', data?.reasoning ? 'YES' : 'NO');
+        
+        if (error) {
+          console.error('Function error details:', error);
+          throw new Error(error.message || 'Erro ao enviar mensagem');
+        }
+
+        if (!data) {
+          console.error('No data received from function');
+          throw new Error('Nenhuma resposta recebida da função');
+        }
+
+        const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia recebida.';
+        const reasoningContent = data.reasoning || null;
+        
+        console.log('=== AI MESSAGE CONTENT ===');
+        console.log('aiMessageContent length:', aiMessageContent.length);
+        console.log('aiMessageContent preview:', aiMessageContent.substring(0, 200));
+        console.log('reasoningContent length:', reasoningContent?.length || 0);
+        
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === botMessageId 
+              ? { ...msg, content: aiMessageContent, reasoning: reasoningContent }
+              : msg
+          )
+        );
+        
+        await consumeTokens(selectedModel, messageContent);
       }
-
-      if (!data) {
-        console.error('No data received from function');
-        throw new Error('Nenhuma resposta recebida da função');
-      }
-
-      const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia recebida.';
-      const reasoningContent = data.reasoning || null;
-      
-      console.log('=== AI MESSAGE CONTENT ===');
-      console.log('aiMessageContent length:', aiMessageContent.length);
-      console.log('aiMessageContent preview:', aiMessageContent.substring(0, 200));
-      console.log('reasoningContent length:', reasoningContent?.length || 0);
-      
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === botMessageId 
-            ? { ...msg, content: aiMessageContent, reasoning: reasoningContent }
-            : msg
-        )
-      );
-      
-      // Consume tokens after successful response
-      await consumeTokens(selectedModel, messageContent);
       
       // Limpar dados do arquivo após o envio
       clearFileData();
