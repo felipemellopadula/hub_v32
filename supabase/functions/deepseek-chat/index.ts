@@ -180,13 +180,19 @@ serve(async (req) => {
       let reasoningContent = '';
       let buffer = ''; // Buffer para dados incompletos
 
+      console.log('📥 Iniciando leitura do stream...');
+
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log('✅ Stream finalizado');
+            break;
+          }
 
           // Acumular no buffer
-          buffer += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
           
           // Processar linhas completas
           const lines = buffer.split('\n');
@@ -199,23 +205,29 @@ serve(async (req) => {
             
             if (trimmedLine.startsWith('data: ')) {
               const data = trimmedLine.slice(6);
-              if (data === '[DONE]') continue;
+              if (data === '[DONE]') {
+                console.log('🏁 Received [DONE] signal');
+                continue;
+              }
               
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
+                  const delta = parsed.choices[0].delta;
+                  
                   // Capturar content normal
-                  if (parsed.choices[0].delta.content) {
-                    fullResponse += parsed.choices[0].delta.content;
+                  if (delta.content) {
+                    fullResponse += delta.content;
                   }
-                  // Capturar reasoning_content para modo thinking
-                  if (parsed.choices[0].delta.reasoning_content) {
-                    reasoningContent += parsed.choices[0].delta.reasoning_content;
+                  // Capturar reasoning_content para modo thinking (DeepSeek Reasoner)
+                  if (delta.reasoning_content) {
+                    reasoningContent += delta.reasoning_content;
+                    console.log(`🧠 Reasoning chunk: +${delta.reasoning_content.length} chars (total: ${reasoningContent.length})`);
                   }
                 }
               } catch (e) {
                 // Ignorar erros de parsing de chunks individuais
-                console.log('Parse error for line:', trimmedLine.substring(0, 100));
+                console.log('⚠️ Parse error for line:', trimmedLine.substring(0, 50));
               }
             }
           }
@@ -223,6 +235,7 @@ serve(async (req) => {
         
         // Processar qualquer dado restante no buffer
         if (buffer.trim()) {
+          console.log('📝 Processing remaining buffer:', buffer.length, 'chars');
           const trimmedBuffer = buffer.trim();
           if (trimmedBuffer.startsWith('data: ')) {
             const data = trimmedBuffer.slice(6);
@@ -230,15 +243,16 @@ serve(async (req) => {
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
-                  if (parsed.choices[0].delta.content) {
-                    fullResponse += parsed.choices[0].delta.content;
+                  const delta = parsed.choices[0].delta;
+                  if (delta.content) {
+                    fullResponse += delta.content;
                   }
-                  if (parsed.choices[0].delta.reasoning_content) {
-                    reasoningContent += parsed.choices[0].delta.reasoning_content;
+                  if (delta.reasoning_content) {
+                    reasoningContent += delta.reasoning_content;
                   }
                 }
               } catch (e) {
-                console.log('Final buffer parse error');
+                console.log('⚠️ Final buffer parse error');
               }
             }
           }
@@ -247,23 +261,41 @@ serve(async (req) => {
         reader.releaseLock();
       }
 
-      console.log('Resposta completa recebida');
-      console.log(`Content length: ${fullResponse.length}, Reasoning length: ${reasoningContent.length}`);
+      console.log('📊 Stream processing complete:');
+      console.log(`   - Content length: ${fullResponse.length} chars`);
+      console.log(`   - Reasoning length: ${reasoningContent.length} chars`);
+      console.log(`   - Is thinking only mode: ${isThinkingOnlyMode}`);
+      console.log(`   - Reasoning preview: ${reasoningContent.substring(0, 200)}...`);
       
       // Se modo thinking only, retornar apenas o reasoning_content
-      let finalResponse = isThinkingOnlyMode && reasoningContent 
-        ? `## 🧠 Processo de Raciocínio\n\n${reasoningContent}`
-        : fullResponse;
+      let finalResponse = fullResponse;
+      
+      if (isThinkingOnlyMode && reasoningContent) {
+        finalResponse = `## 🧠 Processo de Raciocínio\n\n${reasoningContent}`;
+        console.log('🧠 Returning thinking-only response');
+      } else if (!fullResponse && reasoningContent) {
+        // Se não há content mas há reasoning (pode acontecer com reasoner)
+        finalResponse = reasoningContent;
+        console.log('🔄 Using reasoning as response (no content)');
+      }
       
       // Normalize line breaks to standard \n
       finalResponse = finalResponse
         .replace(/\r\n/g, '\n')  // Normalize CRLF to LF
         .replace(/\r/g, '\n');   // Convert any remaining CR to LF
       
-      return new Response(JSON.stringify({ 
+      const responsePayload = { 
         response: finalResponse,
-        reasoning: reasoningContent || null 
-      }), {
+        reasoning: reasoningContent.length > 0 ? reasoningContent : null 
+      };
+      
+      console.log('📤 Sending response:', {
+        responseLength: responsePayload.response.length,
+        hasReasoning: !!responsePayload.reasoning,
+        reasoningLength: responsePayload.reasoning?.length || 0
+      });
+      
+      return new Response(JSON.stringify(responsePayload), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
