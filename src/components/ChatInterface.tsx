@@ -525,6 +525,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       // Check if this is a DeepSeek Reasoner model that supports streaming reasoning
       const isDeepSeekReasonerModel = selectedModel === 'deepseek-reasoner' || selectedModel === 'deepseek-reasoner-thinking-only';
       
+      console.log('🧠 DeepSeek check:', {
+        selectedModel,
+        isDeepSeekReasonerModel,
+        isDeepSeekModel,
+      });
+      
       // Prepare files for sending if we have PDF/Word content
       const requestBody: any = {
         message: messageContent,
@@ -532,6 +538,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         hasLargeDocument: filePages > 20,
         streamReasoning: isDeepSeekReasonerModel, // Enable streaming reasoning for reasoner models
       };
+      
+      console.log('📤 Request body streamReasoning:', requestBody.streamReasoning);
 
       // Add files if we processed any PDF/Word documents
       if (attachedFiles.length > 0 && (fileName?.endsWith('.pdf') || fileName?.endsWith('.docx') || fileName?.endsWith('.doc'))) {
@@ -549,7 +557,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         messageLength: messageContent.length,
         hasFiles: !!requestBody.files,
         filesCount: requestBody.files?.length || 0,
-        streamReasoning: requestBody.streamReasoning
+        streamReasoning: requestBody.streamReasoning,
+        isDeepSeekReasonerModel
       });
 
       // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
