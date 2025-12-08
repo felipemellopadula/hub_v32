@@ -1,16 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModelSelector } from "./ModelSelector";
-import { Send, Bot, User, Paperclip, Image, Camera, ArrowDown } from "lucide-react";
+import { Send, Bot, User, Paperclip, Image, Camera, ArrowDown, Save } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PdfProcessor } from "@/utils/PdfProcessor";
 import { WordProcessor } from "@/utils/WordProcessor";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTokens } from '@/hooks/useTokens';
+import { useConversationPersistence } from '@/hooks/useConversationPersistence';
 import { PagePreview } from './PagePreview';
 import CleanMarkdownRenderer from './CleanMarkdownRenderer';
 import { DeepSeekThinkingIndicator } from './DeepSeekThinkingIndicator';
@@ -38,6 +39,7 @@ interface ChatInterfaceProps {
 
 export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const { checkTokenBalance, consumeTokens } = useTokens();
+  const { saveMessages, currentConversationId, isSaving } = useConversationPersistence();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>();
@@ -56,6 +58,13 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const pasteAreaRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isCallingRef = useRef(false); // ✅ Proteção contra múltiplas chamadas simultâneas
+
+  // Auto-save messages when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(messages, currentConversationId || undefined);
+    }
+  }, [messages, currentConversationId, saveMessages]);
 
   // Handle clipboard paste for images - enhanced version
   const handlePaste = async (event: ClipboardEvent) => {
@@ -568,7 +577,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         const session = await supabase.auth.getSession();
         const accessToken = session.data.session?.access_token;
         
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`, {
+        // Use direct Supabase URL (not env var which may be undefined)
+        const supabaseUrl = 'https://myqgnnqltemfpzdxwybj.supabase.co';
+        const fetchUrl = `${supabaseUrl}/functions/v1/${functionName}`;
+        
+        console.log('📡 Fetching SSE from:', fetchUrl);
+        console.log('📡 Request body:', JSON.stringify(requestBody, null, 2));
+        
+        const response = await fetch(fetchUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -576,6 +592,9 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           },
           body: JSON.stringify(requestBody),
         });
+
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
           throw new Error(`Erro na requisição: ${response.status}`);
@@ -764,6 +783,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           <div className="flex items-center gap-3">
             <Bot className="h-6 w-6 text-primary" />
             <h2 className="text-xl font-bold text-foreground">Chat com IA</h2>
+            {isSaving && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground animate-pulse">
+                <Save className="h-3 w-3" />
+                Salvando...
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
