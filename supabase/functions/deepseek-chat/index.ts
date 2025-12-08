@@ -46,23 +46,28 @@ serve(async (req) => {
   }
 
   try {
-    const { message, model = 'deepseek-chat', files, streamReasoning = false } = await req.json();
+    const body = await req.json();
+    const { message, model = 'deepseek-chat', files, streamReasoning = false } = body;
 
     // Determine actual API model and mode
     const isThinkingOnlyMode = model === 'deepseek-reasoner-thinking-only';
     const apiModel = isThinkingOnlyMode ? 'deepseek-reasoner' : model;
     const isReasonerModel = apiModel === 'deepseek-reasoner';
+    
+    // FORCE SSE for reasoner models when streamReasoning is true
+    const useSSE = Boolean(streamReasoning) && isReasonerModel;
 
     console.log('==========================================');
-    console.log('🚀 DEEPSEEK-CHAT v2 - NOVA VERSAO');
+    console.log('🚀 DEEPSEEK-CHAT v3 - SSE FORÇADO');
     console.log('==========================================');
+    console.log(`📌 Raw body streamReasoning: ${body.streamReasoning} (type: ${typeof body.streamReasoning})`);
     console.log(`📌 Modelo recebido: ${model}`);
     console.log(`📌 API Model: ${apiModel}`);
     console.log(`📌 Is Thinking Only: ${isThinkingOnlyMode}`);
     console.log(`📌 Stream Reasoning: ${streamReasoning} (type: ${typeof streamReasoning})`);
     console.log(`📌 Is Reasoner Model: ${isReasonerModel}`);
-    console.log(`📌 WILL USE SSE: ${streamReasoning && isReasonerModel}`);
-    console.log(`📌 Message length: ${message.length} chars`);
+    console.log(`📌 USE SSE: ${useSSE}`);
+    console.log(`📌 Message length: ${message?.length || 0} chars`);
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     if (!deepseekApiKey) {
@@ -180,10 +185,10 @@ serve(async (req) => {
       throw new Error(`Erro da API DeepSeek: ${response.status} - ${errorData}`);
     }
 
-    // Se streamReasoning está ativado e é um modelo reasoner, fazer streaming real para o cliente
-    if (streamReasoning && isReasonerModel && response.body) {
-      console.log('🔄 Iniciando streaming real-time de raciocínio...');
-      
+    // Se useSSE está ativado, fazer streaming real para o cliente
+    if (useSSE && response.body) {
+      console.log('🔄🔄🔄 INICIANDO SSE STREAMING REAL-TIME 🔄🔄🔄');
+      console.log('📤 Response will be text/event-stream');
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
       let sseBuffer = ''; // Buffer para dados incompletos do DeepSeek API
