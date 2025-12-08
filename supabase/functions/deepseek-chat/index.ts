@@ -55,7 +55,9 @@ serve(async (req) => {
 
     console.log(`DeepSeek Chat - Modelo: ${model} (API: ${apiModel})`);
     console.log(`Modo Thinking Only: ${isThinkingOnlyMode}`);
-    console.log(`Stream Reasoning: ${streamReasoning}`);
+    console.log(`Stream Reasoning: ${streamReasoning} (type: ${typeof streamReasoning})`);
+    console.log(`Is Reasoner Model: ${isReasonerModel}`);
+    console.log(`Will use SSE streaming: ${streamReasoning && isReasonerModel}`);
     console.log(`Tamanho da mensagem: ${message.length} caracteres`);
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
