@@ -180,11 +180,18 @@ serve(async (req) => {
       
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
+      let sseBuffer = ''; // Buffer para dados incompletos do DeepSeek API
+      let totalContent = '';
+      let totalReasoning = '';
       
       const transformStream = new TransformStream({
         async transform(chunk, controller) {
           const text = decoder.decode(chunk, { stream: true });
-          const lines = text.split('\n');
+          sseBuffer += text;
+          
+          // Processar apenas linhas completas
+          const lines = sseBuffer.split('\n');
+          sseBuffer = lines.pop() || ''; // Guardar última linha incompleta
           
           for (const line of lines) {
             const trimmedLine = line.trim();
@@ -192,6 +199,7 @@ serve(async (req) => {
             
             const data = trimmedLine.slice(6);
             if (data === '[DONE]') {
+              console.log('🏁 Stream [DONE] - Total content:', totalContent.length, 'reasoning:', totalReasoning.length);
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               continue;
             }
@@ -200,6 +208,10 @@ serve(async (req) => {
               const parsed = JSON.parse(data);
               if (parsed.choices?.[0]?.delta) {
                 const delta = parsed.choices[0].delta;
+                
+                // Acumular para log
+                if (delta.content) totalContent += delta.content;
+                if (delta.reasoning_content) totalReasoning += delta.reasoning_content;
                 
                 // Enviar evento SSE formatado para o cliente
                 const sseEvent = {
@@ -211,9 +223,40 @@ serve(async (req) => {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
               }
             } catch (e) {
-              // Ignorar erros de parsing
+              console.log('⚠️ SSE parse error, buffering:', trimmedLine.substring(0, 50));
+              // Re-adicionar ao buffer se JSON incompleto
+              sseBuffer = trimmedLine + '\n' + sseBuffer;
             }
           }
+        },
+        async flush(controller) {
+          // Processar qualquer dado restante no buffer
+          if (sseBuffer.trim()) {
+            const trimmedBuffer = sseBuffer.trim();
+            if (trimmedBuffer.startsWith('data: ')) {
+              const data = trimmedBuffer.slice(6);
+              if (data !== '[DONE]') {
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.choices?.[0]?.delta) {
+                    const delta = parsed.choices[0].delta;
+                    if (delta.content) totalContent += delta.content;
+                    if (delta.reasoning_content) totalReasoning += delta.reasoning_content;
+                    
+                    const sseEvent = {
+                      type: delta.reasoning_content ? 'reasoning' : 'content',
+                      content: delta.content || '',
+                      reasoning: delta.reasoning_content || ''
+                    };
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+                  }
+                } catch (e) {
+                  console.log('⚠️ Final buffer parse error');
+                }
+              }
+            }
+          }
+          console.log('📊 Stream flush complete - Content:', totalContent.length, 'Reasoning:', totalReasoning.length);
         }
       });
       

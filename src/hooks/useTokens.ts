@@ -38,6 +38,7 @@ const MODEL_COSTS = {
   // DeepSeek Models
   'deepseek-chat': 8000,
   'deepseek-reasoner': 12000,
+  'deepseek-reasoner-thinking-only': 12000,
   // APILLM Models
   'llama-4-maverick': 8000,
   'llama-4-scout': 6000,
@@ -83,7 +84,11 @@ export const useTokens = () => {
     return true;
   }, [user, profile, getTokenCost, toast]);
 
-  const consumeTokens = useCallback(async (modelName: string | undefined, message: string): Promise<boolean> => {
+  const consumeTokens = useCallback(async (
+    modelName: string | undefined, 
+    message: string, 
+    aiResponse?: string
+  ): Promise<boolean> => {
     if (!user || !profile) return false;
     
     // If no model selected, show error
@@ -129,15 +134,32 @@ export const useTokens = () => {
         return false;
       }
 
-      // Log token usage
+      // Calculate input/output tokens (3.2 chars per token for Portuguese)
+      const inputTokens = Math.ceil(message.length / 3.2);
+      const outputTokens = aiResponse ? Math.ceil(aiResponse.length / 3.2) : 0;
+
+      // Log token usage with AI response
       await supabase
         .from('token_usage')
         .insert({
           user_id: user.id,
           model_name: modelName,
           tokens_used: cost,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
           message_content: message.substring(0, 1000), // Limit message length
+          ai_response_content: aiResponse 
+            ? aiResponse.substring(0, 2000) // Limit AI response length
+            : null,
         });
+
+      console.log('✅ Token usage recorded:', {
+        model: modelName,
+        cost,
+        inputTokens,
+        outputTokens,
+        hasAiResponse: !!aiResponse,
+      });
 
       // Refresh profile to update token count
       await refreshProfile();

@@ -633,12 +633,13 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
-                ? { ...msg, content: finalContent, reasoning: fullReasoning || null }
+                ? { ...msg, content: finalContent, reasoning: fullReasoning || undefined }
                 : msg
             )
           );
           
-          await consumeTokens(selectedModel, messageContent);
+          // Pass AI response to consumeTokens for database logging
+          await consumeTokens(selectedModel, messageContent, finalContent);
         } else {
           // JSON response (non-streaming fallback)
           console.log('📦 Processing JSON response (non-streaming)');
@@ -655,7 +656,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             )
           );
           
-          await consumeTokens(selectedModel, messageContent);
+          // Pass AI response to consumeTokens for database logging
+          await consumeTokens(selectedModel, messageContent, aiMessageContent);
         }
       } else {
         // Non-reasoner models use normal invoke
@@ -698,7 +700,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           )
         );
         
-        await consumeTokens(selectedModel, messageContent);
+        // Pass AI response to consumeTokens for database logging
+        await consumeTokens(selectedModel, messageContent, aiMessageContent);
       }
       
       // Limpar dados do arquivo após o envio
