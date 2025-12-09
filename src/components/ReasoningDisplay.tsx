@@ -28,9 +28,9 @@ export const ReasoningDisplay = ({ reasoning, className }: ReasoningDisplayProps
         )}
       </button>
 
-      {/* Expanded Content - Gemini Style */}
+      {/* Expanded Content - Gemini Style with fade-in animation */}
       {isExpanded && (
-        <div className="mt-3 pl-4 border-l-2 border-blue-400/50 dark:border-blue-500/50">
+        <div className="mt-3 pl-4 border-l-2 border-blue-400/50 dark:border-blue-500/50 animate-fade-in">
           <div className="text-sm text-muted-foreground italic leading-relaxed whitespace-pre-wrap">
             {reasoning}
           </div>
