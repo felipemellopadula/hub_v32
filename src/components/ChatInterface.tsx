@@ -572,7 +572,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
 
       // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
       if (isDeepSeekReasonerModel) {
-        console.log('🧠 Using streaming mode for DeepSeek Reasoner...');
+        console.log('🧠🧠🧠 DEEPSEEK REASONER - SSE STREAMING v2 🧠🧠🧠');
         setIsDeepSeekThinking(true);
         setThinkingContent('');
         
@@ -584,7 +584,6 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         const fetchUrl = `${supabaseUrl}/functions/v1/${functionName}`;
         
         console.log('📡 Fetching SSE from:', fetchUrl);
-        console.log('📡 Request body:', JSON.stringify(requestBody, null, 2));
         
         const response = await fetch(fetchUrl, {
           method: 'POST',
@@ -596,28 +595,33 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         });
 
         console.log('📡 Response status:', response.status);
-        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+        const contentType = response.headers.get('content-type');
+        console.log('📡 Content-Type:', contentType);
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ SSE Error:', errorText);
           throw new Error(`Erro na requisição: ${response.status}`);
         }
 
-        const contentType = response.headers.get('content-type');
-        
-        // Check if it's a streaming response
+        // 🔥 Check if it's SSE stream
         if (contentType?.includes('text/event-stream') && response.body) {
-          console.log('📥 Receiving SSE stream...');
+          console.log('🔥🔥🔥 SSE STREAM DETECTADO - PROCESSANDO REAL-TIME 🔥🔥🔥');
           
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let fullContent = '';
           let fullReasoning = '';
           let buffer = '';
+          let eventCount = 0;
           
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
+              if (done) {
+                console.log('✅ Stream finalizado - Total eventos:', eventCount);
+                break;
+              }
               
               buffer += decoder.decode(value, { stream: true });
               const lines = buffer.split('\n');
@@ -628,19 +632,28 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                 if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
                 
                 const data = trimmedLine.slice(6);
-                if (data === '[DONE]') continue;
+                if (data === '[DONE]') {
+                  console.log('🏁 [DONE] signal');
+                  continue;
+                }
                 
                 try {
                   const parsed = JSON.parse(data);
+                  eventCount++;
                   
+                  // 🧠 Reasoning em tempo real
                   if (parsed.type === 'reasoning' && parsed.reasoning) {
                     fullReasoning += parsed.reasoning;
                     setThinkingContent(fullReasoning);
+                    
+                    if (eventCount <= 5 || eventCount % 25 === 0) {
+                      console.log(`🧠 Reasoning #${eventCount}: total ${fullReasoning.length} chars`);
+                    }
                   }
                   
+                  // 📝 Content em tempo real
                   if (parsed.type === 'content' && parsed.content) {
                     fullContent += parsed.content;
-                    // Update message content in real-time
                     setMessages(prev => 
                       prev.map(msg => 
                         msg.id === botMessageId 
@@ -648,18 +661,23 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                           : msg
                       )
                     );
+                    
+                    if (eventCount <= 5 || eventCount % 25 === 0) {
+                      console.log(`📝 Content #${eventCount}: total ${fullContent.length} chars`);
+                    }
                   }
                 } catch (e) {
-                  // Ignore parse errors
+                  // JSON incompleto
                 }
               }
             }
           } finally {
             reader.releaseLock();
           }
+          console.log('📊 SSE completo:', { reasoning: fullReasoning.length, content: fullContent.length, events: eventCount });
           
-          // Final update with reasoning
-          const finalContent = fullContent || fullReasoning || 'Resposta vazia recebida.';
+          // Final update
+          const finalContent = fullContent || (fullReasoning ? `🧠 **Raciocínio:**\n\n${fullReasoning}` : 'Resposta vazia.');
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
@@ -668,17 +686,15 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             )
           );
           
-          // Desativar indicador de thinking após streaming completo
           setIsDeepSeekThinking(false);
-          
-          // Pass AI response to consumeTokens for database logging
+          setThinkingContent('');
           await consumeTokens(selectedModel, messageContent, finalContent);
         } else {
-          // JSON response (non-streaming fallback)
-          console.log('📦 Processing JSON response (non-streaming)');
+          // JSON fallback
+          console.log('📦 JSON fallback (Content-Type:', contentType, ')');
           const data = await response.json();
           
-          const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia recebida.';
+          const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia.';
           const reasoningContent = data.reasoning || null;
           
           setMessages(prev => 
@@ -689,7 +705,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             )
           );
           
-          // Pass AI response to consumeTokens for database logging
+          setIsDeepSeekThinking(false);
+          setThinkingContent('');
           await consumeTokens(selectedModel, messageContent, aiMessageContent);
         }
       } else {

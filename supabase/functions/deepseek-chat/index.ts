@@ -40,6 +40,8 @@ function chunkText(text: string, maxChunkSize: number = 120000): string[] {
 }
 
 serve(async (req) => {
+  console.log('🚀🚀🚀 DEEPSEEK-CHAT v5 - BUILD 20251209-0300 🚀🚀🚀');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -54,20 +56,16 @@ serve(async (req) => {
     const apiModel = isThinkingOnlyMode ? 'deepseek-reasoner' : model;
     const isReasonerModel = apiModel === 'deepseek-reasoner';
     
-    // FORCE SSE for reasoner models when streamReasoning is true
-    const useSSE = Boolean(streamReasoning) && isReasonerModel;
+    // SEMPRE usar SSE para modelos reasoner - simplificado!
+    const useSSE = isReasonerModel;
 
     console.log('==========================================');
-    console.log('🚀 DEEPSEEK-CHAT v3 - SSE FORÇADO');
+    console.log('📌 Modelo recebido:', model);
+    console.log('📌 API Model:', apiModel);
+    console.log('📌 Is Reasoner Model:', isReasonerModel);
+    console.log('📌 streamReasoning from body:', streamReasoning);
+    console.log('🔥 USE SSE (forçado para reasoner):', useSSE);
     console.log('==========================================');
-    console.log(`📌 Raw body streamReasoning: ${body.streamReasoning} (type: ${typeof body.streamReasoning})`);
-    console.log(`📌 Modelo recebido: ${model}`);
-    console.log(`📌 API Model: ${apiModel}`);
-    console.log(`📌 Is Thinking Only: ${isThinkingOnlyMode}`);
-    console.log(`📌 Stream Reasoning: ${streamReasoning} (type: ${typeof streamReasoning})`);
-    console.log(`📌 Is Reasoner Model: ${isReasonerModel}`);
-    console.log(`📌 USE SSE: ${useSSE}`);
-    console.log(`📌 Message length: ${message?.length || 0} chars`);
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     if (!deepseekApiKey) {
@@ -106,7 +104,7 @@ serve(async (req) => {
     let chunks: string[] = [];
 
     // Configurar chunk size baseado no modelo
-    const maxChunkSize = apiModel === 'deepseek-reasoner' ? 100000 : 120000; // Reasoner é mais conservador
+    const maxChunkSize = apiModel === 'deepseek-reasoner' ? 100000 : 120000;
 
     // Se a mensagem for muito longa, usar chunking
     if (message.length > maxChunkSize) {
@@ -130,7 +128,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'deepseek-chat', // Usar sempre chat para chunks (mais rápido)
+            model: 'deepseek-chat',
             messages: [
               { role: 'system', content: 'Você é um assistente especializado em análise de documentos. Seja conciso e objetivo.' },
               { role: 'user', content: chunkPrompt }
@@ -154,8 +152,11 @@ serve(async (req) => {
       processedMessage = `Baseado na análise completa do documento:\n\n${summary}\n\nAgora responda de forma detalhada e completa.`;
     }
 
-    // Fazer a requisição final
-    console.log('Enviando requisição para DeepSeek API...');
+    // Fazer a requisição para DeepSeek API
+    console.log('📡 Enviando requisição para DeepSeek API...');
+    console.log('📡 Model:', apiModel);
+    console.log('📡 Stream: true');
+    
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
@@ -174,35 +175,36 @@ serve(async (req) => {
           { role: 'user', content: processedMessage }
         ],
         max_tokens: 8000,
-        temperature: apiModel === 'deepseek-reasoner' ? undefined : 0.7, // Reasoner não suporta temperature
-        stream: true // Sempre usar stream
+        temperature: apiModel === 'deepseek-reasoner' ? undefined : 0.7,
+        stream: true
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Erro da API DeepSeek:', errorData);
+      console.error('❌ Erro da API DeepSeek:', errorData);
       throw new Error(`Erro da API DeepSeek: ${response.status} - ${errorData}`);
     }
 
-    // Se useSSE está ativado, fazer streaming real para o cliente
+    // 🔥🔥🔥 BLOCO SSE - STREAMING REAL-TIME 🔥🔥🔥
     if (useSSE && response.body) {
-      console.log('🔄🔄🔄 INICIANDO SSE STREAMING REAL-TIME 🔄🔄🔄');
-      console.log('📤 Response will be text/event-stream');
+      console.log('🔥🔥🔥 ENTRANDO NO BLOCO SSE - STREAMING REAL-TIME 🔥🔥🔥');
+      
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
-      let sseBuffer = ''; // Buffer para dados incompletos do DeepSeek API
-      let totalContent = '';
+      let sseBuffer = '';
+      let eventCount = 0;
       let totalReasoning = '';
+      let totalContent = '';
       
       const transformStream = new TransformStream({
         async transform(chunk, controller) {
           const text = decoder.decode(chunk, { stream: true });
           sseBuffer += text;
           
-          // Processar apenas linhas completas
+          // Processar linha por linha
           const lines = sseBuffer.split('\n');
-          sseBuffer = lines.pop() || ''; // Guardar última linha incompleta
+          sseBuffer = lines.pop() || '';
           
           for (const line of lines) {
             const trimmedLine = line.trim();
@@ -210,7 +212,7 @@ serve(async (req) => {
             
             const data = trimmedLine.slice(6);
             if (data === '[DONE]') {
-              console.log('🏁 Stream [DONE] - Total content:', totalContent.length, 'reasoning:', totalReasoning.length);
+              console.log('🏁 [DONE] recebido - Total eventos:', eventCount);
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               continue;
             }
@@ -219,60 +221,77 @@ serve(async (req) => {
               const parsed = JSON.parse(data);
               if (parsed.choices?.[0]?.delta) {
                 const delta = parsed.choices[0].delta;
+                eventCount++;
                 
-                // Acumular para log
-                if (delta.content) totalContent += delta.content;
-                if (delta.reasoning_content) totalReasoning += delta.reasoning_content;
+                // Processar reasoning_content (pensamento)
+                if (delta.reasoning_content) {
+                  totalReasoning += delta.reasoning_content;
+                  const sseEvent = {
+                    type: 'reasoning',
+                    content: '',
+                    reasoning: delta.reasoning_content
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+                  
+                  if (eventCount <= 5 || eventCount % 50 === 0) {
+                    console.log(`📤 SSE #${eventCount} reasoning: +${delta.reasoning_content.length} chars`);
+                  }
+                }
                 
-                // Enviar evento SSE formatado para o cliente
-                const sseEvent = {
-                  type: delta.reasoning_content ? 'reasoning' : 'content',
-                  content: delta.content || '',
-                  reasoning: delta.reasoning_content || ''
-                };
-                
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+                // Processar content (resposta final)
+                if (delta.content) {
+                  totalContent += delta.content;
+                  const sseEvent = {
+                    type: 'content',
+                    content: delta.content,
+                    reasoning: ''
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+                  
+                  if (eventCount <= 5 || eventCount % 50 === 0) {
+                    console.log(`📤 SSE #${eventCount} content: +${delta.content.length} chars`);
+                  }
+                }
               }
             } catch (e) {
-              console.log('⚠️ SSE parse error, buffering:', trimmedLine.substring(0, 50));
-              // Re-adicionar ao buffer se JSON incompleto
+              // JSON incompleto, vai pro buffer
               sseBuffer = trimmedLine + '\n' + sseBuffer;
             }
           }
         },
         async flush(controller) {
-          // Processar qualquer dado restante no buffer
+          // Processar buffer restante
           if (sseBuffer.trim()) {
             const trimmedBuffer = sseBuffer.trim();
-            if (trimmedBuffer.startsWith('data: ')) {
-              const data = trimmedBuffer.slice(6);
-              if (data !== '[DONE]') {
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.choices?.[0]?.delta) {
-                    const delta = parsed.choices[0].delta;
-                    if (delta.content) totalContent += delta.content;
-                    if (delta.reasoning_content) totalReasoning += delta.reasoning_content;
-                    
-                    const sseEvent = {
-                      type: delta.reasoning_content ? 'reasoning' : 'content',
-                      content: delta.content || '',
-                      reasoning: delta.reasoning_content || ''
-                    };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`));
+            if (trimmedBuffer.startsWith('data: ') && trimmedBuffer.slice(6) !== '[DONE]') {
+              try {
+                const parsed = JSON.parse(trimmedBuffer.slice(6));
+                if (parsed.choices?.[0]?.delta) {
+                  const delta = parsed.choices[0].delta;
+                  if (delta.reasoning_content) {
+                    totalReasoning += delta.reasoning_content;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'reasoning', content: '', reasoning: delta.reasoning_content })}\n\n`));
                   }
-                } catch (e) {
-                  console.log('⚠️ Final buffer parse error');
+                  if (delta.content) {
+                    totalContent += delta.content;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', content: delta.content, reasoning: '' })}\n\n`));
+                  }
                 }
+              } catch (e) {
+                console.log('⚠️ Erro no flush do buffer');
               }
             }
           }
-          console.log('📊 Stream flush complete - Content:', totalContent.length, 'Reasoning:', totalReasoning.length);
+          console.log('📊 Stream completo:');
+          console.log('   - Total eventos SSE:', eventCount);
+          console.log('   - Reasoning total:', totalReasoning.length, 'chars');
+          console.log('   - Content total:', totalContent.length, 'chars');
         }
       });
       
       const readableStream = response.body.pipeThrough(transformStream);
       
+      console.log('📤 Retornando stream SSE para cliente...');
       return new Response(readableStream, {
         headers: { 
           ...corsHeaders, 
@@ -283,88 +302,43 @@ serve(async (req) => {
       });
     }
 
-    // Para stream response (modo normal sem streaming de reasoning para cliente)
+    // 📦 Fallback para JSON (modelos não-reasoner)
+    console.log('📦 Usando fallback JSON (não-reasoner)...');
+    
     if (response.body) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullResponse = '';
       let reasoningContent = '';
-      let buffer = ''; // Buffer para dados incompletos
-
-      console.log('📥 Iniciando leitura do stream...');
+      let buffer = '';
 
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) {
-            console.log('✅ Stream finalizado');
-            break;
-          }
+          if (done) break;
 
-          // Acumular no buffer
           const chunk = decoder.decode(value, { stream: true });
           buffer += chunk;
           
-          // Processar linhas completas
           const lines = buffer.split('\n');
-          // Guardar a última linha (pode estar incompleta)
           buffer = lines.pop() || '';
 
           for (const line of lines) {
             const trimmedLine = line.trim();
-            if (!trimmedLine) continue;
+            if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
             
-            if (trimmedLine.startsWith('data: ')) {
-              const data = trimmedLine.slice(6);
-              if (data === '[DONE]') {
-                console.log('🏁 Received [DONE] signal');
-                continue;
+            const data = trimmedLine.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.choices?.[0]?.delta) {
+                const delta = parsed.choices[0].delta;
+                if (delta.content) fullResponse += delta.content;
+                if (delta.reasoning_content) reasoningContent += delta.reasoning_content;
               }
-              
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
-                  const delta = parsed.choices[0].delta;
-                  
-                  // Capturar content normal
-                  if (delta.content) {
-                    fullResponse += delta.content;
-                  }
-                  // Capturar reasoning_content para modo thinking (DeepSeek Reasoner)
-                  if (delta.reasoning_content) {
-                    reasoningContent += delta.reasoning_content;
-                    console.log(`🧠 Reasoning chunk: +${delta.reasoning_content.length} chars (total: ${reasoningContent.length})`);
-                  }
-                }
-              } catch (e) {
-                // Ignorar erros de parsing de chunks individuais
-                console.log('⚠️ Parse error for line:', trimmedLine.substring(0, 50));
-              }
-            }
-          }
-        }
-        
-        // Processar qualquer dado restante no buffer
-        if (buffer.trim()) {
-          console.log('📝 Processing remaining buffer:', buffer.length, 'chars');
-          const trimmedBuffer = buffer.trim();
-          if (trimmedBuffer.startsWith('data: ')) {
-            const data = trimmedBuffer.slice(6);
-            if (data !== '[DONE]') {
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
-                  const delta = parsed.choices[0].delta;
-                  if (delta.content) {
-                    fullResponse += delta.content;
-                  }
-                  if (delta.reasoning_content) {
-                    reasoningContent += delta.reasoning_content;
-                  }
-                }
-              } catch (e) {
-                console.log('⚠️ Final buffer parse error');
-              }
+            } catch (e) {
+              // Ignorar erros de parsing
             }
           }
         }
@@ -372,144 +346,37 @@ serve(async (req) => {
         reader.releaseLock();
       }
 
-      console.log('📊 Stream processing complete:');
-      console.log(`   - Content length: ${fullResponse.length} chars`);
-      console.log(`   - Reasoning length: ${reasoningContent.length} chars`);
-      console.log(`   - Is thinking only mode: ${isThinkingOnlyMode}`);
-      console.log(`   - Reasoning preview: ${reasoningContent.substring(0, 200)}...`);
-      
-      // Se modo thinking only, retornar apenas o reasoning_content
       let finalResponse = fullResponse;
-      
       if (isThinkingOnlyMode && reasoningContent) {
         finalResponse = `## 🧠 Processo de Raciocínio\n\n${reasoningContent}`;
-        console.log('🧠 Returning thinking-only response');
       } else if (!fullResponse && reasoningContent) {
-        // Se não há content mas há reasoning (pode acontecer com reasoner)
         finalResponse = reasoningContent;
-        console.log('🔄 Using reasoning as response (no content)');
       }
       
-      // Normalize line breaks to standard \n
-      finalResponse = finalResponse
-        .replace(/\r\n/g, '\n')  // Normalize CRLF to LF
-        .replace(/\r/g, '\n');   // Convert any remaining CR to LF
+      finalResponse = finalResponse.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       
-      const responsePayload = { 
+      return new Response(JSON.stringify({ 
         response: finalResponse,
-        reasoning: reasoningContent.length > 0 ? reasoningContent : null 
-      };
-      
-      console.log('📤 Sending response:', {
-        responseLength: responsePayload.response.length,
-        hasReasoning: !!responsePayload.reasoning,
-        reasoningLength: responsePayload.reasoning?.length || 0
-      });
-      
-      return new Response(JSON.stringify(responsePayload), {
+        reasoning: reasoningContent || null 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Fallback para resposta não-stream
+    // Fallback final
     const data = await response.json();
     let responseText = data.choices[0].message.content;
-    
-    // Normalize line breaks to standard \n
-    responseText = responseText
-      .replace(/\r\n/g, '\n')  // Normalize CRLF to LF
-      .replace(/\r/g, '\n');   // Convert any remaining CR to LF
+    responseText = responseText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Record token usage in database  
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (token) {
-      try {
-        // Get user info from JWT
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        const userId = user?.id;
-        
-        if (userId) {
-          // Calculate token usage - 3.2 characters = 1 token (optimized for Portuguese)
-          const inputTokens = Math.ceil((processedMessage?.length || 0) / 3.2);
-          const outputTokens = Math.ceil(responseText.length / 3.2);
-          const totalTokens = inputTokens + outputTokens;
-          
-          console.log('Recording DeepSeek token usage:', {
-            userId,
-            model,
-            inputTokens,
-            outputTokens,
-            totalTokens
-          });
-
-          // Save token usage to database
-          const { error: tokenError } = await supabase
-            .from('token_usage')
-            .insert({
-              user_id: userId,
-              model_name: model,
-              tokens_used: totalTokens,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              message_content: message?.length > 1000 
-                ? message.substring(0, 1000) + '...' 
-                : message,
-              ai_response_content: responseText.length > 2000
-                ? responseText.substring(0, 2000) + '...'
-                : responseText,
-              created_at: new Date().toISOString()
-            });
-
-          if (tokenError) {
-            console.error('Error saving token usage:', tokenError);
-          } else {
-            console.log('Token usage recorded successfully');
-          }
-        }
-      } catch (tokenRecordError) {
-        console.error('Error recording token usage:', tokenRecordError);
-      }
-    }
-
-    // Create document context if chunks were processed
-    let documentContext = null;
-    if (chunks.length > 1) {
-      const compactSummary = responseText.length > 2000 
-        ? responseText.substring(0, 2000) + '...\n\n[Resposta completa disponível no histórico]'
-        : responseText;
-      
-      documentContext = {
-        summary: compactSummary,
-        totalChunks: chunks.length,
-        fileNames: files?.map((f: any) => f.name),
-        estimatedTokens: Math.ceil(processedMessage.length / 3.2),
-        processedAt: new Date().toISOString()
-      };
-      
-      console.log('📄 Document context created:', {
-        fileNames: documentContext.fileNames,
-        totalChunks: documentContext.totalChunks
-      });
-    }
-
-    return new Response(JSON.stringify({ 
-      response: responseText,
-      documentContext 
-    }), {
+    return new Response(JSON.stringify({ response: responseText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
-    console.error('Erro na função DeepSeek Chat:', error);
+    console.error('❌ Error in deepseek-chat:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      details: 'Erro interno na função DeepSeek Chat'
+      error: error.message || 'Erro interno do servidor',
+      response: null 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
