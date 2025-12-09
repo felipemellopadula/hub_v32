@@ -158,12 +158,11 @@ const Image2Page = () => {
   const [model, setModel] = useState(MODELS[0].id);
   const [quality, setQuality] = useState(QUALITY_SETTINGS[0].id);
   const [numberOfImages, setNumberOfImages] = useState(1);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [magicPromptEnabled, setMagicPromptEnabled] = useState(false);
   const [images, setImages] = useState<DatabaseImage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedImageForModal, setSelectedImageForModal] = useState<DatabaseImage | null>(null);
   const [imageToDelete, setImageToDelete] = useState<DatabaseImage | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -181,6 +180,17 @@ const Image2Page = () => {
     [model],
   );
 
+  // Modelos que suportam 2 imagens: Seedream e Google Gemini
+  const canAttachTwoImages = useMemo(
+    () =>
+      model === "google:4@1" ||
+      model === "google:4@2" ||
+      model === "bytedance:5@0",
+    [model],
+  );
+
+  const maxImages = canAttachTwoImages ? 2 : 1;
+
   const availableQualitySettings = useMemo(() => {
     if (model === "bfl:3@1") return KONTEXT_QUALITY_SETTINGS;
     if (model === "ideogram:4@1") return IDEOGRAM_QUALITY_SETTINGS;
@@ -195,21 +205,23 @@ const Image2Page = () => {
     document.title = "Imagem";
   }, []);
 
-  useEffect(() => {
-    if (selectedFile) {
-      const url = URL.createObjectURL(selectedFile);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [selectedFile]);
+  const previewUrls = useMemo(() => {
+    return selectedFiles.map(file => URL.createObjectURL(file));
+  }, [selectedFiles]);
 
   useEffect(() => {
-    if (!canAttachImage && selectedFile) {
-      setSelectedFile(null);
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  useEffect(() => {
+    if (!canAttachImage && selectedFiles.length > 0) {
+      setSelectedFiles([]);
+    } else if (!canAttachTwoImages && selectedFiles.length > 1) {
+      setSelectedFiles(prev => [prev[0]]);
     }
-  }, [canAttachImage, selectedFile]);
+  }, [canAttachImage, canAttachTwoImages, selectedFiles.length]);
 
   useEffect(() => {
     setQuality(availableQualitySettings[0].id);
@@ -255,10 +267,16 @@ const Image2Page = () => {
   }, [loadSavedImages]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    } else {
-      setSelectedFile(null);
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => {
+        const combined = [...prev, ...newFiles];
+        return combined.slice(0, maxImages);
+      });
+    }
+    // Reset input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -269,15 +287,22 @@ const Image2Page = () => {
 
     if (!canAttachImage || isGenerating) return;
 
-    const files = e.dataTransfer.files;
-    if (files && files[0] && files[0].type.startsWith('image/')) {
-      setSelectedFile(files[0]);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      setSelectedFiles(prev => {
+        const combined = [...prev, ...files];
+        return combined.slice(0, maxImages);
+      });
     } else {
       toast.error("Formato inválido", {
         description: "Por favor, arraste apenas arquivos de imagem (PNG, JPG, WEBP)",
       });
     }
-  }, [canAttachImage, isGenerating]);
+  }, [canAttachImage, isGenerating, maxImages]);
+
+  const removeFile = useCallback((index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -323,21 +348,22 @@ const Image2Page = () => {
         }
       }
 
-      let inputImageBase64: string | undefined;
-      if (selectedFile) {
-        console.log('📸 Tamanho original da imagem:', (selectedFile.size / 1024 / 1024).toFixed(2), 'MB');
+      // Processar todas as imagens anexadas
+      const inputImagesBase64: string[] = [];
+      for (const file of selectedFiles) {
+        console.log('📸 Tamanho original da imagem:', (file.size / 1024 / 1024).toFixed(2), 'MB');
         
         // Comprimir agressivamente para evitar payload muito grande
         const options = {
           maxSizeMB: 0.4, // Máximo 400KB (gera ~533KB de base64)
           maxWidthOrHeight: 1536, // Máximo 1536px
           useWebWorker: true,
-          fileType: selectedFile.type,
+          fileType: file.type,
           initialQuality: 0.7, // Reduzir qualidade inicial
         };
         
         try {
-          const compressedFile = await imageCompression(selectedFile, options);
+          const compressedFile = await imageCompression(file, options);
           console.log('✅ Tamanho após compressão:', (compressedFile.size / 1024).toFixed(0), 'KB');
           
           const reader = new FileReader();
@@ -346,18 +372,19 @@ const Image2Page = () => {
             reader.onload = () => resolve();
             reader.onerror = (error) => reject(error);
           });
-          inputImageBase64 = (reader.result as string).split(",")[1];
+          const base64 = (reader.result as string).split(",")[1];
           
-          const base64SizeKB = (inputImageBase64.length * 0.75 / 1024).toFixed(0);
+          const base64SizeKB = (base64.length * 0.75 / 1024).toFixed(0);
           console.log('📦 Tamanho do base64:', base64SizeKB, 'KB');
           
           // Validar tamanho final
-          if (inputImageBase64.length > 700000) { // ~525KB de base64
+          if (base64.length > 700000) { // ~525KB de base64
             toast.error("Imagem muito grande", {
-              description: "A imagem anexada é muito grande. Tente uma imagem menor ou de menor resolução.",
+              description: "Uma das imagens anexadas é muito grande. Tente uma imagem menor ou de menor resolução.",
             });
             throw new Error("Payload muito grande");
           }
+          inputImagesBase64.push(base64);
         } catch (compressionError) {
           console.error('Erro ao comprimir imagem:', compressionError);
           toast.error("Erro ao processar imagem", {
@@ -367,6 +394,9 @@ const Image2Page = () => {
         }
       }
 
+      const inputImageBase64 = inputImagesBase64[0];
+      const inputImageBase64Second = inputImagesBase64[1];
+
       if (inputImageBase64 && canAttachImage) {
         // Usar edit-image da Runware para todos os modelos (incluindo Google)
         const { data: editData, error: editError } = await supabase.functions.invoke("edit-image", {
@@ -374,6 +404,7 @@ const Image2Page = () => {
             model,
             positivePrompt: finalPrompt,
             inputImage: inputImageBase64,
+            inputImage2: inputImageBase64Second, // Segunda imagem opcional
             width: selectedQualityInfo.width,
             height: selectedQualityInfo.height,
           },
@@ -622,19 +653,34 @@ const Image2Page = () => {
       {/* Chat Bar Fixo (bottom) - Estilo Higgsfield */}
       <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur border-t border-white/10 shadow-2xl z-20">
         <div className="container mx-auto max-w-7xl p-4">
-          {/* Preview de arquivo anexado */}
-          {previewUrl && (
-            <div className="mb-3 flex items-center gap-2 p-2 bg-white/10 rounded-lg">
-              <img src={previewUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
-              <p className="text-white text-sm flex-1 truncate">{selectedFile?.name}</p>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-white hover:text-white/80"
-                onClick={() => setSelectedFile(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+      {/* Preview de arquivos anexados */}
+          {selectedFiles.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white/10 rounded-lg">
+                  <img src={previewUrls[index]} alt={`Preview ${index + 1}`} className="h-12 w-12 object-cover rounded" />
+                  <p className="text-white text-sm truncate max-w-[120px]">{file.name}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-white hover:text-white/80 h-6 w-6 p-0"
+                    onClick={() => removeFile(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {canAttachTwoImages && selectedFiles.length < 2 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 h-[60px]"
+                >
+                  <Paperclip className="h-4 w-4 mr-1" />
+                  +1 imagem
+                </Button>
+              )}
             </div>
           )}
 
@@ -702,17 +748,30 @@ const Image2Page = () => {
               <Button
                 variant="outline"
                 size="icon"
-                disabled={!canAttachImage || isGenerating}
+                disabled={!canAttachImage || isGenerating || selectedFiles.length >= maxImages}
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                title={canAttachImage ? "Anexar imagem (clique ou arraste)" : "Modelo não suporta anexo"}
+                title={
+                  !canAttachImage 
+                    ? "Modelo não suporta anexo" 
+                    : selectedFiles.length >= maxImages 
+                      ? `Máximo de ${maxImages} imagem(ns)` 
+                      : canAttachTwoImages 
+                        ? "Anexar até 2 imagens (clique ou arraste)" 
+                        : "Anexar imagem (clique ou arraste)"
+                }
                 className={`bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white transition-all ${
                   isDragging ? "border-[#8C00FF] border-2 bg-[#8C00FF]/20 scale-110" : ""
-                }`}
+                } ${selectedFiles.length > 0 ? "text-[#8C00FF] border-[#8C00FF]/50" : ""}`}
               >
                 <Paperclip className="h-4 w-4" />
+                {canAttachTwoImages && selectedFiles.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#8C00FF] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {selectedFiles.length}
+                  </span>
+                )}
               </Button>
               <input 
                 ref={fileInputRef}

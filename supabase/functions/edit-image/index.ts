@@ -18,13 +18,13 @@ serve(async (req) => {
       throw new Error('RUNWARE_API_KEY não configurada');
     }
 
-    const { model, positivePrompt, inputImage, width, height } = await req.json();
+    const { model, positivePrompt, inputImage, inputImage2, width, height } = await req.json();
 
     if (!positivePrompt || !inputImage) {
       throw new Error('Prompt e imagem de entrada são obrigatórios');
     }
 
-    console.log('Editando imagem com Runware:', { model, width, height, promptLength: positivePrompt.length });
+    console.log('Editando imagem com Runware:', { model, width, height, promptLength: positivePrompt.length, hasSecondImage: !!inputImage2 });
 
     const isGoogleModel = model && model.startsWith('google:');
     const isSeedream = model === 'bytedance:5@0';
@@ -42,7 +42,7 @@ serve(async (req) => {
 
     // Para modelos Google (Gemini) e Seedream, precisa fazer upload da imagem primeiro
     if (needsUploadFlow) {
-      console.log(`Modelo ${isGoogleModel ? 'Google' : 'Seedream'} detectado, fazendo upload da imagem primeiro...`);
+      console.log(`Modelo ${isGoogleModel ? 'Google' : 'Seedream'} detectado, fazendo upload da(s) imagem(ns)...`);
       
       const uploadTaskUUID = crypto.randomUUID();
       runwarePayload.push({
@@ -50,6 +50,18 @@ serve(async (req) => {
         taskUUID: uploadTaskUUID,
         image: inputImage
       });
+
+      // Se tiver segunda imagem, adiciona também
+      let uploadTaskUUID2: string | null = null;
+      if (inputImage2) {
+        uploadTaskUUID2 = crypto.randomUUID();
+        runwarePayload.push({
+          taskType: "imageUpload",
+          taskUUID: uploadTaskUUID2,
+          image: inputImage2
+        });
+        console.log('Segunda imagem detectada, fazendo upload...');
+      }
 
       // Faz o upload primeiro
       console.log('Enviando upload para Runware API...');
@@ -68,15 +80,17 @@ serve(async (req) => {
       }
 
       const uploadResult = await uploadResponse.json();
-      console.log('Upload realizado:', JSON.stringify(uploadResult).substring(0, 200));
+      console.log('Upload realizado:', JSON.stringify(uploadResult).substring(0, 300));
 
-      const uploadedImage = uploadResult.data?.find((item: any) => item.taskType === 'imageUpload');
+      // Pegar todos os UUIDs de imagem uploadadas
+      const uploadedImages = uploadResult.data?.filter((item: any) => item.taskType === 'imageUpload');
       
-      if (!uploadedImage?.imageUUID) {
+      if (!uploadedImages?.length || !uploadedImages[0]?.imageUUID) {
         throw new Error('Falha ao fazer upload da imagem');
       }
 
-      console.log('Image UUID obtido:', uploadedImage.imageUUID);
+      const referenceImageUUIDs = uploadedImages.map((img: any) => img.imageUUID);
+      console.log('Image UUIDs obtidos:', referenceImageUUIDs);
 
       // Agora faz a inferência usando referenceImages
       const inferenceTaskUUID = crypto.randomUUID();
@@ -90,7 +104,7 @@ serve(async (req) => {
           taskUUID: inferenceTaskUUID,
           positivePrompt,
           model: model || "google:4@1",
-          referenceImages: [uploadedImage.imageUUID],
+          referenceImages: referenceImageUUIDs,
           numberResults: 1,
           outputFormat: "PNG",
           outputType: "URL",
@@ -103,6 +117,7 @@ serve(async (req) => {
       if (isNanoBanana2Pro || isSeedream) {
         console.log(`${isNanoBanana2Pro ? 'Nano Banana 2 Pro' : 'Seedream 4.0'} - adicionando dimensões:`, { width, height });
       }
+      console.log(`Usando ${referenceImageUUIDs.length} imagem(ns) de referência`);
 
       console.log('Enviando inferência para Runware API...');
       const inferenceResponse = await fetch(RUNWARE_API_URL, {
