@@ -1863,6 +1863,150 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           return; // Não continuar com processamento normal
         }
         
+        // ========== MODO REASONING (OpenAI) ==========
+        if (reasoningEnabled && isReasoningCapable) {
+          console.log('🧠 Reasoning mode activated for model:', selectedModel);
+          setIsDeepSeekThinking(true);
+          setThinkingContent('');
+          
+          const REASONING_URL = `https://myqgnnqltemfpzdxwybj.supabase.co/functions/v1/openai-reasoning`;
+          const { data: sessionData } = await supabase.auth.getSession();
+          
+          try {
+            const response = await fetch(REASONING_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${sessionData.session?.access_token || ""}`,
+                "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cWdubnFsdGVtZnB6ZHh3eWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODc3NjIsImV4cCI6MjA2OTQ2Mzc2Mn0.X0jHc8AkyZNZbi3kg5Qh6ngg7aAbijFXchM6bYsAnlE",
+              },
+              body: JSON.stringify({
+                message: messageWithFiles,
+                model: selectedModel,
+                reasoningEffort: 'medium',
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('No response body');
+            
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullReasoning = '';
+            let fullContent = '';
+            
+            const botMessageId = (Date.now() + 1).toString();
+            const newBotMessage: Message = {
+              id: botMessageId,
+              content: '',
+              sender: 'bot',
+              timestamp: new Date(),
+              model: selectedModel,
+              reasoning: '',
+              isStreaming: true,
+            };
+            
+            setMessages((prev) => [...prev, newBotMessage]);
+            setIsStreamingResponse(true);
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+              
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                
+                const data = trimmed.slice(6);
+                if (data === '[DONE]') continue;
+                
+                try {
+                  const parsed = JSON.parse(data);
+                  
+                  if (parsed.type === 'reasoning') {
+                    fullReasoning += parsed.reasoning || '';
+                    setThinkingContent(fullReasoning);
+                  }
+                  
+                  if (parsed.type === 'reasoning_final') {
+                    fullReasoning = parsed.reasoning || fullReasoning;
+                    setThinkingContent(fullReasoning);
+                  }
+                  
+                  if (parsed.type === 'content') {
+                    fullContent += parsed.content || '';
+                    startTransition(() => {
+                      setMessages((prev) =>
+                        prev.map((msg) =>
+                          msg.id === botMessageId
+                            ? { ...msg, content: fullContent, reasoning: fullReasoning }
+                            : msg
+                        )
+                      );
+                    });
+                  }
+                } catch (e) {
+                  // Ignore JSON parse errors
+                }
+              }
+            }
+            
+            // Finalizar
+            setIsDeepSeekThinking(false);
+            setIsStreamingResponse(false);
+            startTransition(() => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === botMessageId
+                    ? { ...msg, content: fullContent, reasoning: fullReasoning, isStreaming: false }
+                    : msg
+                )
+              );
+            });
+            
+            // Salvar conversa
+            if (user?.id) {
+              const finalMessages = messages.filter((m) => m.id !== botMessageId);
+              const finalBotMessage: Message = {
+                id: botMessageId,
+                content: fullContent,
+                sender: 'bot',
+                timestamp: new Date(),
+                model: selectedModel,
+                reasoning: fullReasoning,
+              };
+              await upsertConversation([...finalMessages, userMessage, finalBotMessage], currentConversationId);
+            }
+            
+            // Consumir tokens
+            const estimatedTokens = Math.ceil((messageWithFiles.length + fullContent.length + fullReasoning.length) / 4);
+            consumeTokens(estimatedTokens.toString(), selectedModel);
+            
+            setIsLoading(false);
+            return;
+            
+          } catch (error: any) {
+            console.error('🧠 Reasoning error:', error);
+            setIsDeepSeekThinking(false);
+            setIsStreamingResponse(false);
+            toast({
+              title: "Erro no Reasoning",
+              description: error.message || "Não foi possível processar o raciocínio.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // PROCESSAMENTO NORMAL (OUTROS MODELOS)
         const conversationHistory = messages.slice(-20).map((msg) => ({
           role: msg.sender === "user" ? "user" : "assistant",
