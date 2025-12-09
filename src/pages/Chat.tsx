@@ -403,10 +403,10 @@ const BotMessage = React.memo(
               </div>
             )}
             
-            <div className="space-y-3">
-              {/* Reasoning Section - dentro do fluxo, empurra conteúdo para baixo */}
+            <div className="flex flex-col gap-3">
+              {/* Reasoning Section - fluxo normal, empurra resposta para baixo */}
               {!!message.reasoning && (
-                <div className="border-b border-border/30 pb-3">
+                <div className="relative z-0">
                   <button
                     onClick={() => toggleReasoning(message.id)}
                     className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
@@ -428,10 +428,11 @@ const BotMessage = React.memo(
                       </div>
                     </div>
                   )}
+                  <div className="border-b border-border/30 mt-3" />
                 </div>
               )}
 
-              {/* Resposta da IA */}
+              {/* Resposta da IA - sempre abaixo do reasoning */}
               <div className="text-sm max-w-full break-words whitespace-pre-wrap overflow-x-auto">
                 <MarkdownRendererLazy content={displayedContent} isUser={false} />
               </div>
