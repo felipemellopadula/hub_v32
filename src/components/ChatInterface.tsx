@@ -573,6 +573,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
       if (isDeepSeekReasonerModel) {
         console.log('🧠 Using streaming mode for DeepSeek Reasoner...');
+        setIsDeepSeekThinking(true);
+        setThinkingContent('');
         
         const session = await supabase.auth.getSession();
         const accessToken = session.data.session?.access_token;
@@ -665,6 +667,9 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                 : msg
             )
           );
+          
+          // Desativar indicador de thinking após streaming completo
+          setIsDeepSeekThinking(false);
           
           // Pass AI response to consumeTokens for database logging
           await consumeTokens(selectedModel, messageContent, finalContent);
