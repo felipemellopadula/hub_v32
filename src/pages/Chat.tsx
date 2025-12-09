@@ -76,6 +76,7 @@ import { WordTablesPreview } from "@/components/WordTablesPreview";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RAGProgressIndicator } from "@/components/RAGProgressIndicator";
 import { useRAGProgress } from "@/hooks/useRAGProgress";
+import { DeepSeekThinkingIndicator } from "@/components/DeepSeekThinkingIndicator";
 
 // =====================
 // Tipos
@@ -564,6 +565,8 @@ const Chat: React.FC = () => {
   }>({});
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
+  const [isDeepSeekThinking, setIsDeepSeekThinking] = useState(false);
+  const [thinkingContent, setThinkingContent] = useState("");
   
   // RAG Progress hook com cancelamento
   const {
@@ -2018,6 +2021,36 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                   continue;
                 }
                 
+                // 🧠 DeepSeek Reasoner format - reasoning em tempo real
+                if (parsed.type === 'reasoning' && parsed.reasoning) {
+                  // Mostrar indicador de thinking
+                  setIsDeepSeekThinking(true);
+                  setThinkingContent(prev => prev + parsed.reasoning);
+                  console.log('🧠 Reasoning chunk:', parsed.reasoning.length, 'chars');
+                  continue;
+                }
+                
+                // 📝 DeepSeek Reasoner format - content em tempo real  
+                if (parsed.type === 'content' && parsed.content) {
+                  accumulatedContent += parsed.content;
+                  
+                  // Limpar thinking indicator quando content começa
+                  if (isDeepSeekThinking) {
+                    setIsDeepSeekThinking(false);
+                  }
+                  
+                  // Atualizar mensagem do bot em tempo real
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === botMessageId
+                        ? { ...msg, content: accumulatedContent }
+                        : msg
+                    )
+                  );
+                  continue;
+                }
+                
+                // OpenAI/Gemini format
                 const content = parsed.choices?.[0]?.delta?.content as string | undefined;
                 
                 if (content) {
@@ -2094,6 +2127,8 @@ Forneça uma resposta abrangente que integre informações de todos os documento
             setMessages(finalMessages);
             setIsStreamingResponse(false);
             setProcessingStatus("");
+            setIsDeepSeekThinking(false);
+            setThinkingContent("");
           });
 
           // Scroll final
@@ -3049,6 +3084,16 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                       return undefined;
                     })()}
                     onCancel={cancelRAG}
+                  />
+                </div>
+              )}
+
+              {/* DeepSeek Thinking Indicator */}
+              {isDeepSeekThinking && (
+                <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[95%] sm:w-[90%] max-w-2xl z-50">
+                  <DeepSeekThinkingIndicator 
+                    isVisible={isDeepSeekThinking} 
+                    thinkingContent={thinkingContent} 
                   />
                 </div>
               )}
