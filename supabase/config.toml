@@ -3,6 +3,9 @@ project_id = "myqgnnqltemfpzdxwybj"
 [functions.openai-chat]
 verify_jwt = true
 
+[functions.openai-reasoning]
+verify_jwt = true
+
 [functions.rag-logical-sections]
 verify_jwt = true
 

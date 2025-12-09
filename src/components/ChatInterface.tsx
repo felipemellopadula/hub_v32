@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModelSelector } from "./ModelSelector";
-import { Send, Bot, User, Paperclip, Image, Camera, ArrowDown, Save } from "lucide-react";
+import { Send, Bot, User, Paperclip, Image, Camera, ArrowDown, Save, Brain } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PdfProcessor } from "@/utils/PdfProcessor";
 import { WordProcessor } from "@/utils/WordProcessor";
@@ -52,7 +54,12 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isDeepSeekThinking, setIsDeepSeekThinking] = useState(false);
   const [thinkingContent, setThinkingContent] = useState('');
+  const [reasoningEnabled, setReasoningEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Models that support OpenAI Reasoning (Responses API)
+  const reasoningCapableModels = ['gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'o4-mini'];
+  const isReasoningCapable = selectedModel ? reasoningCapableModels.includes(selectedModel) : false;
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pasteAreaRef = useRef<HTMLDivElement>(null);
@@ -501,8 +508,14 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     setMessages(prev => [...prev, tempBotMessage]);
 
     try {
+      // Check if OpenAI Reasoning mode is enabled for capable models
+      const isOpenAIReasoningMode = reasoningEnabled && reasoningCapableModels.includes(selectedModel);
+      
       // Determine which edge function to use based on the selected model
       const getEdgeFunctionName = (model: string) => {
+        if (isOpenAIReasoningMode) {
+          return 'openai-reasoning';
+        }
         if (model.includes('gpt-') || model.includes('o3') || model.includes('o4')) {
           return 'openai-chat';
         }
@@ -528,7 +541,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       console.log(`Using edge function: ${functionName} for model: ${selectedModel}`);
       console.log('Sending message to function:', {
         messageLength: messageContent.length,
-        messagePreview: messageContent.substring(0, 300) + '...'
+        messagePreview: messageContent.substring(0, 300) + '...',
+        isOpenAIReasoningMode,
       });
 
       // Check if this is a DeepSeek Reasoner model that supports streaming reasoning
@@ -570,8 +584,154 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         isDeepSeekReasonerModel
       });
 
-      // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
-      if (isDeepSeekReasonerModel) {
+      // For OpenAI Reasoning mode with SSE streaming
+      if (isOpenAIReasoningMode) {
+        console.log('🧠🧠🧠 OPENAI REASONING MODE - SSE STREAMING 🧠🧠🧠');
+        setIsDeepSeekThinking(true);
+        setThinkingContent('');
+        
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        
+        const supabaseUrl = 'https://myqgnnqltemfpzdxwybj.supabase.co';
+        const fetchUrl = `${supabaseUrl}/functions/v1/openai-reasoning`;
+        
+        console.log('📡 Fetching OpenAI Reasoning SSE from:', fetchUrl);
+        
+        const response = await fetch(fetchUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            message: messageContent,
+            model: selectedModel,
+            reasoningEffort: 'medium',
+          }),
+        });
+
+        console.log('📡 Response status:', response.status);
+        const contentType = response.headers.get('content-type');
+        console.log('📡 Content-Type:', contentType);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ OpenAI Reasoning Error:', errorText);
+          throw new Error(`Erro na requisição: ${response.status}`);
+        }
+
+        if (contentType?.includes('text/event-stream') && response.body) {
+          console.log('🔥 OpenAI Reasoning SSE STREAM DETECTADO');
+          
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let fullContent = '';
+          let fullReasoning = '';
+          let buffer = '';
+          let eventCount = 0;
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                console.log('✅ OpenAI Reasoning Stream finalizado - Total eventos:', eventCount);
+                break;
+              }
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+              
+              for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+                
+                const data = trimmedLine.slice(6);
+                if (data === '[DONE]') {
+                  console.log('🏁 [DONE] signal');
+                  continue;
+                }
+                
+                try {
+                  const parsed = JSON.parse(data);
+                  eventCount++;
+                  
+                  // 🧠 Reasoning em tempo real
+                  if ((parsed.type === 'reasoning' || parsed.type === 'reasoning_final') && parsed.reasoning) {
+                    if (parsed.type === 'reasoning_final') {
+                      fullReasoning = parsed.reasoning;
+                    } else {
+                      fullReasoning += parsed.reasoning;
+                    }
+                    setThinkingContent(fullReasoning);
+                    
+                    if (eventCount <= 5 || eventCount % 25 === 0) {
+                      console.log(`🧠 OpenAI Reasoning #${eventCount}: total ${fullReasoning.length} chars`);
+                    }
+                  }
+                  
+                  // 📝 Content em tempo real
+                  if (parsed.type === 'content' && parsed.content) {
+                    fullContent += parsed.content;
+                    setMessages(prev => 
+                      prev.map(msg => 
+                        msg.id === botMessageId 
+                          ? { ...msg, content: fullContent }
+                          : msg
+                      )
+                    );
+                    
+                    if (eventCount <= 5 || eventCount % 25 === 0) {
+                      console.log(`📝 OpenAI Content #${eventCount}: total ${fullContent.length} chars`);
+                    }
+                  }
+                } catch (e) {
+                  // JSON incompleto
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+          
+          console.log('📊 OpenAI Reasoning SSE completo:', { reasoning: fullReasoning.length, content: fullContent.length, events: eventCount });
+          
+          // Final update
+          const finalContent = fullContent || 'Resposta vazia.';
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, content: finalContent, reasoning: fullReasoning || undefined }
+                : msg
+            )
+          );
+          
+          setIsDeepSeekThinking(false);
+          setThinkingContent('');
+          await consumeTokens(selectedModel, messageContent, finalContent);
+        } else {
+          // JSON fallback
+          console.log('📦 OpenAI Reasoning JSON fallback');
+          const data = await response.json();
+          
+          const aiMessageContent = data.response || data.message || data.text || 'Resposta vazia.';
+          const reasoningContent = data.reasoning || null;
+          
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, content: aiMessageContent, reasoning: reasoningContent }
+                : msg
+            )
+          );
+          
+          setIsDeepSeekThinking(false);
+          setThinkingContent('');
+          await consumeTokens(selectedModel, messageContent, aiMessageContent);
+        }
+      } else if (isDeepSeekReasonerModel) {
+        // For DeepSeek Reasoner with streaming, use fetch directly to handle SSE
         console.log('🧠🧠🧠 DEEPSEEK REASONER - SSE STREAMING v2 🧠🧠🧠');
         setIsDeepSeekThinking(true);
         setThinkingContent('');
@@ -814,6 +974,39 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           </div>
           <div className="flex items-center gap-3">
             <ModelSelector onModelSelect={setSelectedModel} selectedModel={selectedModel} />
+            
+            {/* Reasoning Toggle */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+                    isReasoningCapable 
+                      ? reasoningEnabled 
+                        ? 'bg-violet-500/20 border-violet-500/50 text-violet-400' 
+                        : 'bg-muted border-border text-muted-foreground hover:border-violet-500/30'
+                      : 'bg-muted/50 border-border/50 text-muted-foreground/50 cursor-not-allowed'
+                  }`}>
+                    <Brain className="h-4 w-4" />
+                    <span className="text-xs font-medium hidden sm:inline">Reasoning</span>
+                    <Switch
+                      checked={reasoningEnabled}
+                      onCheckedChange={setReasoningEnabled}
+                      disabled={!isReasoningCapable}
+                      className="scale-75"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">
+                    {isReasoningCapable 
+                      ? 'Ativar modo de raciocínio para ver o processo de pensamento do modelo'
+                      : 'Disponível apenas para GPT-5.1, GPT-5 Mini, GPT-5 Nano e o4 Mini'
+                    }
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>
