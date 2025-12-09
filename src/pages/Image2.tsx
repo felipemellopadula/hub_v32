@@ -180,12 +180,13 @@ const Image2Page = () => {
     [model],
   );
 
-  // Modelos que suportam 2 imagens: Seedream e Google Gemini
+  // Modelos que suportam 2 imagens: Seedream, Google Gemini e Gemini Flash 2.5
   const canAttachTwoImages = useMemo(
     () =>
       model === "google:4@1" ||
       model === "google:4@2" ||
-      model === "bytedance:5@0",
+      model === "bytedance:5@0" ||
+      model === "gemini-flash-2.5",
     [model],
   );
 
