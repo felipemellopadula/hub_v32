@@ -141,12 +141,12 @@ const QWEN_QUALITY_SETTINGS = [
 ];
 
 const MODELS = [
+  { id: "google:4@2", label: "Google Nano Banana 2 Pro" },
+  { id: "google:4@1", label: "Google Nano Banana" },
   { id: "openai:1@1", label: "Gpt-Image 1" },
   { id: "ideogram:4@1", label: "Ideogram 3.0" },
   { id: "runware:108@1", label: "Qwen-Image" },
   { id: "bfl:3@1", label: "FLUX.1 Kontext [max]" },
-  { id: "google:4@1", label: "Gemini Flash Image 2.5" },
-  { id: "google:4@2", label: "Nano Banana 2 Pro" },
   { id: "bytedance:5@0", label: "Seedream 4.0" },
 ];
 
