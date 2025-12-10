@@ -413,6 +413,25 @@ const BotMessage = React.memo(
                 <p className="text-xs opacity-70">{getModelDisplayName(message.model)}</p>
 
                 <div className="flex items-center gap-1">
+                  {/* Botão de raciocínio - abre modal */}
+                  {!!message.reasoning && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleReasoning(message.id)}
+                            className="h-7 w-7 hover:bg-muted/80 hover:scale-105 transition-all duration-200"
+                          >
+                            <Brain className="h-3.5 w-3.5 text-purple-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver raciocínio</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -447,6 +466,28 @@ const BotMessage = React.memo(
                   </TooltipProvider>
                 </div>
               </div>
+
+              {/* Modal de Raciocínio */}
+              {!!message.reasoning && expandedReasoning[message.id] && (
+                <Dialog open={expandedReasoning[message.id]} onOpenChange={() => toggleReasoning(message.id)}>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-purple-500" />
+                        Raciocínio do Modelo
+                      </DialogTitle>
+                      <DialogDescription>
+                        Processo de pensamento utilizado para gerar a resposta
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+                      <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {message.reasoning}
+                      </div>
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               {/* Comparação entre modelos — quando a mensagem anterior do usuário não tem anexos */}
               {!hasAttachments && immediateUserMessage?.sender === "user" && (
