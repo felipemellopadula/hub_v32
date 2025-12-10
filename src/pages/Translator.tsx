@@ -112,13 +112,15 @@ const TranslatorPage = () => {
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `You are an expert in humanizing AI-generated texts. Your task is to rewrite the provided text to sound more natural and human.
+          message: `You are an expert in humanizing AI-generated texts.
 
-CRITICAL: Detect the language of the input text and respond in THE EXACT SAME LANGUAGE. Do not translate or change the language.
+CRITICAL RULE - LANGUAGE: You MUST respond in the EXACT SAME LANGUAGE as the input text. If the text is in English, respond in English. If it is in Portuguese, respond in Portuguese. If it is in Spanish, respond in Spanish. NEVER translate or change the language. This is mandatory.
+
+Your task is to rewrite the provided text to sound more natural and human while keeping it in its original language.
 
 Make the following improvements:
 1. Add variations in tone and sentence rhythm
-2. Use contractions and colloquial language when appropriate
+2. Use contractions and colloquial language appropriate for the detected language
 3. Include natural connectors and smooth transitions
 4. Vary sentence length to create flow
 5. Add personal touches and more human expressions
@@ -127,6 +129,7 @@ Make the following improvements:
 8. Maintain the meaning and important information
 
 The text should sound as if it were written by a real person, not a machine.
+REMEMBER: Output MUST be in the same language as the input. Do NOT translate.
 
 Text to humanize:
 ${humanizeInput}`,
