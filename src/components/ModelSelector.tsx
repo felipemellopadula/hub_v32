@@ -38,16 +38,6 @@ const modelsByProvider = {
     { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 Thinking', provider: 'DeepSeek', category: 'premium' as const },
     { id: 'deepseek-reasoner-thinking-only', name: 'DeepSeek V3.2 Thinking Only', provider: 'DeepSeek', category: 'premium' as const },
   ],
-  'META': [
-    { id: 'llama-4-maverick', name: 'Llama 4 Maverick', provider: 'APILLM', category: 'premium' as const },
-    { id: 'llama-4-scout', name: 'Llama 4 Scout', provider: 'APILLM', category: 'premium' as const },
-    { id: 'deepseek-r1', name: 'DeepSeek R1', provider: 'APILLM', category: 'premium' as const },
-    { id: 'llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', provider: 'APILLM', category: 'standard' as const },
-    { id: 'llama-3.2-11b-instruct', name: 'Llama 3.2 11B Instruct', provider: 'APILLM', category: 'standard' as const },
-    { id: 'llama-3.2-8b-instruct', name: 'Llama 3.2 8B Instruct', provider: 'APILLM', category: 'fast' as const },
-    { id: 'llama-3.2-3b-instruct', name: 'Llama 3.2 3B Instruct', provider: 'APILLM', category: 'fast' as const },
-    { id: 'llama-3.2-1b-instruct', name: 'Llama 3.2 1B Instruct', provider: 'APILLM', category: 'fast' as const },
-  ],
   'xAI': [
     { id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Fast (Reasoning)', provider: 'xAI', category: 'premium' as const },
     { id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast (Non-Reasoning)', provider: 'xAI', category: 'standard' as const },
@@ -84,9 +74,7 @@ const getProviderIcon = (provider: string) => {
     'Anthropic': '/images/logos/anthropic.svg',
     'Google': '/images/logos/gemini.svg',
     'DeepSeek': '/images/logos/deepseek.svg',
-    'xAI': '/images/logos/xai.svg',
-    'Meta': '/images/logos/meta.svg',
-    'APILLM': '/images/logos/apillm.svg',
+    'xAI': '/images/logos/xai.svg',
   };
   return iconMap[provider] || '/images/logos/openai.svg';
 };
