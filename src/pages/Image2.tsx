@@ -141,13 +141,13 @@ const QWEN_QUALITY_SETTINGS = [
 ];
 
 const MODELS = [
-  { id: "google:4@2", label: "Google Nano Banana 2 Pro" },
-  { id: "google:4@1", label: "Google Nano Banana" },
-  { id: "openai:1@1", label: "Gpt-Image 1" },
-  { id: "ideogram:4@1", label: "Ideogram 3.0" },
-  { id: "runware:108@1", label: "Qwen-Image" },
-  { id: "bfl:3@1", label: "FLUX.1 Kontext [max]" },
-  { id: "bytedance:5@0", label: "Seedream 4.0" },
+  { id: "google:4@2", label: "Google Nano Banana 2 Pro", maxImages: 4 },
+  { id: "google:4@1", label: "Google Nano Banana", maxImages: 2 },
+  { id: "openai:1@1", label: "Gpt-Image 1", maxImages: 1 },
+  { id: "ideogram:4@1", label: "Ideogram 3.0", maxImages: 1 },
+  { id: "runware:108@1", label: "Qwen-Image", maxImages: 0 },
+  { id: "bfl:3@1", label: "FLUX.1 Kontext [max]", maxImages: 1 },
+  { id: "bytedance:seedream@4.5", label: "Seedream 4.5", maxImages: 2 },
 ];
 
 const MAX_IMAGES_TO_FETCH = 10;
@@ -181,35 +181,24 @@ const Image2Page = () => {
   const isLoadingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const currentModel = useMemo(
+    () => MODELS.find(m => m.id === model) || MODELS[0],
+    [model]
+  );
+
   const canAttachImage = useMemo(
-    () =>
-      model === "openai:1@1" ||
-      model === "ideogram:4@1" ||
-      model === "bfl:3@1" ||
-      model === "google:4@1" ||
-      model === "google:4@2" ||
-      model === "bytedance:5@0",
-    [model],
+    () => currentModel.maxImages > 0,
+    [currentModel],
   );
 
-  // Modelos que suportam 2 imagens: Seedream, Google Gemini e Gemini Flash 2.5
-  const canAttachTwoImages = useMemo(
-    () =>
-      model === "google:4@1" ||
-      model === "google:4@2" ||
-      model === "bytedance:5@0" ||
-      model === "gemini-flash-2.5",
-    [model],
-  );
-
-  const maxImages = canAttachTwoImages ? 2 : 1;
+  const maxImages = currentModel.maxImages;
 
   const availableQualitySettings = useMemo(() => {
     if (model === "bfl:3@1") return KONTEXT_QUALITY_SETTINGS;
     if (model === "ideogram:4@1") return IDEOGRAM_QUALITY_SETTINGS;
     if (model === "google:4@1") return GEMINI_QUALITY_SETTINGS;
     if (model === "google:4@2") return NANO_BANANA_PRO_QUALITY_SETTINGS;
-    if (model === "bytedance:5@0") return SEEDREAM_QUALITY_SETTINGS;
+    if (model === "bytedance:seedream@4.5") return SEEDREAM_QUALITY_SETTINGS;
     if (model === "runware:108@1") return QWEN_QUALITY_SETTINGS;
     return QUALITY_SETTINGS;
   }, [model]);
@@ -231,10 +220,10 @@ const Image2Page = () => {
   useEffect(() => {
     if (!canAttachImage && selectedFiles.length > 0) {
       setSelectedFiles([]);
-    } else if (!canAttachTwoImages && selectedFiles.length > 1) {
-      setSelectedFiles(prev => [prev[0]]);
+    } else if (selectedFiles.length > maxImages) {
+      setSelectedFiles(prev => prev.slice(0, maxImages));
     }
-  }, [canAttachImage, canAttachTwoImages, selectedFiles.length]);
+  }, [canAttachImage, maxImages, selectedFiles.length]);
 
   useEffect(() => {
     setQuality(availableQualitySettings[0].id);
@@ -683,7 +672,7 @@ const Image2Page = () => {
                   </Button>
                 </div>
               ))}
-              {canAttachTwoImages && selectedFiles.length < 2 && (
+              {maxImages > 1 && selectedFiles.length < maxImages && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -771,8 +760,8 @@ const Image2Page = () => {
                     ? "Modelo não suporta anexo" 
                     : selectedFiles.length >= maxImages 
                       ? `Máximo de ${maxImages} imagem(ns)` 
-                      : canAttachTwoImages 
-                        ? "Anexar até 2 imagens (clique ou arraste)" 
+                      : maxImages > 1 
+                        ? `Anexar até ${maxImages} imagens (clique ou arraste)` 
                         : "Anexar imagem (clique ou arraste)"
                 }
                 className={`bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white transition-all ${
@@ -780,7 +769,7 @@ const Image2Page = () => {
                 } ${selectedFiles.length > 0 ? "text-[#8C00FF] border-[#8C00FF]/50" : ""}`}
               >
                 <Paperclip className="h-4 w-4" />
-                {canAttachTwoImages && selectedFiles.length > 0 && (
+                {maxImages > 1 && selectedFiles.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-[#8C00FF] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     {selectedFiles.length}
                   </span>
