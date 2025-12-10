@@ -1637,12 +1637,18 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           hasLargeDocument: false,
         };
         
-        // Add webSearchEnabled for OpenAI models
+        // Add webSearchEnabled for OpenAI and Gemini models
         const isOpenAIModel = internalModel.includes('gpt') || internalModel.includes('o3') || internalModel.includes('o4');
+        const isGeminiModel = internalModel.includes('gemini');
         if (isWebSearchMode && isOpenAIModel) {
           requestBody.webSearchEnabled = true;
           console.log('🌐 Web Search mode enabled for OpenAI model');
           setProcessingStatus('🔍 Buscando na web...');
+        }
+        if (isWebSearchMode && isGeminiModel) {
+          requestBody.webSearchEnabled = true;
+          console.log('🌐 Web Search (Google Search Grounding) enabled for Gemini model');
+          setProcessingStatus('🔍 Buscando na web com Google Search...');
         }
         
         // Add reasoningEnabled for Gemini, Claude, and Grok models
@@ -1803,16 +1809,20 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                   continue;
                 }
                 
-                // 🌐 Web Search status events
+                // 🌐 Web Search status events (OpenAI and Gemini)
                 if (parsed.type === 'web_search_status') {
-                  console.log('🌐 Web Search:', parsed.status);
-                  setProcessingStatus(parsed.status);
+                  console.log('🌐 Web Search:', parsed.status, parsed.queries || '');
+                  if (parsed.status === 'completed' && parsed.queries?.length > 0) {
+                    setProcessingStatus(`🔍 Pesquisou: ${parsed.queries.slice(0, 2).join(', ')}`);
+                  } else {
+                    setProcessingStatus(parsed.status);
+                  }
                   continue;
                 }
                 
-                // 🌐 Citations from web search
+                // 🌐 Citations from web search (OpenAI and Gemini)
                 if (parsed.type === 'citations' && parsed.citations) {
-                  console.log('📚 Citations received:', parsed.citations.length);
+                  console.log('📚 Citations received:', parsed.citations.length, 'sources');
                   // Store citations for later display (could be added to message metadata)
                   continue;
                 }

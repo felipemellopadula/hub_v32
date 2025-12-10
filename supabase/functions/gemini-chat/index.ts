@@ -38,6 +38,33 @@ function supportsThinking(model: string): boolean {
   return model.includes('gemini-2.5') || model.includes('gemini-3');
 }
 
+// Process grounding metadata to extract citations
+function processGroundingMetadata(metadata: any, fullText: string): any[] {
+  const citations: any[] = [];
+  const chunks = metadata.groundingChunks || [];
+  const supports = metadata.groundingSupports || [];
+  
+  // Extract unique sources from grounding chunks
+  const seenUrls = new Set<string>();
+  
+  for (const chunk of chunks) {
+    if (chunk.web?.uri && !seenUrls.has(chunk.web.uri)) {
+      seenUrls.add(chunk.web.uri);
+      citations.push({
+        url: chunk.web.uri,
+        title: chunk.web.title || 'Fonte',
+        // Map supports to this citation
+        segments: supports
+          .filter((s: any) => s.groundingChunkIndices?.includes(chunks.indexOf(chunk)))
+          .map((s: any) => s.segment?.text)
+          .filter(Boolean)
+      });
+    }
+  }
+  
+  return citations;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,7 +78,8 @@ serve(async (req) => {
       files, 
       conversationHistory = [], 
       contextEnabled = false,
-      reasoningEnabled = false // New parameter for enabling thinking
+      reasoningEnabled = false, // New parameter for enabling thinking
+      webSearchEnabled = false // New parameter for enabling Google Search grounding
     } = await req.json();
     
     // Map frontend model names to correct Gemini API model names
@@ -74,6 +102,7 @@ serve(async (req) => {
       contextEnabled,
       reasoningEnabled,
       useThinking,
+      webSearchEnabled,
       historyLength: conversationHistory.length
     });
     
@@ -290,19 +319,34 @@ serve(async (req) => {
       console.log('🧠 Thinking mode enabled with config:', generationConfig.thinkingConfig);
     }
 
-    // Use streaming for thinking mode to get real-time reasoning
-    if (useThinking) {
-      console.log('🧠 Using streaming for thinking mode...');
+    // Build tools array for web search
+    const tools: any[] = [];
+    if (webSearchEnabled) {
+      tools.push({ google_search: {} });
+      console.log('🌐 Web Search (Google Search Grounding) enabled');
+    }
+
+    // Use streaming for thinking mode or web search to get real-time updates
+    if (useThinking || webSearchEnabled) {
+      const modeName = useThinking ? '🧠 Thinking' : '🌐 Web Search';
+      console.log(`${modeName} mode - Using streaming...`);
+      
+      const requestPayload: any = {
+        contents: contents,
+        generationConfig
+      };
+      
+      // Add tools if web search is enabled
+      if (tools.length > 0) {
+        requestPayload.tools = tools;
+      }
       
       const streamResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:streamGenerateContent?alt=sse&key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: contents,
-            generationConfig
-          }),
+          body: JSON.stringify(requestPayload),
         }
       );
 
@@ -321,6 +365,7 @@ serve(async (req) => {
           let buffer = '';
           let fullThoughts = '';
           let fullContent = '';
+          let groundingMetadata: any = null;
 
           try {
             while (true) {
@@ -340,7 +385,28 @@ serve(async (req) => {
 
                 try {
                   const parsed = JSON.parse(jsonStr);
-                  const parts = parsed.candidates?.[0]?.content?.parts || [];
+                  const candidate = parsed.candidates?.[0];
+                  const parts = candidate?.content?.parts || [];
+                  
+                  // Capture grounding metadata from web search
+                  if (candidate?.groundingMetadata) {
+                    groundingMetadata = candidate.groundingMetadata;
+                    console.log('🌐 Grounding metadata received:', {
+                      hasSearchQueries: !!groundingMetadata.webSearchQueries,
+                      queriesCount: groundingMetadata.webSearchQueries?.length || 0,
+                      hasChunks: !!groundingMetadata.groundingChunks,
+                      chunksCount: groundingMetadata.groundingChunks?.length || 0
+                    });
+                    
+                    // Send search status to client
+                    if (groundingMetadata.webSearchQueries?.length > 0) {
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'web_search_status',
+                        status: 'completed',
+                        queries: groundingMetadata.webSearchQueries
+                      })}\n\n`));
+                    }
+                  }
 
                   for (const part of parts) {
                     if (!part.text) continue;
@@ -373,6 +439,18 @@ serve(async (req) => {
                 type: 'reasoning_final',
                 reasoning: fullThoughts
               })}\n\n`));
+            }
+            
+            // Send grounding metadata with citations at the end
+            if (groundingMetadata && webSearchEnabled) {
+              const citations = processGroundingMetadata(groundingMetadata, fullContent);
+              if (citations.length > 0) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                  type: 'citations',
+                  citations: citations,
+                  webSearchQueries: groundingMetadata.webSearchQueries || []
+                })}\n\n`));
+              }
             }
 
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
@@ -445,16 +523,23 @@ serve(async (req) => {
       });
     }
 
-    // Non-thinking mode: regular request
+    // Non-streaming mode: regular request (no thinking, no web search)
+    const requestPayload: any = {
+      contents: contents,
+      generationConfig
+    };
+    
+    // Add tools if any are configured
+    if (tools.length > 0) {
+      requestPayload.tools = tools;
+    }
+    
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents: contents,
-        generationConfig
-      }),
+      body: JSON.stringify(requestPayload),
     });
 
     if (!response.ok) {
