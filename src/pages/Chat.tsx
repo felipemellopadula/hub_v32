@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import React, { useState, useRef, useEffect, useCallback, useTransition, lazy, Suspense } from "react";
+import React, { useState, useRef, useEffect, useCallback, useTransition, lazy, Suspense, useMemo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const ModelSelectorLazy = lazy(() =>
   import("@/components/ModelSelector").then((m) => ({
@@ -68,6 +68,7 @@ import { WordTablesPreview } from "@/components/WordTablesPreview";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RAGProgressIndicator } from "@/components/RAGProgressIndicator";
 import { useRAGProgress } from "@/hooks/useRAGProgress";
+import { useStreamingChat } from "@/hooks/useStreamingChat";
 import { DeepSeekThinkingIndicator } from "@/components/DeepSeekThinkingIndicator";
 
 // Importar tipos e componentes do chat
@@ -116,7 +117,6 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>("synergy-ia");
-  const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isWebSearchMode, setIsWebSearchMode] = useState(false);
   const [wordVisionDialog, setWordVisionDialog] = useState<{ show: boolean; file: File | null }>({
@@ -147,11 +147,22 @@ const Chat: React.FC = () => {
   const [comparingModels, setComparingModels] = useState<{
     [messageId: string]: string[];
   }>({});
-  const [isStreamingResponse, setIsStreamingResponse] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState<string>("");
-  const [isDeepSeekThinking, setIsDeepSeekThinking] = useState(false);
-  const [thinkingContent, setThinkingContent] = useState("");
   const [reasoningEnabled, setReasoningEnabled] = useState(false);
+  
+  // Use streaming chat hook
+  const {
+    isLoading,
+    isStreaming: isStreamingResponse,
+    processingStatus,
+    isDeepSeekThinking,
+    thinkingContent,
+    stopGeneration: hookStopGeneration,
+    setProcessingStatus,
+    setIsLoading,
+    setIsStreaming: setIsStreamingResponse,
+    setIsDeepSeekThinking,
+    setThinkingContent,
+  } = useStreamingChat();
   
   // Models that support OpenAI Reasoning (Responses API)
   const reasoningCapableModels = ['gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'o4-mini'];

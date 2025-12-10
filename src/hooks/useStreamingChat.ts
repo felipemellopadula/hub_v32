@@ -290,5 +290,7 @@ export function useStreamingChat(options: StreamingChatOptions = {}) {
     setProcessingStatus,
     setIsLoading,
     setIsStreaming,
+    setIsDeepSeekThinking,
+    setThinkingContent,
   };
 }
