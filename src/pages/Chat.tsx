@@ -3149,9 +3149,12 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                           <Camera className="h-4 w-4 mr-2" />
                           Capturar Screenshot
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsWebSearchMode((p) => !p)} className="cursor-pointer">
-                          <Globe className="h-4 w-4 mr-2" />
-                          {isWebSearchMode ? "Desativar Busca Web" : "Busca Web"}
+                        <DropdownMenuItem 
+                          onClick={() => setIsWebSearchMode((p) => !p)} 
+                          className={`cursor-pointer ${isWebSearchMode ? 'bg-emerald-500/20 text-emerald-400' : ''}`}
+                        >
+                          <Globe className={`h-4 w-4 mr-2 ${isWebSearchMode ? 'text-emerald-400' : ''}`} />
+                          {isWebSearchMode ? "✓ Busca Web Ativa" : "Busca Web"}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => {
@@ -3174,13 +3177,29 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                     </DropdownMenu>
                   </div>
 
-                  {/* Reasoning Badge - mostrado quando ativo */}
-                  {reasoningEnabled && isReasoningCapable && (
-                    <div className="absolute left-12 sm:left-14 top-2.5 z-10">
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-violet-500/20 border border-violet-500/50 text-violet-400 text-xs font-medium">
-                        <Brain className="h-3 w-3" />
-                        <span className="hidden sm:inline">Reasoning</span>
-                      </div>
+                  {/* Badges de modo ativo - Web Search e/ou Reasoning */}
+                  {(isWebSearchMode || (reasoningEnabled && isReasoningCapable)) && (
+                    <div className="absolute left-12 sm:left-14 top-2.5 z-10 flex items-center gap-1.5">
+                      {isWebSearchMode && (
+                        <div 
+                          onClick={() => setIsWebSearchMode(false)}
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-xs font-medium cursor-pointer hover:bg-emerald-500/30 transition-colors"
+                        >
+                          <Globe className="h-3 w-3" />
+                          <span className="hidden sm:inline">Web</span>
+                          <span className="text-emerald-300/60 hover:text-emerald-200">×</span>
+                        </div>
+                      )}
+                      {reasoningEnabled && isReasoningCapable && (
+                        <div 
+                          onClick={() => setReasoningEnabled(false)}
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-violet-500/20 border border-violet-500/50 text-violet-400 text-xs font-medium cursor-pointer hover:bg-violet-500/30 transition-colors"
+                        >
+                          <Brain className="h-3 w-3" />
+                          <span className="hidden sm:inline">Reasoning</span>
+                          <span className="text-violet-300/60 hover:text-violet-200">×</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -3205,8 +3224,12 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                     }
                     disabled={isLoading}
                     className={`w-full py-3 rounded-lg resize-none min-h-[52px] max-h-[128px] transition-colors ${
-                      reasoningEnabled && isReasoningCapable ? 'pl-24 sm:pl-32 md:pl-36' : 'pl-12 md:pl-14'
-                    } pr-16 md:pr-24 ${isDragOver ? "bg-accent border-primary border-dashed" : ""}`}
+                      (reasoningEnabled && isReasoningCapable) || isWebSearchMode 
+                        ? (reasoningEnabled && isReasoningCapable && isWebSearchMode) 
+                          ? 'pl-36 sm:pl-44 md:pl-52' 
+                          : 'pl-24 sm:pl-32 md:pl-36' 
+                        : 'pl-12 md:pl-14'
+                    } pr-16 md:pr-24 ${isDragOver ? "bg-accent border-primary border-dashed" : ""} ${isWebSearchMode ? "border-emerald-500/30" : ""}`}
                     rows={1}
                     onKeyDown={(e) => {
                       // Escape para cancelar geração
