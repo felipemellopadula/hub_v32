@@ -68,10 +68,10 @@ serve(async (req) => {
     const isGoogleModel = model.startsWith('google:');
     // Nano Banana 2 Pro (google:4@2) suporta dimensões customizadas, diferente do Gemini Flash (google:4@1)
     const isNanoBanana2Pro = model === 'google:4@2';
-    // Modelos que suportam dimensões altas - Seedream especificamente suporta até 6048x6048
-    const isHighResModel = model === 'bytedance:5@0' || model === 'ideogram:4@1' || model === 'bfl:3@1' || model === 'google:4@2';
-    // Seedream tem limite específico maior
-    const isSeedreamModel = model === 'bytedance:5@0';
+    // Modelos que suportam dimensões altas - Seedream especificamente suporta até 4096x4096
+    const isHighResModel = model === 'bytedance:5@0' || model.startsWith('bytedance:seedream') || model === 'ideogram:4@1' || model === 'bfl:3@1' || model === 'google:4@2';
+    // Seedream models (both old and new IDs)
+    const isSeedreamModel = model === 'bytedance:5@0' || model.startsWith('bytedance:seedream');
     // Qwen-Image tem limite de pixels: máximo 1048576 pixels (1024x1024)
     const isQwenModel = model === 'runware:108@1';
     
@@ -164,7 +164,7 @@ serve(async (req) => {
           // Definir limites baseados no modelo
           let maxDimension = 2048;
           if (isSeedreamModel) {
-            maxDimension = 6144;
+            maxDimension = 4096; // Seedream 4.5 max is 4096, min pixels is 3.6M
             console.log('Seedream detectado - limite máximo ajustado para:', maxDimension);
           } else if (isNanoBanana2Pro) {
             maxDimension = 6144; // Suporta até 4K (6336x2688 para 21:9)

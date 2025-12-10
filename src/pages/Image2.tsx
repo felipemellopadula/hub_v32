@@ -56,21 +56,20 @@ const KONTEXT_QUALITY_SETTINGS = [
 ];
 
 const SEEDREAM_QUALITY_SETTINGS = [
-  { id: "1:1-1k", label: "1:1 (1K / Square)", width: 1024, height: 1024, steps: 15 },
   { id: "1:1-2k", label: "1:1 (2K / Square)", width: 2048, height: 2048, steps: 15 },
   { id: "1:1-4k", label: "1:1 (4K / Square)", width: 4096, height: 4096, steps: 15 },
   { id: "4:3-2k", label: "4:3 (2K / Landscape)", width: 2304, height: 1728, steps: 15 },
-  { id: "4:3-4k", label: "4:3 (4K / Landscape)", width: 4608, height: 3456, steps: 15 },
+  { id: "4:3-4k", label: "4:3 (4K / Landscape)", width: 4096, height: 3072, steps: 15 },
   { id: "16:9-2k", label: "16:9 (2K / Landscape)", width: 2560, height: 1440, steps: 15 },
-  { id: "16:9-4k", label: "16:9 (4K / Landscape)", width: 5120, height: 2880, steps: 15 },
+  { id: "16:9-4k", label: "16:9 (4K / Landscape)", width: 4096, height: 2304, steps: 15 },
   { id: "3:2-2k", label: "3:2 (2K / Landscape)", width: 2496, height: 1664, steps: 15 },
-  { id: "3:2-4k", label: "3:2 (4K / Landscape)", width: 4992, height: 3328, steps: 15 },
+  { id: "3:2-4k", label: "3:2 (4K / Landscape)", width: 4096, height: 2730, steps: 15 },
   { id: "21:9-2k", label: "21:9 (2K / Landscape)", width: 3024, height: 1296, steps: 15 },
-  { id: "21:9-4k", label: "21:9 (4K / Landscape)", width: 5120, height: 2194, steps: 15 },
+  { id: "21:9-4k", label: "21:9 (4K / Landscape)", width: 4096, height: 1755, steps: 15 },
   { id: "3:4-2k", label: "3:4 (2K / Portrait)", width: 1728, height: 2304, steps: 15 },
   { id: "3:4-4k", label: "3:4 (4K / Portrait)", width: 3072, height: 4096, steps: 15 },
   { id: "9:16-2k", label: "9:16 (2K / Portrait)", width: 1440, height: 2560, steps: 15 },
-  { id: "9:16-4k", label: "9:16 (4K / Portrait)", width: 2880, height: 5120, steps: 15 },
+  { id: "9:16-4k", label: "9:16 (4K / Portrait)", width: 2304, height: 4096, steps: 15 },
   { id: "2:3-2k", label: "2:3 (2K / Portrait)", width: 1664, height: 2496, steps: 15 },
   { id: "2:3-4k", label: "2:3 (4K / Portrait)", width: 2730, height: 4096, steps: 15 },
 ];
