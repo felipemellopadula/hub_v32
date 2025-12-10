@@ -1656,6 +1656,12 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           console.log('🌐 Web Search enabled for Claude model');
           setProcessingStatus('🔍 Buscando na web...');
         }
+        const isGrokModel = internalModel.includes('grok');
+        if (isWebSearchMode && isGrokModel) {
+          requestBody.webSearchEnabled = true;
+          console.log('🌐 Live Search enabled for Grok model');
+          setProcessingStatus('🔍 Buscando na web...');
+        }
         
         // Add reasoningEnabled for Gemini, Claude, and Grok models
         if (isGeminiWithReasoning || isClaudeWithReasoning || isGrokWithReasoning) {

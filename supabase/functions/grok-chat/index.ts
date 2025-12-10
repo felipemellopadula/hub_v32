@@ -46,7 +46,8 @@ serve(async (req) => {
       conversationHistory = [], 
       contextEnabled = false,
       reasoningEnabled = false,
-      reasoningEffort = 'medium'
+      reasoningEffort = 'medium',
+      webSearchEnabled = false
     } = await req.json();
     
     const xaiApiKey = Deno.env.get('XAI_API_KEY');
@@ -65,12 +66,14 @@ serve(async (req) => {
     const limits = getModelLimits(model);
     const useReasoning = reasoningEnabled && isReasoningModel(model);
     const showReasoningContent = useReasoning && supportsReasoningContent(model);
+    const useLiveSearch = webSearchEnabled;
     
-    console.log('🧠 Grok Reasoning:', { 
-      enabled: useReasoning, 
+    console.log('🧠 Grok Config:', { 
+      reasoning: useReasoning, 
       model, 
       showContent: showReasoningContent,
-      effort: reasoningEffort 
+      effort: reasoningEffort,
+      liveSearch: useLiveSearch
     });
     
     if (files && files.length > 0) {
@@ -209,10 +212,19 @@ serve(async (req) => {
       console.log('🧠 Added reasoning_effort:', reasoningEffort);
     }
     
-    // Enable streaming for reasoning models to get incremental updates
-    if (useReasoning) {
+    // Add live search parameters
+    if (useLiveSearch) {
+      requestBody.search_parameters = {
+        mode: 'on',
+        return_citations: true
+      };
+      console.log('🌐 Live Search enabled for Grok');
+    }
+    
+    // Enable streaming for reasoning models or live search to get incremental updates
+    if (useReasoning || useLiveSearch) {
       requestBody.stream = true;
-      console.log('🌊 Streaming enabled for reasoning');
+      console.log('🌊 Streaming enabled for', useReasoning ? 'reasoning' : 'live search');
     }
 
     console.log('Sending request to xAI with model:', model);
@@ -239,9 +251,9 @@ serve(async (req) => {
       throw new Error(`Erro da API xAI: ${response.status} - ${errorData}`);
     }
 
-    // Handle streaming response for reasoning
-    if (useReasoning && response.body) {
-      console.log('🔄 Processing streaming response with reasoning...');
+    // Handle streaming response for reasoning or live search
+    if ((useReasoning || useLiveSearch) && response.body) {
+      console.log('🔄 Processing streaming response with', useReasoning ? 'reasoning' : 'live search');
       
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
@@ -251,11 +263,20 @@ serve(async (req) => {
           let buffer = '';
           let reasoningContent = '';
           let textContent = '';
+          let citations: string[] = [];
           let inputTokens = 0;
           let outputTokens = 0;
           let reasoningTokens = 0;
 
           try {
+            // Send initial status for live search
+            if (useLiveSearch) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                type: 'web_search_status', 
+                status: '🔍 Buscando na web...' 
+              })}\n\n`));
+            }
+
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
@@ -295,6 +316,12 @@ serve(async (req) => {
                     }
                   }
                   
+                  // Citations returned in final chunk with live search
+                  if (data.citations) {
+                    citations = data.citations;
+                    console.log('🌐 Citations received:', citations.length);
+                  }
+                  
                   // Token usage in final chunk
                   if (data.usage) {
                     inputTokens = data.usage.prompt_tokens || 0;
@@ -313,6 +340,19 @@ serve(async (req) => {
                 type: 'reasoning_final', 
                 content: reasoningContent 
               })}\n\n`));
+            }
+            
+            // Send citations if we have them (from live search)
+            if (citations.length > 0) {
+              const formattedCitations = citations.map(url => ({
+                url: url,
+                title: new URL(url).hostname
+              }));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                type: 'citations', 
+                citations: formattedCitations
+              })}\n\n`));
+              console.log('🌐 Sent', formattedCitations.length, 'citations to client');
             }
 
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
