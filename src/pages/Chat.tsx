@@ -164,8 +164,13 @@ const Chat: React.FC = () => {
     setThinkingContent,
   } = useStreamingChat();
   
-  // Models that support OpenAI Reasoning (Responses API)
-  const reasoningCapableModels = ['gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'o4-mini'];
+  // Models that support Reasoning/Thinking
+  const reasoningCapableModels = [
+    // OpenAI
+    'gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'o4-mini',
+    // Gemini (2.5 and 3 Pro support thinking)
+    'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro'
+  ];
   const isReasoningCapable = selectedModel ? reasoningCapableModels.includes(selectedModel) : false;
   
   // RAG Progress hook com cancelamento
@@ -1612,7 +1617,10 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const CHAT_URL = `https://myqgnnqltemfpzdxwybj.supabase.co/functions/v1/${functionName}`;
         const { data: sessionData } = await supabase.auth.getSession();
         
-        const requestBody = {
+        // Check if this is a Gemini model with reasoning enabled
+        const isGeminiWithReasoning = internalModel.includes('gemini') && reasoningEnabled;
+        
+        const requestBody: any = {
           message: messageWithFiles,
           model: internalModel,
           files: fileData.length > 0 ? fileData : undefined,
@@ -1620,6 +1628,12 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           contextEnabled: true,
           hasLargeDocument: false,
         };
+        
+        // Add reasoningEnabled for Gemini models
+        if (isGeminiWithReasoning) {
+          requestBody.reasoningEnabled = true;
+          console.log('🧠 Gemini reasoning mode enabled');
+        }
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
@@ -1680,6 +1694,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const isJson = contentType.includes("application/json");
 
         let accumulatedContent = "";
+        let accumulatedReasoning = ""; // Track reasoning for Gemini/DeepSeek
         const botMessageId = (Date.now() + 1).toString();
 
         if (isJson) {
@@ -1765,12 +1780,20 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                   continue;
                 }
                 
-                // 🧠 DeepSeek Reasoner format - reasoning em tempo real
+                // 🧠 DeepSeek/Gemini Reasoner format - reasoning em tempo real
                 if (parsed.type === 'reasoning' && parsed.reasoning) {
                   // Mostrar indicador de thinking
                   setIsDeepSeekThinking(true);
+                  accumulatedReasoning += parsed.reasoning;
                   setThinkingContent(prev => prev + parsed.reasoning);
                   console.log('🧠 Reasoning chunk:', parsed.reasoning.length, 'chars');
+                  continue;
+                }
+                
+                // 🧠 Final reasoning summary (Gemini sends this at the end)
+                if (parsed.type === 'reasoning_final' && parsed.reasoning) {
+                  accumulatedReasoning = parsed.reasoning;
+                  console.log('🧠 Final reasoning received:', parsed.reasoning.length, 'chars');
                   continue;
                 }
                 
@@ -1852,16 +1875,15 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         // Finalizar stream APENAS para SSE (não para JSON que já foi processado)
         if (!isJson && accumulatedContent) {
           const fullBotText = accumulatedContent || "Desculpe, não consegui processar sua mensagem.";
-          const reasoning = "";
 
-          // Finalizar stream
+          // Finalizar stream with reasoning if available
           const finalBotMessage: Message = {
             id: botMessageId,
             content: fullBotText,
             sender: "bot",
             timestamp: new Date(),
             model: selectedModel,
-            reasoning: reasoning || undefined,
+            reasoning: accumulatedReasoning || undefined,
             isStreaming: false,
           };
           
@@ -3077,7 +3099,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                             } else {
                               toast({
                                 title: "Modelo não suportado",
-                                description: "Reasoning está disponível apenas para GPT-5.1, GPT-5 Mini, GPT-5 Nano e o4-mini",
+                                description: "Reasoning está disponível para GPT-5.1, GPT-5 Mini, GPT-5 Nano, o4-mini, Gemini 2.5 Pro, Gemini 2.5 Flash e Gemini 3 Pro",
                                 variant: "destructive"
                               });
                             }
@@ -3085,7 +3107,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                           className={`cursor-pointer ${reasoningEnabled ? 'bg-violet-500/20 text-violet-400' : ''} ${!isReasoningCapable ? 'opacity-50' : ''}`}
                         >
                           <Brain className={`h-4 w-4 mr-2 ${reasoningEnabled ? 'text-violet-400' : ''}`} />
-                          {reasoningEnabled ? "✓ Reasoning Ativo" : "Reasoning (GPT)"}
+                          {reasoningEnabled ? "✓ Reasoning Ativo" : "Reasoning"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
