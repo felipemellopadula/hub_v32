@@ -1466,9 +1466,11 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           return; // Não continuar com processamento normal
         }
         
-        // ========== MODO REASONING (OpenAI) ==========
-        if (reasoningEnabled && isReasoningCapable) {
-          console.log('🧠 Reasoning mode activated for model:', selectedModel);
+        // ========== MODO REASONING (OpenAI ONLY) ==========
+        // Gemini, Claude, Grok e DeepSeek usam reasoningEnabled nos seus próprios endpoints
+        const isOpenAIReasoningModel = selectedModel.includes('gpt-') || selectedModel.includes('o3') || selectedModel.includes('o4-');
+        if (reasoningEnabled && isReasoningCapable && isOpenAIReasoningModel) {
+          console.log('🧠 OpenAI Reasoning mode activated for model:', selectedModel);
           setIsDeepSeekThinking(true);
           setThinkingContent('');
           
