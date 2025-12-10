@@ -357,6 +357,8 @@ const BotMessage = React.memo(
     immediateUserMessage,
     scrollToBottom,
     processingStatus,
+    onRegenerate,
+    toast,
   }: {
     message: Message;
     getModelDisplayName: (model?: string) => string;
@@ -371,17 +373,30 @@ const BotMessage = React.memo(
     immediateUserMessage: Message | null;
     scrollToBottom: () => void;
     processingStatus?: string;
+    onRegenerate: (messageId: string, originalUserContent: string) => Promise<void>;
+    toast: (props: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
   }) => {
     const hasAttachments = immediateUserMessage?.files && immediateUserMessage.files.length > 0;
 
     // Hook para animação de digitação
     const [displayedContent, setDisplayedContent] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(false);
 
     useEffect(() => {
       setDisplayedContent(message.content);
       setIsTyping(!!message.isStreaming);
     }, [message.content, message.isStreaming]);
+    
+    const handleRegenerate = async () => {
+      if (!immediateUserMessage || isRegenerating) return;
+      setIsRegenerating(true);
+      try {
+        await onRegenerate(message.id, immediateUserMessage.content);
+      } finally {
+        setIsRegenerating(false);
+      }
+    };
 
     // [FIX] Não renderiza a bolha se não houver conteúdo ainda
     const hasText = (displayedContent || "").trim().length > 0;
@@ -464,10 +479,30 @@ const BotMessage = React.memo(
                       <TooltipContent>Copiar link de compartilhamento</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+
+                  {/* Botão Regenerar Resposta */}
+                  {immediateUserMessage && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleRegenerate}
+                            disabled={isRegenerating || message.isStreaming}
+                            className="h-7 w-7 hover:bg-muted/80 hover:scale-105 transition-all duration-200"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Regenerar resposta</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               </div>
 
-              {/* Modal de Raciocínio */}
+              {/* Modal de Raciocínio com botão copiar e contador */}
               {!!message.reasoning && expandedReasoning[message.id] && (
                 <Dialog open={expandedReasoning[message.id]} onOpenChange={() => toggleReasoning(message.id)}>
                   <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -476,8 +511,11 @@ const BotMessage = React.memo(
                         <Brain className="h-5 w-5 text-purple-500" />
                         Raciocínio do Modelo
                       </DialogTitle>
-                      <DialogDescription>
-                        Processo de pensamento utilizado para gerar a resposta
+                      <DialogDescription className="flex items-center justify-between">
+                        <span>Processo de pensamento utilizado para gerar a resposta</span>
+                        <span className="text-xs text-muted-foreground">
+                          {message.reasoning.split(/\s+/).length} palavras
+                        </span>
                       </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1 max-h-[60vh] pr-4">
@@ -485,6 +523,20 @@ const BotMessage = React.memo(
                         {message.reasoning}
                       </div>
                     </ScrollArea>
+                    <div className="flex justify-end pt-3 border-t border-border">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(message.reasoning || '');
+                          toast({ title: "Copiado!", description: "Raciocínio copiado para a área de transferência." });
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copiar raciocínio
+                      </Button>
+                    </div>
                   </DialogContent>
                 </Dialog>
               )}
@@ -2916,6 +2968,26 @@ Forneça uma resposta abrangente que integre informações de todos os documento
     setExpandedReasoning((p) => ({ ...p, [id]: !p[id] }));
   }, []);
 
+  // Função para regenerar resposta
+  const regenerateResponse = useCallback(
+    async (messageId: string, originalUserContent: string) => {
+      // Remove a mensagem do bot que será regenerada
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      
+      // Simula o envio da mensagem original novamente
+      setInputValue(originalUserContent);
+      
+      // Aguarda um tick para o estado atualizar e então submete
+      setTimeout(() => {
+        const form = document.querySelector('form') as HTMLFormElement;
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
+    },
+    [],
+  );
+
   // =====================
   // Render
   // =====================
@@ -3025,10 +3097,39 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                   className="flex items-center justify-center h-full text-muted-foreground"
                   style={{ minHeight: "calc(100vh - 250px)" }}
                 >
-                  <div className="text-center px-2">
-                    <h3 className="text-2xl font-bold mb-2">Olá, {profile.name}!</h3>
-                    <p>Selecione uma conversa ou inicie uma nova.</p>
-                    <p className="mt-2 text-sm">Você tem {tokenBalance.toLocaleString()} tokens disponíveis.</p>
+                  <div className="text-center px-4 max-w-2xl">
+                    <h3 className="text-2xl font-bold mb-2 text-foreground">Olá, {profile.name}!</h3>
+                    <p className="text-muted-foreground mb-6">Como posso ajudar você hoje?</p>
+                    <p className="text-sm text-muted-foreground/70 mb-8">
+                      Você tem {tokenBalance.toLocaleString()} tokens disponíveis
+                    </p>
+                    
+                    {/* Sugestões de prompts iniciais */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+                      {[
+                        { icon: "✍️", text: "Escreva um artigo sobre IA" },
+                        { icon: "💡", text: "Me dê ideias para um projeto" },
+                        { icon: "📝", text: "Resuma um documento para mim" },
+                        { icon: "🔍", text: "Explique um conceito técnico" },
+                      ].map((suggestion, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          className="h-auto py-3 px-4 text-left justify-start gap-3 hover:bg-muted/80 transition-all duration-200 group"
+                          onClick={() => setInputValue(suggestion.text)}
+                        >
+                          <span className="text-lg group-hover:scale-110 transition-transform">{suggestion.icon}</span>
+                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                            {suggestion.text}
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    <p className="mt-8 text-xs text-muted-foreground/50">
+                      Dica: Use <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Ctrl+Enter</kbd> para enviar • 
+                      <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Esc</kbd> para cancelar
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -3058,6 +3159,8 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                           immediateUserMessage={immediateUserMessage}
                           scrollToBottom={scrollToBottom}
                           processingStatus={index === messages.length - 1 ? processingStatus : undefined}
+                          onRegenerate={regenerateResponse}
+                          toast={toast}
                         />
                       ) : (
                         <UserMessage message={message} onCopy={copyWithFormatting} renderFileIcon={renderFileIcon} />
@@ -3496,6 +3599,13 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                     } pr-16 md:pr-24 ${isDragOver ? "bg-accent border-primary border-dashed" : ""}`}
                     rows={1}
                     onKeyDown={(e) => {
+                      // Escape para cancelar geração
+                      if (e.key === "Escape" && isLoading) {
+                        e.preventDefault();
+                        handleStopGeneration();
+                        return;
+                      }
+                      // Enter para enviar (desktop)
                       if (e.key === "Enter" && !isMobile && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage(e as any);
