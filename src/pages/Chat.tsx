@@ -3160,7 +3160,7 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                             } else {
                               toast({
                                 title: "Modelo não suportado",
-                                description: "Reasoning está disponível para GPT-5.1, GPT-5 Mini, GPT-5 Nano, o4-mini, Gemini 2.5 Pro, Gemini 2.5 Flash e Gemini 3 Pro",
+                                description: "Reasoning está disponível para GPT-5.1, GPT-5 Mini, GPT-5 Nano, o4-mini, Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 3 Pro, Claude Sonnet 4.5, Grok e DeepSeek Reasoning",
                                 variant: "destructive"
                               });
                             }
