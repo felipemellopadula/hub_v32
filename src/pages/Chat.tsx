@@ -2672,6 +2672,11 @@ Forneça uma resposta abrangente que integre informações de todos os documento
                           processingStatus={index === messages.length - 1 ? processingStatus : undefined}
                           onRegenerate={regenerateResponse}
                           toast={toast}
+                          isLastMessage={index === messages.length - 1 && message.sender === "bot"}
+                          onFollowUpClick={(suggestion) => {
+                            setInputValue(suggestion);
+                            textareaRef.current?.focus();
+                          }}
                         />
                       ) : (
                         <UserMessage message={message} onCopy={copyWithFormatting} renderFileIcon={renderFileIcon} />
