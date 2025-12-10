@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Copy, Check, Share, RefreshCw, Brain, Loader2, Sparkles } from "lucide-react";
+import { Copy, Check, Share, RefreshCw, Brain, Loader2, Sparkles, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,6 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MarkdownRendererLazy from "@/components/CleanMarkdownRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "./types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 // Fallback suggestions when AI fails
 const getFallbackSuggestions = (content: string): string[] => {
@@ -229,25 +232,118 @@ export const BotMessage: React.FC<BotMessageProps> = React.memo(
                 </div>
               </div>
 
-              {/* Modal de Raciocínio */}
+              {/* Modal de Raciocínio com Markdown */}
               {!!message.reasoning && expandedReasoning[message.id] && (
                 <Dialog open={expandedReasoning[message.id]} onOpenChange={() => toggleReasoning(message.id)}>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-scale-in">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-purple-500" />
-                        Raciocínio do Modelo
+                      <DialogTitle className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-2 rounded-lg",
+                          message.model?.includes('claude') ? "bg-amber-500/10" :
+                          message.model?.includes('gemini') ? "bg-blue-500/10" :
+                          message.model?.includes('deepseek') ? "bg-violet-500/10" :
+                          message.model?.includes('gpt') || message.model?.includes('o4') ? "bg-emerald-500/10" :
+                          "bg-primary/10"
+                        )}>
+                          {message.model?.includes('gemini') ? (
+                            <Sparkles className={cn(
+                              "h-5 w-5",
+                              "text-blue-500"
+                            )} />
+                          ) : message.model?.includes('gpt') || message.model?.includes('o4') ? (
+                            <Lightbulb className="h-5 w-5 text-emerald-500" />
+                          ) : (
+                            <Brain className={cn(
+                              "h-5 w-5",
+                              message.model?.includes('claude') ? "text-amber-500" :
+                              message.model?.includes('deepseek') ? "text-violet-500" :
+                              "text-primary"
+                            )} />
+                          )}
+                        </div>
+                        <span>
+                          {message.model?.includes('claude') ? 'Claude Extended Thinking' :
+                           message.model?.includes('gemini') ? 'Gemini Thinking' :
+                           message.model?.includes('deepseek') ? 'DeepSeek Reasoning' :
+                           message.model?.includes('gpt') || message.model?.includes('o4') ? 'OpenAI Reasoning' :
+                           'Raciocínio do Modelo'}
+                        </span>
                       </DialogTitle>
                       <DialogDescription className="flex items-center justify-between">
                         <span>Processo de pensamento utilizado para gerar a resposta</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                           {message.reasoning.split(/\s+/).length} palavras
                         </span>
                       </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1 max-h-[60vh] pr-4">
-                      <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                        {message.reasoning}
+                      <div className="prose prose-sm dark:prose-invert max-w-none animate-fade-in">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ children }) => (
+                              <p className="text-sm text-muted-foreground leading-relaxed mb-3 last:mb-0">
+                                {children}
+                              </p>
+                            ),
+                            h1: ({ children }) => (
+                              <h1 className="text-lg font-bold mb-2 text-foreground">{children}</h1>
+                            ),
+                            h2: ({ children }) => (
+                              <h2 className="text-base font-semibold mb-2 text-foreground">{children}</h2>
+                            ),
+                            h3: ({ children }) => (
+                              <h3 className="text-sm font-semibold mb-1 text-foreground">{children}</h3>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className="font-semibold text-foreground">{children}</strong>
+                            ),
+                            em: ({ children }) => (
+                              <em className="text-muted-foreground/80 italic">{children}</em>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 my-2 ml-2">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1 my-2 ml-2">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className="text-sm leading-relaxed">{children}</li>
+                            ),
+                            code: ({ className: codeClassName, children }) => {
+                              const isInline = !codeClassName;
+                              if (isInline) {
+                                return (
+                                  <code className="px-1.5 py-0.5 rounded text-xs font-mono bg-muted text-foreground">
+                                    {children}
+                                  </code>
+                                );
+                              }
+                              return (
+                                <code className="block p-3 rounded-lg text-xs font-mono overflow-x-auto bg-muted">
+                                  {children}
+                                </code>
+                              );
+                            },
+                            pre: ({ children }) => (
+                              <pre className="rounded-lg overflow-x-auto my-3 bg-muted border border-border">
+                                {children}
+                              </pre>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-2 border-primary/50 pl-4 my-3 italic text-sm text-muted-foreground/80">
+                                {children}
+                              </blockquote>
+                            ),
+                          }}
+                        >
+                          {message.reasoning}
+                        </ReactMarkdown>
                       </div>
                     </ScrollArea>
                     <div className="flex justify-end pt-3 border-t border-border">
@@ -258,7 +354,7 @@ export const BotMessage: React.FC<BotMessageProps> = React.memo(
                           await navigator.clipboard.writeText(message.reasoning || "");
                           toast({ title: "Copiado!", description: "Raciocínio copiado para a área de transferência." });
                         }}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 hover:scale-105 transition-transform"
                       >
                         <Copy className="h-4 w-4" />
                         Copiar raciocínio
