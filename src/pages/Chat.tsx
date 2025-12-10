@@ -169,7 +169,9 @@ const Chat: React.FC = () => {
     // OpenAI
     'gpt-5.1', 'gpt-5-mini', 'gpt-5-nano', 'o4-mini',
     // Gemini (2.5 and 3 Pro support thinking)
-    'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro'
+    'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro',
+    // Claude (Extended Thinking)
+    'claude-sonnet-4-5', 'claude-3-7-sonnet', 'claude-opus-4'
   ];
   const isReasoningCapable = selectedModel ? reasoningCapableModels.includes(selectedModel) : false;
   
@@ -1617,8 +1619,10 @@ Forneça uma resposta abrangente que integre informações de todos os documento
         const CHAT_URL = `https://myqgnnqltemfpzdxwybj.supabase.co/functions/v1/${functionName}`;
         const { data: sessionData } = await supabase.auth.getSession();
         
-        // Check if this is a Gemini model with reasoning enabled
+        // Check if this is a Gemini or Claude model with reasoning enabled
         const isGeminiWithReasoning = internalModel.includes('gemini') && reasoningEnabled;
+        const isClaudeWithReasoning = internalModel.includes('claude') && reasoningEnabled && 
+          (internalModel.includes('sonnet-4-5') || internalModel.includes('3-7-sonnet') || internalModel.includes('opus-4'));
         
         const requestBody: any = {
           message: messageWithFiles,
@@ -1629,10 +1633,16 @@ Forneça uma resposta abrangente que integre informações de todos os documento
           hasLargeDocument: false,
         };
         
-        // Add reasoningEnabled for Gemini models
-        if (isGeminiWithReasoning) {
+        // Add reasoningEnabled for Gemini and Claude models
+        if (isGeminiWithReasoning || isClaudeWithReasoning) {
           requestBody.reasoningEnabled = true;
-          console.log('🧠 Gemini reasoning mode enabled');
+          console.log(`🧠 ${isGeminiWithReasoning ? 'Gemini' : 'Claude'} reasoning mode enabled`);
+        }
+        
+        // For Claude with reasoning, set up thinking indicator
+        if (isClaudeWithReasoning) {
+          setIsDeepSeekThinking(true);
+          setThinkingContent('');
         }
         
         const controller = new AbortController();

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Function to estimate token count (optimized for Portuguese)
 function estimateTokenCount(text: string): number {
-  return Math.ceil(text.length / 3.2); // More accurate for Portuguese
+  return Math.ceil(text.length / 3.2);
 }
 
 // Function to split text into chunks
@@ -23,14 +23,27 @@ function splitIntoChunks(text: string, maxTokens: number): string[] {
   return chunks;
 }
 
+// Check if model supports Extended Thinking
+function supportsExtendedThinking(model: string): boolean {
+  return model.includes('claude-sonnet-4-5') || 
+         model.includes('claude-3-7-sonnet') || 
+         model.includes('claude-opus-4');
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, model = 'claude-sonnet-4-5', files, conversationHistory = [], contextEnabled = false } = await req.json();
+    const { 
+      message, 
+      model = 'claude-sonnet-4-5', 
+      files, 
+      conversationHistory = [], 
+      contextEnabled = false,
+      reasoningEnabled = false 
+    } = await req.json();
     
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
@@ -42,15 +55,18 @@ serve(async (req) => {
       if (modelName.includes('claude-opus-4')) return { input: 200000, output: 32768 };
       if (modelName.includes('claude-sonnet-4')) return { input: 200000, output: 65536 };
       if (modelName.includes('claude-haiku-4')) return { input: 200000, output: 65536 };
+      if (modelName.includes('claude-3-7-sonnet')) return { input: 200000, output: 65536 };
       if (modelName.includes('claude-3-5-haiku')) return { input: 200000, output: 8192 };
       if (modelName.includes('claude-3-5-sonnet')) return { input: 200000, output: 8192 };
       if (modelName.includes('claude-3-opus')) return { input: 200000, output: 4096 };
-      return { input: 200000, output: 65536 }; // Default for Claude 4 models
+      return { input: 200000, output: 65536 };
     };
 
     const limits = getModelLimits(model);
+    const useExtendedThinking = reasoningEnabled && supportsExtendedThinking(model);
     
-    // Log files information
+    console.log('Extended Thinking:', { enabled: useExtendedThinking, model, reasoningEnabled });
+    
     if (files && files.length > 0) {
       console.log('Files received:', files.map((f: any) => ({ 
         name: f.name, 
@@ -86,23 +102,20 @@ serve(async (req) => {
       }
     }
     
-    // Build messages array with conversation history if context is enabled
+    // Build messages array with conversation history
     let messages: any[] = [];
     let cachedTokens = 0;
     
     if (contextEnabled && conversationHistory.length > 0) {
       console.log('Building conversation context with', conversationHistory.length, 'previous messages');
-      const recentHistory = conversationHistory.slice(-4); // Last 4 messages for Claude
+      const recentHistory = conversationHistory.slice(-4);
       
-      // For Claude, add cache_control to enable prompt caching (90% discount on cache reads)
       messages = recentHistory.map((historyMsg: any, index: number) => {
         const msg: any = {
           role: historyMsg.role,
           content: historyMsg.content
         };
         
-        // Add cache_control to the last user message in history to cache the conversation
-        // Claude requires cache_control only on the last eligible message before the new one
         if (index === recentHistory.length - 1 && historyMsg.role === 'user') {
           msg.cache_control = { type: "ephemeral" };
           cachedTokens = Math.ceil((historyMsg.content?.length || 0) / 3.2);
@@ -118,7 +131,6 @@ serve(async (req) => {
       content: finalMessage
     });
     
-    // Calculate total token count for the entire conversation
     const totalText = messages.map((msg: any) => msg.content).join('\n');
     const estimatedTokens = estimateTokenCount(totalText);
     
@@ -135,7 +147,7 @@ serve(async (req) => {
     let chunkResponses: string[] = [];
     let responsePrefix = '';
 
-    // If message is too large, process ALL chunks with Map-Reduce
+    // If message is too large, process with Map-Reduce
     if (estimatedTokens > limits.input * 0.4) {
       console.log('📄 Message too large, processing ALL chunks with Map-Reduce...');
       
@@ -185,7 +197,6 @@ serve(async (req) => {
           console.log(`✅ Chunk ${i+1} processed:`, chunkText.length, 'characters');
         }
         
-        // Consolidate all responses
         console.log('🔄 Consolidating', chunkResponses.length, 'chunk responses...');
         const consolidationPrompt = `Consolidar as análises das ${chunks.length} partes:\n\n${
           chunkResponses.map((r, i) => `PARTE ${i+1}:\n${r}`).join('\n\n---\n\n')
@@ -200,35 +211,49 @@ serve(async (req) => {
       }
     }
     
-    // Calculate dynamic max_tokens based on context
-    // For consolidation: use 50% of output limit (more conservative)
-    // For normal responses: use 80% of output limit (maximize output)
+    // Calculate dynamic max_tokens
     const maxTokens = chunkResponses.length > 0 
-      ? Math.min(Math.floor(limits.output * 0.5), limits.output) // Consolidation
-      : Math.min(Math.floor(limits.output * 0.8), limits.output); // Normal response
+      ? Math.min(Math.floor(limits.output * 0.5), limits.output)
+      : Math.min(Math.floor(limits.output * 0.8), limits.output);
     
-    const requestBody = {
-      model: model,
-      max_tokens: maxTokens,
-      messages: processedMessages
-    };
+    // Build request body based on whether Extended Thinking is enabled
+    let requestBody: any;
+    
+    if (useExtendedThinking) {
+      // Extended Thinking mode with streaming
+      requestBody = {
+        model: model,
+        max_tokens: 16000, // Required for extended thinking
+        thinking: {
+          type: "enabled",
+          budget_tokens: 10000 // Budget for thinking process
+        },
+        messages: processedMessages,
+        stream: true
+      };
+      console.log('🧠 Extended Thinking enabled with streaming');
+    } else {
+      requestBody = {
+        model: model,
+        max_tokens: maxTokens,
+        messages: processedMessages
+      };
+    }
 
-    // Log request body details for debugging
     const bodySize = JSON.stringify(requestBody).length;
     console.log('📤 Request body size:', bodySize, 'bytes');
     console.log('📤 Messages count:', requestBody.messages.length);
-    console.log('📤 First message preview:', requestBody.messages[0].content.substring(0, 100) + '...');
 
     console.log('Sending request to Anthropic with model:', model);
     console.log('Request config:', { 
       model, 
       maxTokens: requestBody.max_tokens,
-      messageCount: processedMessages.length
+      messageCount: processedMessages.length,
+      extendedThinking: useExtendedThinking
     });
 
-    // Add timeout to prevent hanging requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
 
     console.log('🚀 Iniciando fetch para Anthropic API...');
     
@@ -258,10 +283,135 @@ serve(async (req) => {
         throw new Error(`Erro da API Anthropic: ${response.status} - ${errorData}`);
       }
 
+      // Handle streaming for Extended Thinking
+      if (useExtendedThinking && response.body) {
+        console.log('🔄 Processing Extended Thinking stream...');
+        
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            const reader = response.body!.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let thinkingContent = '';
+            let textContent = '';
+            let inputTokens = 0;
+            let outputTokens = 0;
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                  if (!line.trim() || line.startsWith(':')) continue;
+                  
+                  if (line.startsWith('event: ')) {
+                    continue;
+                  }
+                  
+                  if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6);
+                    if (jsonStr === '[DONE]') continue;
+
+                    try {
+                      const data = JSON.parse(jsonStr);
+                      
+                      // Handle different event types
+                      if (data.type === 'content_block_start') {
+                        if (data.content_block?.type === 'thinking') {
+                          console.log('🧠 Thinking block started');
+                          // Send thinking start marker
+                          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'reasoning', content: '' })}\n\n`));
+                        }
+                      } else if (data.type === 'content_block_delta') {
+                        if (data.delta?.type === 'thinking_delta') {
+                          // Thinking content
+                          const thinking = data.delta.thinking || '';
+                          thinkingContent += thinking;
+                          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'reasoning', content: thinking })}\n\n`));
+                        } else if (data.delta?.type === 'text_delta') {
+                          // Main text content
+                          const text = data.delta.text || '';
+                          textContent += text;
+                          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', content: text })}\n\n`));
+                        }
+                      } else if (data.type === 'content_block_stop') {
+                        // Block finished
+                        if (thinkingContent && !textContent) {
+                          // Thinking finished, text will start
+                          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'reasoning_final', content: thinkingContent })}\n\n`));
+                        }
+                      } else if (data.type === 'message_delta') {
+                        // Message metadata
+                        if (data.usage) {
+                          outputTokens = data.usage.output_tokens || 0;
+                        }
+                      } else if (data.type === 'message_start') {
+                        if (data.message?.usage) {
+                          inputTokens = data.message.usage.input_tokens || 0;
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Error parsing SSE data:', e);
+                    }
+                  }
+                }
+              }
+
+              // Send done marker
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+
+              // Record token usage
+              const authHeader = req.headers.get('authorization');
+              if (authHeader) {
+                const token = authHeader.replace('Bearer ', '');
+                const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+                const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+                const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+                const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+                
+                const { data: userData } = await supabaseClient.auth.getUser(token);
+                
+                if (userData.user) {
+                  const totalTokens = inputTokens + outputTokens;
+                  console.log('📊 Extended Thinking token usage:', { inputTokens, outputTokens, total: totalTokens });
+                  
+                  await supabaseClient.from('token_usage').insert({
+                    user_id: userData.user.id,
+                    tokens_used: totalTokens,
+                    model_name: model,
+                    input_tokens: inputTokens,
+                    output_tokens: outputTokens,
+                  });
+                }
+              }
+            } catch (e) {
+              console.error('Stream error:', e);
+              controller.error(e);
+            }
+          }
+        });
+
+        return new Response(stream, {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+          },
+        });
+      }
+
+      // Non-streaming response (no extended thinking)
       console.log('📥 Anthropic API response status:', response.status);
       console.log('🔄 Iniciando parse do JSON...');
       
-      // Continue processing the response
       const data = await response.json();
       console.log('✅ JSON parseado com sucesso');
       console.log('📊 Data structure:', { 
@@ -273,7 +423,6 @@ serve(async (req) => {
       let generatedText = data.content?.[0]?.text || "Não foi possível gerar resposta";
       console.log('📝 Texto gerado, comprimento:', generatedText.length);
       
-      // Normalize line breaks and remove excessive spacing
       generatedText = generatedText
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
@@ -282,7 +431,6 @@ serve(async (req) => {
       
       console.log('🔧 Texto normalizado, comprimento final:', generatedText.length);
       
-      // Add prefix if message was processed in chunks
       const finalResponse = responsePrefix + generatedText;
 
       console.log('✨ Anthropic response received successfully', {
@@ -290,13 +438,11 @@ serve(async (req) => {
         hadPrefix: !!responsePrefix
       });
 
-      // Record token usage in database
       console.log('💾 Iniciando gravação de token usage...');
       const authHeader = req.headers.get('authorization');
       if (authHeader) {
         const token = authHeader.replace('Bearer ', '');
         
-        // Create supabase client
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -310,8 +456,6 @@ serve(async (req) => {
           const cacheCreationTokens = data.usage?.cache_creation_input_tokens || 0;
           const cacheReadTokens = data.usage?.cache_read_input_tokens || 0;
           
-          // Calculate effective token usage with 90% discount on cache reads
-          // Cache reads cost only 10% of normal price
           const regularInputTokens = inputTokens - cacheReadTokens;
           const effectiveInputTokens = regularInputTokens + Math.ceil(cacheReadTokens * 0.1);
           const totalEffectiveTokens = effectiveInputTokens + outputTokens;
@@ -329,7 +473,7 @@ serve(async (req) => {
           await supabaseClient.from('token_usage').insert({
             user_id: userData.user.id,
             tokens_used: totalEffectiveTokens,
-            model: model,
+            model_name: model,
             input_tokens: effectiveInputTokens,
             output_tokens: outputTokens,
           });
@@ -340,7 +484,6 @@ serve(async (req) => {
 
       console.log('🎉 Retornando resposta final para o cliente...');
       
-      // Create document context for follow-ups
       let documentContext = null;
       if (chunkResponses.length > 0) {
         const compactSummary = finalResponse.length > 2000 
