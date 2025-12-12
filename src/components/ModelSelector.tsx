@@ -19,15 +19,14 @@ const modelsByProvider = {
   'Synergy': [
     { id: 'synergy-ia', name: 'SynergyIA', provider: 'Synergy', category: 'fast' as const },
   ],
-  'OpenAI': [
-    { id: 'gpt-5.1', name: 'GPT-5.1', provider: 'OpenAI', category: 'premium' as const },
-    { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', category: 'standard' as const },
-    { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI', category: 'fast' as const },
-    { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'OpenAI', category: 'premium' as const },
-    { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', provider: 'OpenAI', category: 'standard' as const },
-    { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', provider: 'OpenAI', category: 'fast' as const },
-    { id: 'o4-mini', name: 'o4 Mini', provider: 'OpenAI', category: 'fast' as const },
-  ],
+  'OpenAI': [
+    { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'OpenAI', category: 'premium' as const },
+    { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', category: 'standard' as const },
+    { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'OpenAI', category: 'premium' as const },
+    { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', provider: 'OpenAI', category: 'standard' as const },
+    { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', provider: 'OpenAI', category: 'fast' as const },
+    { id: 'o4-mini', name: 'o4 Mini', provider: 'OpenAI', category: 'fast' as const },
+  ],
   'Anthropic': [
     { id: 'claude-opus-4-1-20250805', name: 'Claude Opus 4.1', provider: 'Anthropic', category: 'premium' as const },
     { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', category: 'premium' as const },
