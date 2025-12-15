@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LazyVideo } from "@/components/LazyVideo";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -202,15 +203,10 @@ const Home2 = () => {
               key={index}
               className="relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer"
             >
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
+              <LazyVideo
+                src={card.video}
                 className="absolute inset-0 w-full h-full object-cover"
-              >
-                <source src={card.video} type="video/mp4" />
-              </video>
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               
               {/* Badge */}
