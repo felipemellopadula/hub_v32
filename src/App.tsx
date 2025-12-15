@@ -21,6 +21,7 @@ const WritePage = lazy(() => import("./pages/Write"));
 const TranscribePage = lazy(() => import("./pages/Transcribe"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const Share = lazy(() => import("./pages/Share"));
+const Home2 = lazy(() => import("./pages/Home2"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
@@ -52,6 +53,7 @@ const App = () => (
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Index />} />
+          <Route path="/home2" element={<Home2 />} />
           <Route path="/share" element={<Share />} />
           <Route path="/admin" element={<AdminLogin />} />
           
