@@ -148,7 +148,7 @@ const Home2 = () => {
               <Link to="/video" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Vídeo</Link>
               <Link to="/image2" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Editar</Link>
               <Link to="/chat" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Personagens</Link>
-              <Link to="/settings" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Preços</Link>
+              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Preços</a>
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -325,7 +325,7 @@ const Home2 = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="container mx-auto px-4 py-16">
+      <section id="pricing" className="container mx-auto px-4 py-16 scroll-mt-20">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4">Escolha seu poder criativo</h2>
           <p className="text-muted-foreground">
