@@ -25,6 +25,7 @@ const Share = lazy(() => import("./pages/Share"));
 const Home2 = lazy(() => import("./pages/Home2"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const DashboardNovo = lazy(() => import("./pages/DashboardNovo"));
 
 // Create queryClient
 const queryClient = new QueryClient();
@@ -87,6 +88,9 @@ const App = () => (
           } />
           <Route path="/settings" element={
             <ProtectedRoute><SettingsPage /></ProtectedRoute>
+          } />
+          <Route path="/dashboard-novo" element={
+            <ProtectedRoute><DashboardNovo /></ProtectedRoute>
           } />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           

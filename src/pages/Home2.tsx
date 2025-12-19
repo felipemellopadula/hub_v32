@@ -167,7 +167,7 @@ const Home2 = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard-novo')}>
                     <User className="mr-2 h-4 w-4" />
                     Dashboard
                   </DropdownMenuItem>
