@@ -131,15 +131,15 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
             IMAGINE<span className="text-cyan-500">.</span>
           </h2>
           <p className="text-cyan-100/60 max-w-sm text-sm leading-relaxed mb-6">
-            Static asset synthesis with high fidelity. <br />
-            <span className="text-cyan-400/50 italic text-xs uppercase tracking-widest">Scroll to explore models</span>
+            Síntese de imagens com alta fidelidade. <br />
+            <span className="text-cyan-400/50 italic text-xs uppercase tracking-widest">Role para explorar modelos</span>
           </p>
           
           <button 
-            onClick={() => navigate('/image')}
+            onClick={() => navigate('/image2')}
             className="px-8 py-3 bg-cyan-600/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold pointer-events-auto"
           >
-            Open Studio
+            Abrir Estúdio
           </button>
         </motion.div>
       </div>
@@ -187,14 +187,14 @@ const VideoLoop: React.FC<{ isActive: boolean }> = ({ isActive }) => {
             Motion<span className="text-fuchsia-500">.</span>
           </h2>
           <p className="text-fuchsia-100/60 max-w-sm text-sm leading-relaxed mb-6">
-            Temporal dynamics and video generation. <br />
-            Bring static concepts to life.
+            Dinâmica temporal e geração de vídeo. <br />
+            Dê vida a conceitos estáticos.
           </p>
           <button 
             onClick={() => navigate('/video')}
             className="px-8 py-3 bg-fuchsia-600/10 border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold"
           >
-            Create Motion
+            Criar Vídeo
           </button>
         </motion.div>
       </div>
