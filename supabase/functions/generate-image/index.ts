@@ -362,201 +362,211 @@ serve(async (req) => {
       );
     }
 
-    // Processar todas as imagens em paralelo
-    const processedImages = await Promise.all(
-      imageItems.map(async (item, index) => {
-        const imageURL: string = item.imageURL || item.imageUrl || item.image_url;
-        console.log(`[Imagem ${index + 1}/${imageItems.length}] Processando: ${imageURL}`);
+    // Processar imagens SEQUENCIALMENTE para evitar estouro de memória
+    // Promise.all processa todas ao mesmo tempo, causando pico de memória ~25-30MB
+    // Loop sequencial mantém pico em ~8MB (uma imagem por vez)
+    console.log(`Iniciando processamento SEQUENCIAL de ${imageItems.length} imagens...`);
+    
+    const processedImages: any[] = [];
+    
+    for (let index = 0; index < imageItems.length; index++) {
+      const item = imageItems[index];
+      const imageURL: string = item.imageURL || item.imageUrl || item.image_url;
+      console.log(`[Imagem ${index + 1}/${imageItems.length}] Processando: ${imageURL}`);
 
-        try {
-          // Baixar imagem com retry
-          let imgRes: Response | null = null;
-          let lastError: string = '';
-          const maxRetries = 3;
-          
-          for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-              console.log(`[Imagem ${index + 1}] Tentativa ${attempt}/${maxRetries} de download...`);
-              imgRes = await fetch(imageURL, {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (compatible; ImageDownloader/1.0)',
-                  'Accept': 'image/*',
-                }
-              });
-              
-              if (imgRes.ok) {
-                console.log(`[Imagem ${index + 1}] Download bem sucedido na tentativa ${attempt}`);
-                break;
+      try {
+        // Baixar imagem com retry
+        let imgRes: Response | null = null;
+        let lastError: string = '';
+        const maxRetries = 3;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`[Imagem ${index + 1}] Tentativa ${attempt}/${maxRetries} de download...`);
+            imgRes = await fetch(imageURL, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; ImageDownloader/1.0)',
+                'Accept': 'image/*',
               }
-              
-              lastError = `Status ${imgRes.status}: ${imgRes.statusText}`;
-              const responseText = await imgRes.text();
-              console.warn(`[Imagem ${index + 1}] Tentativa ${attempt} falhou: ${lastError}, Body: ${responseText.slice(0, 200)}`);
-              
-              if (attempt < maxRetries) {
-                // Aguardar antes de retry (exponential backoff)
-                const delay = attempt * 1000;
-                console.log(`[Imagem ${index + 1}] Aguardando ${delay}ms antes de retry...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-              }
-            } catch (fetchError) {
-              lastError = fetchError instanceof Error ? fetchError.message : String(fetchError);
-              console.warn(`[Imagem ${index + 1}] Tentativa ${attempt} erro de fetch: ${lastError}`);
-              
-              if (attempt < maxRetries) {
-                const delay = attempt * 1000;
-                await new Promise(resolve => setTimeout(resolve, delay));
-              }
+            });
+            
+            if (imgRes.ok) {
+              console.log(`[Imagem ${index + 1}] Download bem sucedido na tentativa ${attempt}`);
+              break;
+            }
+            
+            lastError = `Status ${imgRes.status}: ${imgRes.statusText}`;
+            const responseText = await imgRes.text();
+            console.warn(`[Imagem ${index + 1}] Tentativa ${attempt} falhou: ${lastError}, Body: ${responseText.slice(0, 200)}`);
+            
+            if (attempt < maxRetries) {
+              const delay = attempt * 1000;
+              console.log(`[Imagem ${index + 1}] Aguardando ${delay}ms antes de retry...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          } catch (fetchError) {
+            lastError = fetchError instanceof Error ? fetchError.message : String(fetchError);
+            console.warn(`[Imagem ${index + 1}] Tentativa ${attempt} erro de fetch: ${lastError}`);
+            
+            if (attempt < maxRetries) {
+              const delay = attempt * 1000;
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
           }
-          
-          if (!imgRes || !imgRes.ok) {
-            console.error(`[Imagem ${index + 1}] Todas as tentativas falharam: ${lastError}`);
-            throw new Error(`Falha ao baixar imagem ${index + 1} após ${maxRetries} tentativas: ${lastError}`);
-          }
+        }
+        
+        if (!imgRes || !imgRes.ok) {
+          console.error(`[Imagem ${index + 1}] Todas as tentativas falharam: ${lastError}`);
+          console.log(`[Imagem ${index + 1}] Continuando com as próximas imagens...`);
+          processedImages.push(null);
+          continue;
+        }
 
-          const ab = await imgRes.arrayBuffer();
-          console.log(`[Imagem ${index + 1}] ArrayBuffer size: ${ab.byteLength} bytes`);
-          
-          // Verificar tamanho - limites ajustados para 4K
-          let maxSize = 5 * 1024 * 1024; // 5MB padrão
-          if (width >= 4096 || height >= 4096) {
-            maxSize = 50 * 1024 * 1024; // 50MB para 4K+
-          } else if (width >= 2048 || height >= 2048) {
-            maxSize = 20 * 1024 * 1024; // 20MB para 2K+
-          }
-          
-          if (ab.byteLength > maxSize) {
-            console.error(`[Imagem ${index + 1}] Muito grande:`, ab.byteLength, 'bytes');
-            throw new Error(`Imagem ${index + 1} muito grande: ${(ab.byteLength / 1024 / 1024).toFixed(1)}MB`);
-          }
-          
-          const b64 = b64encode(ab);
-          
-          // Inferir formato
-          let format: string = 'webp';
-          if (imageURL.endsWith('.webp')) format = 'webp';
-          else if (imageURL.endsWith('.png')) format = 'png';
-          else if (imageURL.endsWith('.jpg')) format = 'jpg';
-          else if (imageURL.endsWith('.jpeg')) format = 'jpeg';
-          
-          console.log(`[Imagem ${index + 1}] Formato: ${format}, Base64 length: ${b64.length}`);
+        const ab = await imgRes.arrayBuffer();
+        console.log(`[Imagem ${index + 1}] ArrayBuffer size: ${ab.byteLength} bytes`);
+        
+        // Verificar tamanho - limites ajustados para 4K
+        let maxSize = 5 * 1024 * 1024; // 5MB padrão
+        if (width >= 4096 || height >= 4096) {
+          maxSize = 50 * 1024 * 1024; // 50MB para 4K+
+        } else if (width >= 2048 || height >= 2048) {
+          maxSize = 20 * 1024 * 1024; // 20MB para 2K+
+        }
+        
+        if (ab.byteLength > maxSize) {
+          console.error(`[Imagem ${index + 1}] Muito grande:`, ab.byteLength, 'bytes');
+          console.log(`[Imagem ${index + 1}] Continuando com as próximas imagens...`);
+          processedImages.push(null);
+          continue;
+        }
+        
+        const b64 = b64encode(ab);
+        
+        // Inferir formato
+        let format: string = 'webp';
+        if (imageURL.endsWith('.webp')) format = 'webp';
+        else if (imageURL.endsWith('.png')) format = 'png';
+        else if (imageURL.endsWith('.jpg')) format = 'jpg';
+        else if (imageURL.endsWith('.jpeg')) format = 'jpeg';
+        
+        console.log(`[Imagem ${index + 1}] Formato: ${format}, Base64 length: ${b64.length}`);
 
-          // Salvar no Storage se usuário autenticado
-          if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-            try {
-              const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-              const ext = format.toLowerCase();
-              const timestamp = Date.now();
-              const path = `user-images/${userId}/${timestamp}-${crypto.randomUUID()}.${ext}`;
-              const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        // Salvar no Storage se usuário autenticado
+        if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+          try {
+            const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+            const ext = format.toLowerCase();
+            const timestamp = Date.now();
+            const path = `user-images/${userId}/${timestamp}-${crypto.randomUUID()}.${ext}`;
+            const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+            
+            const upload = await supabaseAdmin.storage.from('images').upload(path, ab, { contentType });
+            if (upload.error) {
+              console.error(`[Imagem ${index + 1}] Erro upload Storage:`, upload.error);
+            } else {
+              console.log(`[Imagem ${index + 1}] Upload OK: ${path}`);
+              const { error: insertErr } = await supabaseAdmin
+                .from('user_images')
+                .insert({ user_id: userId, image_path: path, prompt, width, height, format: ext });
               
-              const upload = await supabaseAdmin.storage.from('images').upload(path, ab, { contentType });
-              if (upload.error) {
-                console.error(`[Imagem ${index + 1}] Erro upload Storage:`, upload.error);
+              if (insertErr) {
+                console.error(`[Imagem ${index + 1}] Erro inserir DB:`, insertErr);
               } else {
-                console.log(`[Imagem ${index + 1}] Upload OK: ${path}`);
-                const { error: insertErr } = await supabaseAdmin
-                  .from('user_images')
-                  .insert({ user_id: userId, image_path: path, prompt, width, height, format: ext });
+                console.log(`[Imagem ${index + 1}] Registro inserido no banco`);
                 
-                if (insertErr) {
-                  console.error(`[Imagem ${index + 1}] Erro inserir DB:`, insertErr);
-                } else {
-                  console.log(`[Imagem ${index + 1}] Registro inserido no banco`);
-                  
-                  // Registrar custo apenas na PRIMEIRA imagem (evitar duplicação)
-                  if (index === 0) {
-                    try {
-                      const IMAGE_COSTS: Record<string, number> = {
-                        'gpt-image-1': 0.167, 'gemini-flash': 0.039, 'qwen-image': 0.0058,
-                        'ideogram-3.0': 0.06, 'flux.1-kontext-max': 0.08, 'flux.2-pro': 0.045, 'seedream-4.0': 0.03,
-                        'seedream-4.5': 0.03, 'runware:100@1': 0.04, 'runware:101@1': 0.04, 'openai:1@1': 0.167,
-                        'google:4@1': 0.039, 'google:4@2': 0.08, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
-                        'bfl:4@1': 0.045, 'bytedance:5@0': 0.03, 'bytedance:seedream@4.5': 0.03, 'runware:108@1': 0.0058,
-                      };
-                      
-                      let modelCost = 0.02;
-                      let modelForTracking = model || 'unknown';
-                      
-                      if (model === 'openai:1@1') {
-                        modelForTracking = 'gpt-image-1';
-                        modelCost = IMAGE_COSTS['gpt-image-1'] || 0.167;
-                      } else if (model === 'google:4@1') {
-                        modelForTracking = 'gemini-flash-image';
-                        modelCost = IMAGE_COSTS['google:4@1'] || 0.039;
-                      } else if (model === 'google:4@2') {
-                        modelForTracking = 'nano-banana-2-pro';
-                        modelCost = IMAGE_COSTS['google:4@2'] || 0.08;
-                      } else if (model === 'runware:108@1') {
-                        modelForTracking = 'qwen-image';
-                        modelCost = IMAGE_COSTS['qwen-image'] || 0.0058;
-                      } else if (model === 'ideogram:4@1') {
-                        modelForTracking = 'ideogram-3.0';
-                        modelCost = IMAGE_COSTS['ideogram-3.0'] || 0.06;
-                      } else if (model === 'bfl:3@1') {
-                        modelForTracking = 'flux.1-kontext-max';
-                        modelCost = IMAGE_COSTS['flux.1-kontext-max'] || 0.08;
-                      } else if (model === 'bfl:4@1') {
-                        modelForTracking = 'flux.2-pro';
-                        modelCost = IMAGE_COSTS['flux.2-pro'] || 0.045;
-                      } else if (model === 'bytedance:5@0') {
-                        modelForTracking = 'seedream-4.0';
-                        modelCost = IMAGE_COSTS['seedream-4.0'] || 0.03;
-                      } else if (model === 'bytedance:seedream@4.5' || model?.startsWith('bytedance:seedream')) {
-                        modelForTracking = 'seedream-4.5';
-                        modelCost = IMAGE_COSTS['seedream-4.5'] || 0.03;
-                      } else if (model === 'runware:100@1' || model === 'runware:101@1') {
-                        modelForTracking = 'flux-context';
-                        modelCost = IMAGE_COSTS['runware:100@1'] || 0.04;
-                      } else {
-                        for (const [modelName, cost] of Object.entries(IMAGE_COSTS)) {
-                          if (model && model.toLowerCase().includes(modelName.toLowerCase())) {
-                            modelForTracking = modelName;
-                            modelCost = cost;
-                            break;
-                          }
+                // Registrar custo apenas na PRIMEIRA imagem (evitar duplicação)
+                if (index === 0) {
+                  try {
+                    const IMAGE_COSTS: Record<string, number> = {
+                      'gpt-image-1': 0.167, 'gemini-flash': 0.039, 'qwen-image': 0.0058,
+                      'ideogram-3.0': 0.06, 'flux.1-kontext-max': 0.08, 'flux.2-pro': 0.045, 'seedream-4.0': 0.03,
+                      'seedream-4.5': 0.03, 'runware:100@1': 0.04, 'runware:101@1': 0.04, 'openai:1@1': 0.167,
+                      'google:4@1': 0.039, 'google:4@2': 0.08, 'ideogram:4@1': 0.06, 'bfl:3@1': 0.08,
+                      'bfl:4@1': 0.045, 'bytedance:5@0': 0.03, 'bytedance:seedream@4.5': 0.03, 'runware:108@1': 0.0058,
+                    };
+                    
+                    let modelCost = 0.02;
+                    let modelForTracking = model || 'unknown';
+                    
+                    if (model === 'openai:1@1') {
+                      modelForTracking = 'gpt-image-1';
+                      modelCost = IMAGE_COSTS['gpt-image-1'] || 0.167;
+                    } else if (model === 'google:4@1') {
+                      modelForTracking = 'gemini-flash-image';
+                      modelCost = IMAGE_COSTS['google:4@1'] || 0.039;
+                    } else if (model === 'google:4@2') {
+                      modelForTracking = 'nano-banana-2-pro';
+                      modelCost = IMAGE_COSTS['google:4@2'] || 0.08;
+                    } else if (model === 'runware:108@1') {
+                      modelForTracking = 'qwen-image';
+                      modelCost = IMAGE_COSTS['qwen-image'] || 0.0058;
+                    } else if (model === 'ideogram:4@1') {
+                      modelForTracking = 'ideogram-3.0';
+                      modelCost = IMAGE_COSTS['ideogram-3.0'] || 0.06;
+                    } else if (model === 'bfl:3@1') {
+                      modelForTracking = 'flux.1-kontext-max';
+                      modelCost = IMAGE_COSTS['flux.1-kontext-max'] || 0.08;
+                    } else if (model === 'bfl:4@1') {
+                      modelForTracking = 'flux.2-pro';
+                      modelCost = IMAGE_COSTS['flux.2-pro'] || 0.045;
+                    } else if (model === 'bytedance:5@0') {
+                      modelForTracking = 'seedream-4.0';
+                      modelCost = IMAGE_COSTS['seedream-4.0'] || 0.03;
+                    } else if (model === 'bytedance:seedream@4.5' || model?.startsWith('bytedance:seedream')) {
+                      modelForTracking = 'seedream-4.5';
+                      modelCost = IMAGE_COSTS['seedream-4.5'] || 0.03;
+                    } else if (model === 'runware:100@1' || model === 'runware:101@1') {
+                      modelForTracking = 'flux-context';
+                      modelCost = IMAGE_COSTS['runware:100@1'] || 0.04;
+                    } else {
+                      for (const [modelName, cost] of Object.entries(IMAGE_COSTS)) {
+                        if (model && model.toLowerCase().includes(modelName.toLowerCase())) {
+                          modelForTracking = modelName;
+                          modelCost = cost;
+                          break;
                         }
                       }
-                      
-                      console.log(`Registrando custo: ${imageItems.length}x imagens, modelo=${modelForTracking}, custo=$${modelCost * imageItems.length}`);
-                      
-                      const { error: usageErr } = await supabaseAdmin
-                        .from('token_usage')
-                        .insert({
-                          user_id: userId,
-                          model_name: modelForTracking,
-                          message_content: `${prompt || 'Image generation request'} (${imageItems.length}x images)`,
-                          ai_response_content: `${imageItems.length} image(s) generated successfully`,
-                          tokens_used: imageItems.length, // 1 token = 1 imagem
-                          input_tokens: imageItems.length,
-                          output_tokens: imageItems.length,
-                        });
-                      
-                      if (usageErr) {
-                        console.error('Erro ao inserir token_usage:', usageErr);
-                      } else {
-                        console.log('Custo registrado no token_usage');
-                      }
-                    } catch (costErr) {
-                      console.error('Erro ao calcular/registrar custo:', costErr);
                     }
+                    
+                    console.log(`Registrando custo: ${imageItems.length}x imagens, modelo=${modelForTracking}, custo=$${modelCost * imageItems.length}`);
+                    
+                    const { error: usageErr } = await supabaseAdmin
+                      .from('token_usage')
+                      .insert({
+                        user_id: userId,
+                        model_name: modelForTracking,
+                        message_content: `${prompt || 'Image generation request'} (${imageItems.length}x images)`,
+                        ai_response_content: `${imageItems.length} image(s) generated successfully`,
+                        tokens_used: imageItems.length,
+                        input_tokens: imageItems.length,
+                        output_tokens: imageItems.length,
+                      });
+                    
+                    if (usageErr) {
+                      console.error('Erro ao inserir token_usage:', usageErr);
+                    } else {
+                      console.log('Custo registrado no token_usage');
+                    }
+                  } catch (costErr) {
+                    console.error('Erro ao calcular/registrar custo:', costErr);
                   }
                 }
               }
-            } catch (e) {
-              console.error(`[Imagem ${index + 1}] Erro ao salvar:`, e);
             }
+          } catch (e) {
+            console.error(`[Imagem ${index + 1}] Erro ao salvar:`, e);
           }
-
-          return { image: b64, url: imageURL, width, height, format };
-        } catch (error) {
-          console.error(`[Imagem ${index + 1}] Erro no processamento:`, error);
-          // Retornar null para imagens que falharam
-          return null;
         }
-      })
-    );
+
+        processedImages.push({ image: b64, url: imageURL, width, height, format });
+        console.log(`[Imagem ${index + 1}] Processamento completo. Total processadas: ${processedImages.filter(img => img !== null).length}`);
+        
+      } catch (error) {
+        console.error(`[Imagem ${index + 1}] Erro no processamento:`, error);
+        processedImages.push(null);
+        console.log(`[Imagem ${index + 1}] Continuando com as próximas imagens...`);
+      }
+    }
 
     // Filtrar imagens que deram erro (null)
     const successfulImages = processedImages.filter(img => img !== null);
