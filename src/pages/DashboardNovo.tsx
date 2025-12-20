@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Transition } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Sparkles, ArrowUpCircle, UserCircle, Smile, Video } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // --- Types ---
 type Side = 'left' | 'right' | null;
@@ -135,12 +142,32 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
             <span className="text-cyan-400/50 italic text-xs uppercase tracking-widest">Role para explorar modelos</span>
           </p>
           
-          <button 
-            onClick={() => navigate('/image2')}
-            className="px-8 py-3 bg-cyan-600/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold pointer-events-auto"
-          >
-            Abrir Estúdio
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="px-8 py-3 bg-cyan-600/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold pointer-events-auto flex items-center gap-2">
+                Abrir Estúdio
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-black/90 backdrop-blur-xl border-cyan-500/30 text-cyan-400 min-w-[180px]">
+              <DropdownMenuItem onClick={() => navigate('/image2')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <Sparkles className="w-4 h-4" />
+                Gerar Imagem
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/image2?mode=upscale')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <ArrowUpCircle className="w-4 h-4" />
+                Upscale
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/image2?mode=skin')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <Smile className="w-4 h-4" />
+                Skin Enhancer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/image2?mode=avatar')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <UserCircle className="w-4 h-4" />
+                AI Avatar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </motion.div>
       </div>
     </div>
@@ -190,12 +217,24 @@ const VideoLoop: React.FC<{ isActive: boolean }> = ({ isActive }) => {
             Dinâmica temporal e geração de vídeo. <br />
             Dê vida a conceitos estáticos.
           </p>
-          <button 
-            onClick={() => navigate('/video')}
-            className="px-8 py-3 bg-fuchsia-600/10 border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold"
-          >
-            Criar Vídeo
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="px-8 py-3 bg-fuchsia-600/10 border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold flex items-center gap-2">
+                Criar Vídeo
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-black/90 backdrop-blur-xl border-fuchsia-500/30 text-fuchsia-400 min-w-[180px]">
+              <DropdownMenuItem onClick={() => navigate('/video')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
+                <Video className="w-4 h-4" />
+                Gerar Vídeo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/video?mode=upscale')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
+                <ArrowUpCircle className="w-4 h-4" />
+                Upscale
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </motion.div>
       </div>
     </div>
