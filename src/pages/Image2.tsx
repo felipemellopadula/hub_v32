@@ -356,7 +356,10 @@ const Image2Page = () => {
 
         const imageCount = apiData.images.length;
         toast.success(`${imageCount} ${imageCount === 1 ? 'imagem gerada' : 'imagens geradas'} com sucesso!`);
-        setTimeout(() => loadSavedImages(), 1000);
+        
+        // Recarregar imagens do banco de dados após geração bem-sucedida
+        // A edge function já salvou as imagens no banco, então podemos recarregar imediatamente
+        await loadSavedImages();
       }
     } catch (e: any) {
       console.error("Erro no processo de geração de imagem:", e);
