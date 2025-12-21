@@ -8,6 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useIsTabletOrMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 // --- Types ---
 type Side = 'left' | 'right' | null;
@@ -47,7 +49,12 @@ const formatModelName = (path: string) => {
 
 // --- Components ---
 
-const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+interface CarouselProps {
+  isActive: boolean;
+  isTabletOrMobile: boolean;
+}
+
+const ImageCarousel: React.FC<CarouselProps> = ({ isActive, isTabletOrMobile }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const scrollTimeout = useRef<boolean>(false);
@@ -84,7 +91,7 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   }, [isActive]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isActive) return;
+    if (!isActive || isTabletOrMobile) return;
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - left) / width) * 100;
     const y = ((e.clientY - top) / height) * 100;
@@ -120,7 +127,10 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
         </motion.div>
       </AnimatePresence>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent p-10 flex flex-col justify-end z-10 pointer-events-none">
+      <div className={cn(
+        "absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent flex flex-col justify-end z-10 pointer-events-none",
+        isTabletOrMobile ? "p-6" : "p-10"
+      )}>
         <motion.div
           key={currentModelName}
           initial={{ y: 20, opacity: 0 }}
@@ -129,22 +139,36 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
         >
           {/* Nome do Modelo como destaque secundário */}
           <div className="mb-2">
-             <span className="text-cyan-400 font-mono text-sm tracking-[0.3em] font-bold">
+             <span className={cn(
+               "text-cyan-400 font-mono tracking-[0.3em] font-bold",
+               isTabletOrMobile ? "text-xs" : "text-sm"
+             )}>
                {currentModelName}
              </span>
           </div>
 
-          <h2 className="text-6xl font-black text-white tracking-tighter mb-2 italic">
+          <h2 className={cn(
+            "font-black text-white tracking-tighter mb-2 italic",
+            isTabletOrMobile ? "text-4xl" : "text-6xl"
+          )}>
             IMAGINE<span className="text-cyan-500">.</span>
           </h2>
-          <p className="text-cyan-100/60 max-w-sm text-sm leading-relaxed mb-6">
+          <p className={cn(
+            "text-cyan-100/60 max-w-sm leading-relaxed mb-4",
+            isTabletOrMobile ? "text-xs" : "text-sm mb-6"
+          )}>
             Síntese de imagens com alta fidelidade. <br />
-            <span className="text-cyan-400/50 italic text-xs uppercase tracking-widest">Role para explorar modelos</span>
+            <span className="text-cyan-400/50 italic text-xs uppercase tracking-widest">
+              {isTabletOrMobile ? "Toque para explorar" : "Role para explorar modelos"}
+            </span>
           </p>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="px-8 py-3 bg-cyan-600/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold pointer-events-auto flex items-center gap-2">
+              <button className={cn(
+                "bg-cyan-600/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] font-bold pointer-events-auto flex items-center gap-2",
+                isTabletOrMobile ? "px-5 py-2 text-[9px]" : "px-8 py-3 text-[10px]"
+              )}>
                 Abrir Estúdio
                 <ChevronDown className="w-3 h-3" />
               </button>
@@ -174,7 +198,12 @@ const ImageCarousel: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   );
 };
 
-const VideoLoop: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+interface VideoLoopProps {
+  isActive: boolean;
+  isTabletOrMobile: boolean;
+}
+
+const VideoLoop: React.FC<VideoLoopProps> = ({ isActive, isTabletOrMobile }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoSrc, setVideoSrc] = useState(LOCAL_VIDEO_PATH);
   const navigate = useNavigate();
@@ -204,22 +233,34 @@ const VideoLoop: React.FC<{ isActive: boolean }> = ({ isActive }) => {
         src={videoSrc}
         onError={handleVideoError}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent p-10 flex flex-col justify-end z-10 items-end text-right">
+      <div className={cn(
+        "absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent flex flex-col justify-end z-10 items-end text-right",
+        isTabletOrMobile ? "p-6" : "p-10"
+      )}>
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-6xl font-black text-white tracking-tighter mb-2 italic uppercase">
+          <h2 className={cn(
+            "font-black text-white tracking-tighter mb-2 italic uppercase",
+            isTabletOrMobile ? "text-4xl" : "text-6xl"
+          )}>
             Motion<span className="text-fuchsia-500">.</span>
           </h2>
-          <p className="text-fuchsia-100/60 max-w-sm text-sm leading-relaxed mb-6">
+          <p className={cn(
+            "text-fuchsia-100/60 max-w-sm leading-relaxed mb-4",
+            isTabletOrMobile ? "text-xs" : "text-sm mb-6"
+          )}>
             Dinâmica temporal e geração de vídeo. <br />
             Dê vida a conceitos estáticos.
           </p>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="px-8 py-3 bg-fuchsia-600/10 border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold flex items-center gap-2">
+              <button className={cn(
+                "bg-fuchsia-600/10 border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500 hover:text-black transition-all duration-300 rounded-full uppercase tracking-[0.2em] font-bold flex items-center gap-2",
+                isTabletOrMobile ? "px-5 py-2 text-[9px]" : "px-8 py-3 text-[10px]"
+              )}>
                 Criar Vídeo
                 <ChevronDown className="w-3 h-3" />
               </button>
@@ -243,6 +284,7 @@ const VideoLoop: React.FC<{ isActive: boolean }> = ({ isActive }) => {
 
 const DashboardNovo: React.FC = () => {
   const [hoveredSide, setHoveredSide] = useState<Side>(null);
+  const isTabletOrMobile = useIsTabletOrMobile();
 
   const transitionSettings: Transition = {
     type: "spring",
@@ -250,46 +292,96 @@ const DashboardNovo: React.FC = () => {
     damping: 30,
   };
 
+  // Toggle para mobile (click ao invés de hover)
+  const handleSideClick = (side: Side) => {
+    if (isTabletOrMobile) {
+      setHoveredSide(prev => prev === side ? null : side);
+    }
+  };
+
+  // Animação adaptativa: height em mobile, width em desktop
+  const getLeftAnimation = () => {
+    if (isTabletOrMobile) {
+      return {
+        height: hoveredSide === 'left' ? "65%" : hoveredSide === 'right' ? "35%" : "50%",
+        filter: hoveredSide === 'right' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
+      };
+    }
+    return {
+      width: hoveredSide === 'left' ? "70%" : hoveredSide === 'right' ? "30%" : "50%",
+      filter: hoveredSide === 'right' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
+    };
+  };
+
+  const getRightAnimation = () => {
+    if (isTabletOrMobile) {
+      return {
+        height: hoveredSide === 'right' ? "65%" : hoveredSide === 'left' ? "35%" : "50%",
+        filter: hoveredSide === 'left' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
+      };
+    }
+    return {
+      width: hoveredSide === 'right' ? "70%" : hoveredSide === 'left' ? "30%" : "50%",
+      filter: hoveredSide === 'left' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
+    };
+  };
+
   return (
-    <div className="relative w-full h-screen bg-black flex overflow-hidden font-sans antialiased">
-      {/* Left Side */}
+    <div className={cn(
+      "relative w-full h-screen bg-black flex overflow-hidden font-sans antialiased",
+      isTabletOrMobile && "flex-col"
+    )}>
+      {/* Left Side (Top on mobile) */}
       <motion.div
-        className="relative h-full flex-shrink-0 z-10"
-        onMouseEnter={() => setHoveredSide('left')}
-        onMouseLeave={() => setHoveredSide(null)}
-        animate={{ 
-          width: hoveredSide === 'left' ? "70%" : hoveredSide === 'right' ? "30%" : "50%",
-          filter: hoveredSide === 'right' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
-        }}
+        className={cn(
+          "relative flex-shrink-0 z-10",
+          isTabletOrMobile ? "w-full" : "h-full"
+        )}
+        onClick={() => handleSideClick('left')}
+        onMouseEnter={!isTabletOrMobile ? () => setHoveredSide('left') : undefined}
+        onMouseLeave={!isTabletOrMobile ? () => setHoveredSide(null) : undefined}
+        animate={getLeftAnimation()}
         transition={transitionSettings}
       >
-        <ImageCarousel isActive={hoveredSide === 'left'} />
+        <ImageCarousel isActive={hoveredSide === 'left'} isTabletOrMobile={isTabletOrMobile} />
       </motion.div>
 
       {/* Central Badge */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
+      <div className={cn(
+        "absolute z-50 pointer-events-none",
+        isTabletOrMobile 
+          ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+      )}>
         <motion.div 
-            animate={{ scale: hoveredSide ? 0.9 : 1, opacity: hoveredSide ? 0.3 : 1 }}
-            className="bg-black/40 border border-white/10 backdrop-blur-xl px-8 py-4 rounded-full shadow-2xl flex items-center gap-4"
+          animate={{ scale: hoveredSide ? 0.9 : 1, opacity: hoveredSide ? 0.3 : 1 }}
+          className={cn(
+            "bg-black/40 border border-white/10 backdrop-blur-xl rounded-full shadow-2xl flex items-center gap-3",
+            isTabletOrMobile ? "px-4 py-2" : "px-8 py-4 gap-4"
+          )}
         >
-            <div className={`w-2 h-2 rounded-full ${hoveredSide === 'left' ? 'bg-cyan-400' : 'bg-white/20'}`} />
-            <span className="text-sm font-black tracking-[0.5em] text-white uppercase">Synergy Hub</span>
-            <div className={`w-2 h-2 rounded-full ${hoveredSide === 'right' ? 'bg-fuchsia-400' : 'bg-white/20'}`} />
+          <div className={`w-2 h-2 rounded-full ${hoveredSide === 'left' ? 'bg-cyan-400' : 'bg-white/20'}`} />
+          <span className={cn(
+            "font-black tracking-[0.3em] text-white uppercase",
+            isTabletOrMobile ? "text-[10px] tracking-[0.2em]" : "text-sm tracking-[0.5em]"
+          )}>Synergy Hub</span>
+          <div className={`w-2 h-2 rounded-full ${hoveredSide === 'right' ? 'bg-fuchsia-400' : 'bg-white/20'}`} />
         </motion.div>
       </div>
 
-      {/* Right Side */}
+      {/* Right Side (Bottom on mobile) */}
       <motion.div
-        className="relative h-full flex-shrink-0 z-10"
-        onMouseEnter={() => setHoveredSide('right')}
-        onMouseLeave={() => setHoveredSide(null)}
-        animate={{ 
-          width: hoveredSide === 'right' ? "70%" : hoveredSide === 'left' ? "30%" : "50%",
-          filter: hoveredSide === 'left' ? "grayscale(1) brightness(0.5)" : "grayscale(0) brightness(1)"
-        }}
+        className={cn(
+          "relative flex-shrink-0 z-10",
+          isTabletOrMobile ? "w-full" : "h-full"
+        )}
+        onClick={() => handleSideClick('right')}
+        onMouseEnter={!isTabletOrMobile ? () => setHoveredSide('right') : undefined}
+        onMouseLeave={!isTabletOrMobile ? () => setHoveredSide(null) : undefined}
+        animate={getRightAnimation()}
         transition={transitionSettings}
       >
-        <VideoLoop isActive={hoveredSide === 'right'} />
+        <VideoLoop isActive={hoveredSide === 'right'} isTabletOrMobile={isTabletOrMobile} />
       </motion.div>
     </div>
   );
