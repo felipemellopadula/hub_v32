@@ -215,16 +215,14 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user && event !== 'SIGNED_OUT') {
           fetchProfile(session.user.id, session.user);
           
-          // Redirect to appropriate dashboard for sign-in events
+          // Redirect to dashboard for sign-in events (only from login pages, not /home2)
           if ((event === 'SIGNED_IN' || (event === 'TOKEN_REFRESHED' && window.location.pathname === '/')) && 
-              (window.location.pathname === '/' || window.location.pathname === '/auth' || window.location.pathname === '/home2')) {
-            // Redirect to dashboard-novo if coming from /home2, otherwise /dashboard
-            const redirectTo = window.location.pathname === '/home2' ? '/dashboard-novo' : '/dashboard';
-            console.log(`Redirecting to ${redirectTo}...`);
+              (window.location.pathname === '/' || window.location.pathname === '/auth')) {
+            console.log('Redirecting to /dashboard...');
             if (navigate) {
-              navigate(redirectTo, { replace: true });
+              navigate('/dashboard', { replace: true });
             } else {
-              window.location.replace(redirectTo);
+              window.location.replace('/dashboard');
             }
           }
         } else {
