@@ -20,7 +20,7 @@ import React, {
   startTransition,
   memo,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -867,17 +867,17 @@ const VideoPage: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/dashboard-novo")}
               className="flex items-center gap-2 hover:bg-muted"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <div className="flex items-center gap-2">
+            <Link to="/home2" className="flex items-center gap-2">
               <VideoIcon className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold text-foreground">Vídeo</h1>
-            </div>
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Suspense fallback={<div className="h-6 w-6 rounded-full bg-muted" />}>

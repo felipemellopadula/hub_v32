@@ -325,13 +325,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Aguardar um pouco para garantir que o logout foi processado
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      console.log('Logout completed, redirecting...');
+      console.log('Logout completed, redirecting to /home2...');
       
-      // Redirecionamento usando React Router ou fallback
+      // Redirecionamento para /home2
       if (navigate) {
-        setTimeout(() => navigate('/', { replace: true }), 300);
+        setTimeout(() => navigate('/home2', { replace: true }), 300);
       } else {
-        setTimeout(() => window.location.replace('/'), 300);
+        setTimeout(() => window.location.replace('/home2'), 300);
       }
     } catch (error) {
       console.error('Error signing out:', error);
@@ -339,9 +339,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.clear();
       sessionStorage.clear();
       if (navigate) {
-        setTimeout(() => navigate('/', { replace: true }), 100);
+        setTimeout(() => navigate('/home2', { replace: true }), 100);
       } else {
-        setTimeout(() => window.location.replace('/'), 100);
+        setTimeout(() => window.location.replace('/home2'), 100);
       }
     }
   };

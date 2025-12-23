@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -463,16 +463,16 @@ const Image2Page = () => {
       <header className="border-b p-4 sticky top-0 bg-background/95 backdrop-blur z-20">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard-novo")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <div className="flex items-center gap-2">
+            <Link to="/home2" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
                 <ImageIcon className="h-5 w-5 text-purple-500" />
               </div>
               <h1 className="text-xl font-bold">Imagem</h1>
-            </div>
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <UserProfile />
