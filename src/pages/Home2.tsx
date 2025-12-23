@@ -48,12 +48,12 @@ const heroCards = [
 ];
 
 const tools = [
-  { name: "CRIAR IMAGEM", image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=300&fit=crop" },
-  { name: "CRIAR VÍDEO", image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=300&fit=crop", hasArrow: true },
-  { name: "EDITAR IMAGEM", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop" },
-  { name: "VEO EDITOR", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop" },
-  { name: "UPSCALE 4K", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=300&fit=crop" },
-  { name: "AVATAR IA", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop" },
+  { name: "CRIAR IMAGEM", image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=300&fit=crop", path: "/image2" },
+  { name: "CRIAR VÍDEO", image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=300&fit=crop", hasArrow: true, path: "/video" },
+  { name: "EDITAR IMAGEM", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop", path: "/image2?mode=edit" },
+  { name: "VEO EDITOR", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop", path: "/video?mode=veo" },
+  { name: "UPSCALE 4K", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=300&fit=crop", path: "/upscale" },
+  { name: "AVATAR IA", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop", path: "/image2?mode=avatar" },
 ];
 
 const recentCreations = [
@@ -258,6 +258,7 @@ const Home2 = () => {
           {tools.map((tool, index) => (
             <div 
               key={index}
+              onClick={() => tool.path && navigate(tool.path)}
               className="group relative rounded-xl overflow-hidden aspect-square cursor-pointer bg-card hover:ring-2 hover:ring-primary/50 transition-all"
             >
               <img
