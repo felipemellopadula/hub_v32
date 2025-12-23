@@ -878,6 +878,7 @@ export type Database = {
           height: number | null
           id: string
           image_path: string
+          is_public: boolean
           prompt: string | null
           user_id: string
           width: number | null
@@ -888,6 +889,7 @@ export type Database = {
           height?: number | null
           id?: string
           image_path: string
+          is_public?: boolean
           prompt?: string | null
           user_id: string
           width?: number | null
@@ -898,6 +900,7 @@ export type Database = {
           height?: number | null
           id?: string
           image_path?: string
+          is_public?: boolean
           prompt?: string | null
           user_id?: string
           width?: number | null

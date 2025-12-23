@@ -23,4 +23,5 @@ export interface DatabaseImage {
   height: number | null;
   format: string | null;
   created_at: string;
+  is_public: boolean;
 }

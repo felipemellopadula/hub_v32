@@ -16,6 +16,8 @@ import {
   X,
   ArrowLeft,
   Trash2,
+  Globe,
+  Lock,
   Paperclip,
   Sparkles,
   Maximize2,
@@ -407,6 +409,39 @@ const Image2Page = () => {
     [user, loadSavedImages],
   );
 
+  const toggleImageVisibility = useCallback(
+    async (image: DatabaseImage) => {
+      if (!user) return;
+
+      const newIsPublic = !image.is_public;
+      
+      // Atualização otimista
+      setImages((prev) =>
+        prev.map((img) => (img.id === image.id ? { ...img, is_public: newIsPublic } : img))
+      );
+
+      try {
+        const { error } = await supabase
+          .from("user_images")
+          .update({ is_public: newIsPublic })
+          .eq("id", image.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        toast.success(newIsPublic ? "Imagem agora é pública" : "Imagem agora é privada");
+      } catch (error) {
+        console.error("Erro ao alterar visibilidade:", error);
+        toast.error("Erro ao alterar visibilidade");
+        // Reverter em caso de erro
+        setImages((prev) =>
+          prev.map((img) => (img.id === image.id ? { ...img, is_public: !newIsPublic } : img))
+        );
+      }
+    },
+    [user]
+  );
+
   const downloadImage = useCallback(async (image: DatabaseImage) => {
     const { data: publicData } = supabase.storage.from("images").getPublicUrl(image.image_path);
     const imageUrl = publicData.publicUrl;
@@ -510,6 +545,17 @@ const Image2Page = () => {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
+                        variant={img.is_public ? "default" : "secondary"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleImageVisibility(img);
+                        }}
+                        title={img.is_public ? "Público - clique para tornar privado" : "Privado - clique para tornar público"}
+                      >
+                        {img.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="secondary"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -539,6 +585,19 @@ const Image2Page = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
+
+                  {/* Indicador de visibilidade sempre visível */}
+                  <div className="absolute top-2 right-2">
+                    {img.is_public ? (
+                      <div className="bg-primary/90 p-1.5 rounded-full">
+                        <Globe className="h-3 w-3 text-primary-foreground" />
+                      </div>
+                    ) : (
+                      <div className="bg-black/50 p-1.5 rounded-full">
+                        <Lock className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}

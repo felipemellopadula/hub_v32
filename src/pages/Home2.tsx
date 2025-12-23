@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LazyVideo } from "@/components/LazyVideo";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Zap, Crown, Star, ArrowRight, LogOut, User } from "lucide-react";
+import { Check, Zap, Crown, Star, ArrowRight, LogOut, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface PublicImage {
+  id: string;
+  image_path: string;
+  prompt: string | null;
+  created_at: string;
+}
 
 // Sample video URLs for hero cards - using Pexels CDN (reliable)
 const heroCards = [
@@ -56,12 +64,13 @@ const tools = [
   { name: "AVATAR IA", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop", path: "/ai-avatar" },
 ];
 
-const recentCreations = [
-  { image: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=500&fit=crop", size: "small" },
-  { image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=600&fit=crop", size: "large" },
-  { image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=400&fit=crop", size: "small" },
-  { image: "https://images.unsplash.com/photo-1491002052546-bf38f186af56?w=400&h=500&fit=crop", size: "small" },
-  { image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=500&fit=crop", size: "large" },
+// Fallback estático caso não haja imagens públicas
+const fallbackCreations = [
+  { image: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=500&fit=crop" },
+  { image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=600&fit=crop" },
+  { image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=400&fit=crop" },
+  { image: "https://images.unsplash.com/photo-1491002052546-bf38f186af56?w=400&h=500&fit=crop" },
+  { image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=500&fit=crop" },
 ];
 
 const pricingPlans = [
@@ -120,8 +129,38 @@ const pricingPlans = [
 const Home2 = () => {
   const [activeTab, setActiveTab] = useState<"recent" | "popular">("recent");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [publicImages, setPublicImages] = useState<PublicImage[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(true);
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Carregar imagens públicas
+  useEffect(() => {
+    const loadPublicImages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_images")
+          .select("id, image_path, prompt, created_at")
+          .eq("is_public", true)
+          .order("created_at", { ascending: false })
+          .limit(12);
+
+        if (error) throw error;
+        setPublicImages(data || []);
+      } catch (error) {
+        console.error("Erro ao carregar imagens públicas:", error);
+      } finally {
+        setIsLoadingImages(false);
+      }
+    };
+
+    loadPublicImages();
+  }, []);
+
+  const getImageUrl = (imagePath: string) => {
+    const { data } = supabase.storage.from("images").getPublicUrl(imagePath);
+    return data.publicUrl;
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -306,18 +345,37 @@ const Home2 = () => {
         </div>
 
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-          {recentCreations.map((creation, index) => (
-            <div 
-              key={index}
-              className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group"
-            >
-              <img
-                src={creation.image}
-                alt={`Creation ${index + 1}`}
-                className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+          {isLoadingImages ? (
+            <div className="col-span-full flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ))}
+          ) : publicImages.length > 0 ? (
+            publicImages.map((image) => (
+              <div 
+                key={image.id}
+                className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group"
+              >
+                <img
+                  src={getImageUrl(image.image_path)}
+                  alt={image.prompt || "Criação pública"}
+                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            ))
+          ) : (
+            fallbackCreations.map((creation, index) => (
+              <div 
+                key={index}
+                className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group"
+              >
+                <img
+                  src={creation.image}
+                  alt={`Creation ${index + 1}`}
+                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            ))
+          )}
         </div>
       </section>
 
