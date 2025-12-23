@@ -192,7 +192,7 @@ const ImageCarousel: React.FC<CarouselProps> = ({ isActive, isTabletOrMobile }) 
                 <Smile className="w-4 h-4" />
                 Skin Enhancer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/image2?mode=avatar')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+              <DropdownMenuItem onClick={() => navigate('/ai-avatar')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
                 <UserCircle className="w-4 h-4" />
                 AI Avatar
               </DropdownMenuItem>

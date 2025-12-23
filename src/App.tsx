@@ -29,6 +29,7 @@ const DashboardNovo = lazy(() => import("./pages/DashboardNovo"));
 const Upscale = lazy(() => import("./pages/Upscale"));
 const SkinEnhancer = lazy(() => import("./pages/SkinEnhancer"));
 const ImageEditor = lazy(() => import("./pages/ImageEditor"));
+const AIAvatar = lazy(() => import("./pages/AIAvatar"));
 
 // Create queryClient
 const queryClient = new QueryClient();
@@ -103,6 +104,9 @@ const App = () => (
           } />
           <Route path="/image-editor" element={
             <ProtectedRoute><ImageEditor /></ProtectedRoute>
+          } />
+          <Route path="/ai-avatar" element={
+            <ProtectedRoute><AIAvatar /></ProtectedRoute>
           } />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           
