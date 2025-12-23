@@ -1,12 +1,14 @@
-import { useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, Camera, Eye, MessageSquare, Send, Settings, X } from "lucide-react";
+import { useState, useRef, useCallback, Suspense } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Upload, Camera, Eye, MessageSquare, Send, Settings, X, Download, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import UserProfile from "@/components/UserProfile";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type TabType = "prompt" | "visual" | "camera";
 
@@ -54,6 +56,32 @@ const ImageEditor = () => {
     };
     reader.readAsDataURL(file);
   }, []);
+
+  const handleRemoveImage = useCallback(() => {
+    setUploadedImage(null);
+    setEditedImage(null);
+    setClickMarkers([]);
+    setPrompt("");
+    setRotation(0);
+    setVerticalTilt(0);
+    setProximity(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleDownload = useCallback(() => {
+    const imageToDownload = editedImage || uploadedImage;
+    if (!imageToDownload) return;
+
+    const link = document.createElement("a");
+    link.href = imageToDownload;
+    link.download = `imagem-editada-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Imagem baixada com sucesso!");
+  }, [editedImage, uploadedImage]);
 
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTab !== "visual" || !uploadedImage) return;
@@ -167,17 +195,55 @@ const ImageEditor = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-lg font-medium text-foreground">Editar Imagem</h1>
-        <div className="w-10" />
+      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-20">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard-novo")}
+              className="flex items-center gap-2 hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <Link to="/home2" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-primary" />
+              </div>
+              <h1 className="text-xl font-bold">Editar Imagem</h1>
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            {displayImage && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRemoveImage}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  title="Remover imagem"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </>
+            )}
+            <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
+              <UserProfile />
+            </Suspense>
+            <ThemeToggle />
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
