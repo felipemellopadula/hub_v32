@@ -42,7 +42,7 @@ export default function Upscale() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    navigate("/home2");
   };
 
   const handleFileSelect = useCallback((file: File) => {
@@ -211,7 +211,7 @@ export default function Upscale() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/dashboard-novo")}
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="w-5 h-5" />
