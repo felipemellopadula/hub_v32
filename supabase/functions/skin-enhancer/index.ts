@@ -102,31 +102,43 @@ serve(async (req) => {
     }
 
     const freepikData = await freepikResponse.json();
-    console.log("Freepik response:", JSON.stringify(freepikData));
+    console.log("Full Freepik response:", JSON.stringify(freepikData, null, 2));
 
-    // Skin Enhancer API can return results directly (synchronous) or as a task (async)
+    // Extract result - check multiple possible response formats
     let result = null;
     const taskId = freepikData.data?.task_id;
     
-    // Check if result is already available (synchronous response)
-    if (freepikData.data?.generated && freepikData.data.generated.length > 0) {
-      console.log("Got synchronous result from Freepik");
+    // Check all possible locations where the image URL might be
+    if (freepikData.data?.generated?.[0]) {
+      console.log("Found result in data.generated[0]");
       result = freepikData.data.generated[0];
-    } else if (freepikData.data?.status === "COMPLETED" && freepikData.data?.generated?.[0]) {
-      console.log("Got completed result from Freepik");
-      result = freepikData.data.generated[0];
+    } else if (freepikData.data?.image) {
+      console.log("Found result in data.image");
+      result = freepikData.data.image;
+    } else if (freepikData.data?.url) {
+      console.log("Found result in data.url");
+      result = freepikData.data.url;
+    } else if (typeof freepikData.data === 'string' && freepikData.data.startsWith('http')) {
+      console.log("Found result as data string URL");
+      result = freepikData.data;
+    } else if (freepikData.generated?.[0]) {
+      console.log("Found result in generated[0] (top level)");
+      result = freepikData.generated[0];
+    } else if (freepikData.image) {
+      console.log("Found result in image (top level)");
+      result = freepikData.image;
     } else if (taskId) {
       console.log("Got task_id, need to poll:", taskId);
       
-      // Poll for result using POST to same endpoint with task_id
+      // Poll for result - use URL WITHOUT /creative based on Freepik API patterns
       let attempts = 0;
       const maxAttempts = 60;
 
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Try polling with POST to /v1/ai/skin-enhancer/creative/{taskId}
-        const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/creative/${taskId}`;
+        // Correct polling URL: /v1/ai/skin-enhancer/{taskId} (no /creative)
+        const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/${taskId}`;
         console.log(`Polling URL: ${statusUrl}`);
         
         const statusResponse = await fetch(statusUrl, {
@@ -142,9 +154,10 @@ serve(async (req) => {
           const statusData = await statusResponse.json();
           console.log(`Poll response:`, JSON.stringify(statusData));
           
-          if (statusData.data?.status === "COMPLETED" && statusData.data?.generated?.[0]) {
-            result = statusData.data.generated[0];
-            break;
+          // Check multiple formats in poll response
+          if (statusData.data?.status === "COMPLETED") {
+            result = statusData.data?.generated?.[0] || statusData.data?.image || statusData.data?.url;
+            if (result) break;
           } else if (statusData.data?.status === "FAILED") {
             throw new Error("Skin enhancement task failed");
           }
@@ -155,10 +168,14 @@ serve(async (req) => {
 
         attempts++;
       }
+    } else {
+      // Log all keys to help debug
+      console.log("Unknown response format. Keys in freepikData:", Object.keys(freepikData));
+      console.log("Keys in freepikData.data:", freepikData.data ? Object.keys(freepikData.data) : 'no data');
     }
 
     if (!result) {
-      throw new Error("No result from skin enhancement - check API response format");
+      throw new Error(`No result from skin enhancement. Response structure: ${JSON.stringify(Object.keys(freepikData))}, data keys: ${freepikData.data ? JSON.stringify(Object.keys(freepikData.data)) : 'none'}`);
     }
 
     console.log("Skin enhancement completed:", result);
