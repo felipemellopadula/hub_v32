@@ -394,28 +394,6 @@ const DashboardNovo: React.FC = () => {
         <ImageCarousel isActive={hoveredSide === 'left'} isTabletOrMobile={isTabletOrMobile} />
       </motion.div>
 
-      {/* Central Badge */}
-      <div className={cn(
-        "absolute z-50 pointer-events-none",
-        isTabletOrMobile 
-          ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-          : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-      )}>
-        <motion.div 
-          animate={{ scale: hoveredSide ? 0.9 : 1, opacity: hoveredSide ? 0.3 : 1 }}
-          className={cn(
-            "bg-black/40 border border-white/10 backdrop-blur-xl rounded-full shadow-2xl flex items-center gap-3",
-            isTabletOrMobile ? "px-4 py-2" : "px-8 py-4 gap-4"
-          )}
-        >
-          <div className={`w-2 h-2 rounded-full ${hoveredSide === 'left' ? 'bg-cyan-400' : 'bg-white/20'}`} />
-          <span className={cn(
-            "font-black tracking-[0.3em] text-white uppercase",
-            isTabletOrMobile ? "text-[10px] tracking-[0.2em]" : "text-sm tracking-[0.5em]"
-          )}>Synergy Hub</span>
-          <div className={`w-2 h-2 rounded-full ${hoveredSide === 'right' ? 'bg-fuchsia-400' : 'bg-white/20'}`} />
-        </motion.div>
-      </div>
 
       {/* Right Side (Bottom on mobile) */}
       <motion.div
