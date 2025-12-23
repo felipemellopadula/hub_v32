@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, Transition } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronDown, Sparkles, ArrowUpCircle, UserCircle, Smile, Video, LogOut } from 'lucide-react';
+import { ChevronDown, Sparkles, ArrowUpCircle, UserCircle, Smile, Video, LogOut, ZoomIn } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -184,9 +184,13 @@ const ImageCarousel: React.FC<CarouselProps> = ({ isActive, isTabletOrMobile }) 
                 <Sparkles className="w-4 h-4" />
                 Gerar Imagem
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/upscale')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <ZoomIn className="w-4 h-4" />
+                Upscale (Freepik)
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/image2?mode=upscale')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
                 <ArrowUpCircle className="w-4 h-4" />
-                Upscale
+                Upscale (Runware)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/image2?mode=skin')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
                 <Smile className="w-4 h-4" />
