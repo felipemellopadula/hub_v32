@@ -117,8 +117,11 @@ serve(async (req) => {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
       
-      // Note: GET endpoint doesn't include /creative
-      const statusResponse = await fetch(`https://api.freepik.com/v1/ai/skin-enhancer/${taskId}`, {
+      // Try both possible endpoint formats
+      const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/creative/${taskId}`;
+      console.log(`Polling URL: ${statusUrl}`);
+      
+      const statusResponse = await fetch(statusUrl, {
         method: "GET",
         headers: {
           "x-freepik-api-key": FREEPIK_API_KEY,
