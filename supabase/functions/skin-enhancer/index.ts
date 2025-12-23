@@ -117,8 +117,8 @@ serve(async (req) => {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
       
-      // Try both possible endpoint formats
-      const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/creative/${taskId}`;
+      // GET endpoint is WITHOUT /creative according to Freepik docs
+      const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/${taskId}`;
       console.log(`Polling URL: ${statusUrl}`);
       
       const statusResponse = await fetch(statusUrl, {
@@ -127,6 +127,9 @@ serve(async (req) => {
           "x-freepik-api-key": FREEPIK_API_KEY,
         },
       });
+      
+      // Log more details about the response
+      console.log(`Response status: ${statusResponse.status}, ok: ${statusResponse.ok}`);
 
       if (!statusResponse.ok) {
         console.error("Status check failed:", statusResponse.status);
