@@ -183,7 +183,7 @@ const Home2 = () => {
               />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
-              <Link to="/image" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Imagem</Link>
+              <Link to="/image2" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Imagem</Link>
               <Link to="/video" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Vídeo</Link>
               <Link to="/image2" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Editar</Link>
               <Link to="/chat" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Personagens</Link>
