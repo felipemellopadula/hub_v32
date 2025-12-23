@@ -102,56 +102,63 @@ serve(async (req) => {
     }
 
     const freepikData = await freepikResponse.json();
-    console.log("Freepik task created:", freepikData);
+    console.log("Freepik response:", JSON.stringify(freepikData));
 
-    const taskId = freepikData.data?.task_id;
-    if (!taskId) {
-      throw new Error("No task_id returned from Freepik");
-    }
-
-    // Poll for result (Freepik is async)
+    // Skin Enhancer API can return results directly (synchronous) or as a task (async)
     let result = null;
-    let attempts = 0;
-    const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    const taskId = freepikData.data?.task_id;
+    
+    // Check if result is already available (synchronous response)
+    if (freepikData.data?.generated && freepikData.data.generated.length > 0) {
+      console.log("Got synchronous result from Freepik");
+      result = freepikData.data.generated[0];
+    } else if (freepikData.data?.status === "COMPLETED" && freepikData.data?.generated?.[0]) {
+      console.log("Got completed result from Freepik");
+      result = freepikData.data.generated[0];
+    } else if (taskId) {
+      console.log("Got task_id, need to poll:", taskId);
+      
+      // Poll for result using POST to same endpoint with task_id
+      let attempts = 0;
+      const maxAttempts = 60;
 
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-      
-      // GET endpoint is WITHOUT /creative according to Freepik docs
-      const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/${taskId}`;
-      console.log(`Polling URL: ${statusUrl}`);
-      
-      const statusResponse = await fetch(statusUrl, {
-        method: "GET",
-        headers: {
-          "x-freepik-api-key": FREEPIK_API_KEY,
-        },
-      });
-      
-      // Log more details about the response
-      console.log(`Response status: ${statusResponse.status}, ok: ${statusResponse.ok}`);
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try polling with POST to /v1/ai/skin-enhancer/creative/{taskId}
+        const statusUrl = `https://api.freepik.com/v1/ai/skin-enhancer/creative/${taskId}`;
+        console.log(`Polling URL: ${statusUrl}`);
+        
+        const statusResponse = await fetch(statusUrl, {
+          method: "GET",
+          headers: {
+            "x-freepik-api-key": FREEPIK_API_KEY,
+          },
+        });
+        
+        console.log(`Response status: ${statusResponse.status}`);
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log(`Poll response:`, JSON.stringify(statusData));
+          
+          if (statusData.data?.status === "COMPLETED" && statusData.data?.generated?.[0]) {
+            result = statusData.data.generated[0];
+            break;
+          } else if (statusData.data?.status === "FAILED") {
+            throw new Error("Skin enhancement task failed");
+          }
+        } else {
+          const errorText = await statusResponse.text();
+          console.error(`Status check failed: ${statusResponse.status}`, errorText);
+        }
 
-      if (!statusResponse.ok) {
-        console.error("Status check failed:", statusResponse.status);
         attempts++;
-        continue;
       }
-
-      const statusData = await statusResponse.json();
-      console.log(`Poll attempt ${attempts + 1}:`, statusData.data?.status);
-
-      if (statusData.data?.status === "COMPLETED") {
-        result = statusData.data?.generated?.[0];
-        break;
-      } else if (statusData.data?.status === "FAILED") {
-        throw new Error("Skin enhancement task failed");
-      }
-
-      attempts++;
     }
 
     if (!result) {
-      throw new Error("Timeout waiting for skin enhancement result");
+      throw new Error("No result from skin enhancement - check API response format");
     }
 
     console.log("Skin enhancement completed:", result);
