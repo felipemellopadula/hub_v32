@@ -41,6 +41,7 @@ const heroCards = [
     description: "Até 67% off em todos os planos + 1 ano de gerações ilimitadas",
     badge: "-67% OFF",
     badgeColor: "bg-red-500",
+    href: "#pricing",
   },
   {
     video: "https://videos.pexels.com/video-files/856045/856045-sd_640_360_30fps.mp4",
@@ -48,6 +49,7 @@ const heroCards = [
     description: "Pincel para editar áreas específicas ou transformar imagens inteiras",
     badge: "NANO BANANA",
     badgeColor: "bg-primary",
+    path: "/image-editor",
   },
   {
     video: "https://videos.pexels.com/video-files/3141207/3141207-sd_640_360_25fps.mp4",
@@ -55,6 +57,7 @@ const heroCards = [
     description: "Uma imagem se torna 9 shots. Escolha e melhore seus favoritos",
     badge: null,
     badgeColor: "",
+    path: "/image2",
   },
   {
     video: "https://videos.pexels.com/video-files/3195394/3195394-sd_640_360_25fps.mp4",
@@ -62,6 +65,7 @@ const heroCards = [
     description: "Transforme pele artificial em textura natural e realista",
     badge: "INTRODUZINDO",
     badgeColor: "bg-primary",
+    path: "/skin-enhancer",
   },
 ];
 
@@ -246,42 +250,54 @@ const Home2 = () => {
       {/* Hero Section - 4 Video Cards */}
       <section className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {heroCards.map((card, index) => (
-            <div 
-              key={index}
-              className="relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer"
-            >
-              <LazyVideo
-                src={card.video}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              
-              {/* Badge */}
-              {card.badge && (
-                <div className="absolute top-4 right-4">
-                  <Badge className={`${card.badgeColor} text-white font-semibold`}>
-                    {card.badge}
-                  </Badge>
-                </div>
-              )}
-              
-              {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-lg font-bold text-white mb-1">{card.title}</h3>
-                <p className="text-sm text-white/80">{card.description}</p>
-              </div>
-              
-              {/* Logo overlay */}
-              <div className="absolute top-4 left-4 opacity-60 group-hover:opacity-100 transition-opacity">
-                <img 
-                  src="/images/logo-light-optimized.webp" 
-                  alt="Synergy" 
-                  className="h-5 w-auto"
+          {heroCards.map((card, index) => {
+            const handleClick = () => {
+              if (card.href) {
+                const element = document.querySelector(card.href);
+                element?.scrollIntoView({ behavior: 'smooth' });
+              } else if (card.path) {
+                navigate(card.path);
+              }
+            };
+
+            return (
+              <div 
+                key={index}
+                onClick={handleClick}
+                className="relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+              >
+                <LazyVideo
+                  src={card.video}
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                
+                {/* Badge */}
+                {card.badge && (
+                  <div className="absolute top-4 right-4">
+                    <Badge className={`${card.badgeColor} text-white font-semibold`}>
+                      {card.badge}
+                    </Badge>
+                  </div>
+                )}
+                
+                {/* Content */}
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-lg font-bold text-white mb-1">{card.title}</h3>
+                  <p className="text-sm text-white/80">{card.description}</p>
+                </div>
+                
+                {/* Logo overlay */}
+                <div className="absolute top-4 left-4 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <img 
+                    src="/images/logo-light-optimized.webp" 
+                    alt="Synergy" 
+                    className="h-5 w-auto"
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
