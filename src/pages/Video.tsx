@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { VideoIcon, ArrowLeft } from "lucide-react"; // ícones do topo (acima da dobra)
 import imageCompression from "browser-image-compression";
 import { useAuth } from "@/contexts/AuthContext";
+import { useButtonDebounce } from "@/hooks/useButtonDebounce";
 
 // Lazy (reduz bundle inicial)
 const ThemeToggleLazy = lazy(() => import("@/components/ThemeToggle").then(m => ({ default: m.ThemeToggle })));
@@ -319,6 +320,7 @@ const VideoPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { debounce, isDebouncing } = useButtonDebounce(2000);
 
   // Estado principal
   const [modelId, setModelId] = useState<string>("bytedance:1@1"); // Apenas ByteDance
@@ -1131,7 +1133,7 @@ const VideoPage: React.FC = () => {
                 </div>
               </div>
 
-              <Button className="w-full" onClick={startGeneration} disabled={isProcessing || !prompt}>
+              <Button className="w-full" onClick={() => debounce(startGeneration)} disabled={isProcessing || isDebouncing || !prompt}>
                 {isProcessing ? (
                   <span className="inline-flex items-center">
                     <span className="mr-2 inline-grid place-items-center">

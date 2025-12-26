@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Download, Loader2, LogOut, Sparkles, RefreshCw, ChevronLeft, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useButtonDebounce } from "@/hooks/useButtonDebounce";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ const UserProfile = lazy(() => import("@/components/UserProfile"));
 export default function SkinEnhancer() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { debounce, isDebouncing } = useButtonDebounce(1000);
   
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [enhancedImage, setEnhancedImage] = useState<string | null>(null);
@@ -245,8 +247,8 @@ export default function SkinEnhancer() {
 
               {/* Enhance Button */}
               <Button
-                onClick={handleEnhance}
-                disabled={!originalImage || isLoading}
+                onClick={() => debounce(handleEnhance)}
+                disabled={!originalImage || isLoading || isDebouncing}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
               >

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, Suspense, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Upload, Download, X, Sparkles, UserCircle, Wand2, Loader2, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useButtonDebounce } from "@/hooks/useButtonDebounce";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,7 @@ const AVATAR_STYLES = [
 const AIAvatar = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { debounce, isDebouncing } = useButtonDebounce(1500);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [generatedAvatar, setGeneratedAvatar] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<string>("professional");
@@ -381,8 +383,8 @@ const AIAvatar = () => {
               </div>
 
               <Button
-                onClick={handleGenerate}
-                disabled={!uploadedImage || isProcessing}
+                onClick={() => debounce(handleGenerate)}
+                disabled={!uploadedImage || isProcessing || isDebouncing}
                 className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
               >
                 {isProcessing ? (

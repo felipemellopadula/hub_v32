@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Upload, Camera, Eye, MessageSquare, Send, Settings, X, Download, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useButtonDebounce } from "@/hooks/useButtonDebounce";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ interface ClickMarker {
 const ImageEditor = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { debounce, isDebouncing } = useButtonDebounce(1500);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("prompt");
   const [prompt, setPrompt] = useState("");
@@ -476,8 +478,8 @@ const ImageEditor = () => {
               <Button
                 size="icon"
                 className="h-8 w-8 rounded-full"
-                onClick={handleSubmit}
-                disabled={isProcessing || !uploadedImage}
+                onClick={() => debounce(handleSubmit)}
+                disabled={isProcessing || isDebouncing || !uploadedImage}
               >
                 {isProcessing ? (
                   <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />

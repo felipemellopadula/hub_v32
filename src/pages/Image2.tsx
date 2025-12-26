@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useButtonDebounce } from "@/hooks/useButtonDebounce";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,6 +51,7 @@ import type { DatabaseImage } from "@/modules/image";
 const Image2Page = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { debounce, isDebouncing } = useButtonDebounce(1500);
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(MODELS[0].id);
   const [quality, setQuality] = useState(QUALITY_SETTINGS[0].id);
@@ -369,12 +371,12 @@ const Image2Page = () => {
         
         // Se há imagens em background, recarregar novamente após delays para capturá-las
         if (backgroundCount > 0) {
-          // Recarregar a cada 3 segundos por imagem em background
+          // Recarregar a cada 3.5 segundos por imagem em background (500ms extra de margem)
           for (let i = 1; i <= backgroundCount; i++) {
             setTimeout(async () => {
               console.log(`Recarregando para capturar imagem ${i} de background...`);
               await loadSavedImages();
-            }, i * 3000);
+            }, i * 3500);
           }
         }
       }
@@ -746,8 +748,8 @@ const Image2Page = () => {
 
               {/* Botão Gerar - Estilo Neon */}
               <Button
-                onClick={generate}
-                disabled={isGenerating || !prompt.trim()}
+                onClick={() => debounce(generate)}
+                disabled={isGenerating || isDebouncing || !prompt.trim()}
                 className="bg-[#8C00FF] hover:bg-[#6A42C2] text-white font-bold px-8 h-11 shadow-lg shadow-[#FFD700]/20 hover:shadow-[#FFD700]/40 transition-all disabled:opacity-50 disabled:shadow-none min-w-[140px]"
               >
                 {isGenerating ? (
