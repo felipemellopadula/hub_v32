@@ -83,36 +83,38 @@ type Resolution = { id: string; label: string; w: number; h: number };
 // Mantenho os objetos auxiliares também comentados, caso sejam reativados depois.
 
 const MODELS = [
-  { id: "bytedance:1@1", label: "ByteDance Seedance 1.0 Lite", provider: "bytedance" as const },
-  { id: "google:3@3", label: "Veo 3.1 Fast", provider: "google" as const },
-  { id: "klingai:6@1", label: "KlingAI 2.5 Turbo PRO", provider: "klingai" as const },
+  { id: "bytedance:seedance@1.5-pro", label: "Seedance 1.5 Pro", provider: "bytedance" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
-  "bytedance:1@1": [
-    { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p (864×480)", w: 864, h: 480 },
-    { id: "16:9-704p", label: "16:9 (Wide / Landscape) - 1248×704", w: 1248, h: 704 },
+  "bytedance:seedance@1.5-pro": [
+    // 480p resolutions
+    { id: "16:9-480p", label: "16:9 (Wide / Landscape) - 480p", w: 854, h: 480 },
+    { id: "4:3-480p", label: "4:3 (Standard / Landscape) - 480p", w: 640, h: 480 },
+    { id: "1:1-480p", label: "1:1 (Square) - 480p", w: 480, h: 480 },
+    { id: "3:4-480p", label: "3:4 (Standard / Portrait) - 480p", w: 480, h: 640 },
+    { id: "9:16-480p", label: "9:16 (Tall / Portrait) - 480p", w: 480, h: 854 },
+    { id: "21:9-480p", label: "21:9 (Ultra-Wide / Landscape) - 480p", w: 1120, h: 480 },
+    // 720p resolutions
+    { id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p", w: 1280, h: 720 },
+    { id: "4:3-720p", label: "4:3 (Standard / Landscape) - 720p", w: 960, h: 720 },
+    { id: "1:1-720p", label: "1:1 (Square) - 720p", w: 720, h: 720 },
+    { id: "3:4-720p", label: "3:4 (Standard / Portrait) - 720p", w: 720, h: 960 },
+    { id: "9:16-720p", label: "9:16 (Tall / Portrait) - 720p", w: 720, h: 1280 },
+    { id: "21:9-720p", label: "21:9 (Ultra-Wide / Landscape) - 720p", w: 1680, h: 720 },
   ],
-  "google:3@3": [{ id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p (1280×720)", w: 1280, h: 720 }],
-  "klingai:6@1": [{ id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p (1920×1080)", w: 1920, h: 1080 }],
 };
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
-  "bytedance:1@1": [5, 10],
-  "google:3@3": [4, 6, 8],
-  "klingai:6@1": [5, 10],
+  "bytedance:seedance@1.5-pro": [4, 5, 6, 7, 8, 9, 10, 11, 12],
 };
 
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
-  "bytedance:1@1": true,
-  "google:3@3": false,
-  "klingai:6@1": false,
+  "bytedance:seedance@1.5-pro": true,
 };
 
 const SUPPORTS_AUDIO: Record<string, boolean> = {
-  "bytedance:1@1": false,
-  "google:3@3": true,
-  "klingai:6@1": false,
+  "bytedance:seedance@1.5-pro": false,
 };
 
 const FORMATS = ["mp4", "webm", "mov"];
@@ -323,9 +325,9 @@ const VideoPage: React.FC = () => {
   const { debounce, isDebouncing } = useButtonDebounce(2000);
 
   // Estado principal
-  const [modelId, setModelId] = useState<string>("bytedance:1@1"); // Apenas ByteDance
+  const [modelId, setModelId] = useState<string>("bytedance:seedance@1.5-pro");
   const [prompt, setPrompt] = useState("");
-  const [resolution, setResolution] = useState<string>("16:9-480p");
+  const [resolution, setResolution] = useState<string>("16:9-720p");
   const [duration, setDuration] = useState<number>(5);
   const [outputFormat, setOutputFormat] = useState<string>("mp4");
   const [cameraFixed, setCameraFixed] = useState<boolean>(false);
