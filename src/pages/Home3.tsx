@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { ContactForm } from '@/components/ContactForm';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -183,7 +185,7 @@ const tools: ToolCard[] = [
   },
 ];
 
-// Pricing plans
+// Pricing plans mapped to stripe_products table
 const pricingPlans = [
   {
     name: 'Start',
@@ -197,8 +199,8 @@ const pricingPlans = [
       'Geração de vídeo limitada',
       'Suporte por email',
     ],
-    monthlyPriceId: 'price_1RQAKfP8GjTimH2kLtTBPQxa',
-    annualPriceId: 'price_annual_start',
+    monthlyPlanId: 'basic_monthly',
+    annualPlanId: 'basic_annual',
     popular: false,
   },
   {
@@ -214,8 +216,8 @@ const pricingPlans = [
       'Skin Enhancer & Upscale',
       'Suporte prioritário',
     ],
-    monthlyPriceId: 'price_1RQALtP8GjTimH2kfBsIxBz5',
-    annualPriceId: 'price_annual_pro',
+    monthlyPlanId: 'pro_monthly',
+    annualPlanId: 'pro_annual',
     popular: true,
   },
   {
@@ -232,8 +234,8 @@ const pricingPlans = [
       'Suporte 24/7',
       'Early access a novos recursos',
     ],
-    monthlyPriceId: 'price_1RQANMP8GjTimH2kAceiQGqR',
-    annualPriceId: 'price_annual_creator',
+    monthlyPlanId: 'pro_monthly', // Uses pro for now until creator plan is created
+    annualPlanId: 'pro_annual',
     popular: false,
   },
 ];
@@ -357,11 +359,48 @@ const Home3: React.FC = () => {
     }
   };
 
-  const handlePricingClick = (priceId: string) => {
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handlePricingClick = async (planId: string) => {
     if (!user) {
       setShowAuthModal(true);
-    } else {
-      navigate('/settings');
+      return;
+    }
+
+    setIsSubscribing(true);
+    try {
+      console.log('[Home3] Iniciando checkout para:', planId);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { planId }
+      });
+
+      console.log('[Home3] Resposta recebida:', { data, error });
+
+      if (error) {
+        console.error('[Home3] Erro da função:', error);
+        throw error;
+      }
+      
+      if (data?.url) {
+        console.log('[Home3] Redirecionando para:', data.url);
+        const newWindow = window.open(data.url, '_blank');
+        
+        if (!newWindow) {
+          console.log('[Home3] Popup bloqueado, redirecionando na mesma aba');
+          window.location.href = data.url;
+        } else {
+          setIsSubscribing(false);
+          toast.success('Checkout aberto! Complete o pagamento na nova aba.');
+        }
+      } else {
+        console.error('[Home3] URL não recebida:', data);
+        throw new Error('URL de checkout não recebida');
+      }
+    } catch (error) {
+      console.error('[Home3] Erro ao criar checkout:', error);
+      setIsSubscribing(false);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar o checkout. Tente novamente.');
     }
   };
 
@@ -717,7 +756,7 @@ const Home3: React.FC = () => {
             {pricingPlans.map((plan) => {
               const IconComponent = plan.icon;
               const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
-              const currentPriceId = isAnnual ? plan.annualPriceId : plan.monthlyPriceId;
+              const currentPlanId = isAnnual ? plan.annualPlanId : plan.monthlyPlanId;
               return (
                 <div
                   key={plan.name}
@@ -763,11 +802,12 @@ const Home3: React.FC = () => {
                   </ul>
 
                   <Button
-                    onClick={() => handlePricingClick(currentPriceId)}
+                    onClick={() => handlePricingClick(currentPlanId)}
                     className="w-full"
                     variant={plan.popular ? 'default' : 'outline'}
+                    disabled={isSubscribing}
                   >
-                    Começar Agora
+                    {isSubscribing ? 'Processando...' : 'Começar Agora'}
                   </Button>
                 </div>
               );
