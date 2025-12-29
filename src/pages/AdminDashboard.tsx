@@ -127,6 +127,9 @@ const VIDEO_PRICING: Record<string, { cost: number }> = {
   "google:3@3": { cost: 1.2 }, // Veo 3.1 Fast
   "klingai:kling-video@2.6-pro": { cost: 0.35 }, // KlingAI 2.6 Pro
   "klingai:6@1": { cost: 0.35 }, // KlingAI (alias)
+  "openai:3@1": { cost: 0.10 },   // Sora 2
+  "openai:3@2": { cost: 0.30 },   // Sora 2 Pro
+  "minimax:4@1": { cost: 0.28 },  // MiniMax Hailuo 2.3
 };
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   // Latest models

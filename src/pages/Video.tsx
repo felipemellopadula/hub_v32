@@ -86,7 +86,9 @@ const MODELS = [
   { id: "bytedance:seedance@1.5-pro", label: "Seedance 1.5 Pro", provider: "bytedance" as const },
   { id: "google:3@3", label: "Veo 3.1 Fast", provider: "google" as const },
   { id: "klingai:kling-video@2.6-pro", label: "Kling VIDEO 2.6 Pro", provider: "klingai" as const },
-  // { id: "klingai:kling@o1-standard", label: "Kling O1 Standard", provider: "klingai" as const }, // API com problema
+  { id: "openai:3@1", label: "Sora 2", provider: "openai" as const },
+  { id: "openai:3@2", label: "Sora 2 Pro", provider: "openai" as const },
+  { id: "minimax:4@1", label: "MiniMax Hailuo 2.3", provider: "minimax" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
@@ -112,24 +114,50 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "1:1-1440p", label: "1:1 (Square) - 1440p", w: 1440, h: 1440 },
     { id: "9:16-1080p", label: "9:16 (Tall / Portrait) - 1080p", w: 1080, h: 1920 },
   ],
+  // Sora 2 - apenas 2 formatos
+  "openai:3@1": [
+    { id: "9:16", label: "9:16 (Portrait)", w: 1080, h: 1920 },
+    { id: "16:9", label: "16:9 (Landscape)", w: 1920, h: 1080 },
+  ],
+  // Sora 2 Pro - 4 formatos
+  "openai:3@2": [
+    { id: "9:16", label: "9:16 (Portrait)", w: 1080, h: 1920 },
+    { id: "16:9", label: "16:9 (Landscape)", w: 1920, h: 1080 },
+    { id: "4:7", label: "4:7 (Portrait)", w: 768, h: 1344 },
+    { id: "7:4", label: "7:4 (Landscape)", w: 1344, h: 768 },
+  ],
+  // MiniMax Hailuo 2.3 - 2 formatos
+  "minimax:4@1": [
+    { id: "4:3-768p", label: "4:3 (Standard / Landscape) - 768p", w: 1024, h: 768 },
+    { id: "16:9-1080p", label: "16:9 (Landscape) - 1080p", w: 1920, h: 1080 },
+  ],
 };
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
   "bytedance:seedance@1.5-pro": [4, 5, 6, 7, 8, 9, 10, 11, 12],
   "google:3@3": [4, 6, 8],
   "klingai:kling-video@2.6-pro": [5, 10],
+  "openai:3@1": [4, 8, 12],      // Sora 2
+  "openai:3@2": [4, 8, 12],      // Sora 2 Pro
+  "minimax:4@1": [6, 10],        // MiniMax Hailuo 2.3
 };
 
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
   "bytedance:seedance@1.5-pro": true,
   "google:3@3": false,
   "klingai:kling-video@2.6-pro": false,
+  "openai:3@1": false,   // Sora 2
+  "openai:3@2": false,   // Sora 2 Pro
+  "minimax:4@1": true,   // MiniMax Hailuo 2.3
 };
 
 const SUPPORTS_AUDIO: Record<string, boolean> = {
   "bytedance:seedance@1.5-pro": false,
   "google:3@3": true,
   "klingai:kling-video@2.6-pro": true,
+  "openai:3@1": false,   // Sora 2
+  "openai:3@2": false,   // Sora 2 Pro
+  "minimax:4@1": false,  // MiniMax Hailuo 2.3
 };
 
 // ✅ Motion Transfer: Kling 2.6 Pro suporta capturar movimentos de vídeo e aplicar em imagem
@@ -137,6 +165,9 @@ const SUPPORTS_MOTION_TRANSFER: Record<string, boolean> = {
   "bytedance:seedance@1.5-pro": false,
   "google:3@3": false,
   "klingai:kling-video@2.6-pro": true,
+  "openai:3@1": false,   // Sora 2 - não suporta
+  "openai:3@2": false,   // Sora 2 Pro - não suporta
+  "minimax:4@1": false,  // MiniMax Hailuo 2.3 - usa camera commands no prompt
 };
 
 const FORMATS = ["mp4", "webm", "mov"];
