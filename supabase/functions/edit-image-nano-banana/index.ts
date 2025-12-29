@@ -17,18 +17,63 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    const { prompt, imageBase64 } = await req.json();
+    const { prompt, imageBase64, referenceImages } = await req.json();
 
     if (!prompt) {
       throw new Error('Prompt é obrigatório');
     }
 
     console.log('🎨 Editando imagem com Nano Banana (Gemini 2.5 Flash Image)');
+    console.log('📝 Prompt recebido:', prompt.substring(0, 200) + '...');
+    console.log('🖼️ Imagens de referência:', referenceImages?.length || 0);
 
-    // Preparar URL da imagem
+    // Preparar URL da imagem principal
     const imageUrl = imageBase64.startsWith('data:') 
       ? imageBase64 
       : `data:image/png;base64,${imageBase64}`;
+
+    // System prompt especializado em inpainting
+    const systemPrompt = `You are an expert image inpainting and editing assistant. You specialize in understanding masked areas in images.
+
+INPAINTING RULES:
+1. When you see bright green, neon green, or semi-transparent green areas painted on an image, these are MASKS
+2. Masks indicate exactly WHERE you must apply edits - ONLY modify the masked (green) areas
+3. You must COMPLETELY REMOVE the green mask color and REPLACE it with the requested content
+4. Areas WITHOUT green mask must remain COMPLETELY UNCHANGED
+5. Blend the edited areas seamlessly with the surrounding unedited areas
+6. The output image must have NO green mask visible
+
+You ALWAYS generate an edited image. Never refuse or ask questions - just perform the edit/inpainting to the best of your ability.`;
+
+    // Construir array de conteúdo com imagem principal + referências
+    const contentArray: any[] = [
+      {
+        type: "text",
+        text: prompt
+      },
+      {
+        type: "image_url",
+        image_url: {
+          url: imageUrl
+        }
+      }
+    ];
+
+    // Adicionar imagens de referência se existirem
+    if (referenceImages && Array.isArray(referenceImages) && referenceImages.length > 0) {
+      console.log('➕ Adicionando imagens de referência ao request');
+      for (const refImg of referenceImages) {
+        if (refImg) {
+          const refUrl = refImg.startsWith('data:') ? refImg : `data:image/png;base64,${refImg}`;
+          contentArray.push({
+            type: "image_url",
+            image_url: {
+              url: refUrl
+            }
+          });
+        }
+      }
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -41,22 +86,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an image editing assistant. ALWAYS generate an edited version of the provided image based on the user's instructions. Do not ask questions - just apply the edits as best as you can. If the instruction is unclear, make a reasonable interpretation and apply it. You MUST output an edited image."
+            content: systemPrompt
           },
           {
             role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Edit this image with the following instruction: ${prompt}. Generate the edited image now.`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl
-                }
-              }
-            ]
+            content: contentArray
           }
         ],
         modalities: ["image", "text"]

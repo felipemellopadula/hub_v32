@@ -310,16 +310,37 @@ const Inpaint = () => {
         multiplier: 1,
       });
 
-      // Build prompt with reference images info
-      let fullPrompt = prompt;
-      if (referenceImages.length > 0) {
-        fullPrompt += ` [Com ${referenceImages.length} imagens de referência anexadas]`;
+      // Check if there are any drawn paths (mask)
+      const hasDrawnMask = fabricCanvas.getObjects().length > 0;
+
+      // Build inpainting-specific prompt that explains the mask to the model
+      let inpaintPrompt: string;
+      
+      if (hasDrawnMask) {
+        // User painted areas - explain the mask to the model
+        inpaintPrompt = `INPAINTING TASK: In the provided image, there are areas painted with bright green/neon color (semi-transparent green, RGB approximately 0,255,128). These green painted areas are MASKS indicating exactly WHERE you must apply the following edit.
+
+USER'S EDIT REQUEST: "${prompt}"
+
+CRITICAL INSTRUCTIONS:
+1. Identify ALL green/neon painted areas in the image - these are the ONLY areas you should modify
+2. COMPLETELY REMOVE the green paint/mask color from those areas
+3. REPLACE those masked areas with content that matches the user's request: "${prompt}"
+4. Keep ALL other parts of the image COMPLETELY UNCHANGED - do not modify anything outside the green masked areas
+5. The result should look natural with seamless blending between edited and unedited areas
+6. The output image must have NO green mask visible - the mask must be replaced entirely
+
+Generate the edited image now with the green masked areas replaced according to the instructions.`;
+      } else {
+        // No mask - general edit on entire image
+        inpaintPrompt = `Edit this image with the following instruction: ${prompt}. Generate the edited image now.`;
       }
 
       const { data, error } = await supabase.functions.invoke("edit-image-nano-banana", {
         body: {
-          prompt: fullPrompt,
+          prompt: inpaintPrompt,
           imageBase64: canvasDataUrl,
+          referenceImages: referenceImages.map(img => img.dataUrl),
         },
       });
 
