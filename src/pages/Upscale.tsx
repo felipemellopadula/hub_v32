@@ -216,18 +216,10 @@ export default function Upscale() {
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
-            <Link to="/" className="flex items-center gap-2">
-              <img
-                src="/images/logo-light-optimized.webp"
-                alt="Logo"
-                className="h-8 w-auto dark:hidden"
-              />
-              <img
-                src="/images/logo-dark-optimized.webp"
-                alt="Logo"
-                className="h-8 w-auto hidden dark:block"
-              />
-            </Link>
+            <div className="flex items-center gap-2">
+              <ZoomIn className="w-6 h-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">Upscale</span>
+            </div>
           </div>
           
           <div className="flex items-center gap-3">
