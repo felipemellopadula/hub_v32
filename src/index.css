@@ -189,3 +189,12 @@
     background-color: hsl(var(--muted)) !important;
   }
 }
+
+/* Invert Kling AI logo for dark mode */
+:root img[alt="Kling AI"] {
+  filter: invert(1);
+}
+
+.light img[alt="Kling AI"] {
+  filter: none;
+}
