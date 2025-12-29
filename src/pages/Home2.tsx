@@ -79,7 +79,7 @@ const tools = [
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
     ],
     animated: true,
-    speed: 1000,
+    speed: 600,
     path: "/image2",
   },
   {
