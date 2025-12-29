@@ -301,10 +301,10 @@ const DashboardNovo: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/home2', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      navigate('/home2', { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
@@ -356,7 +356,7 @@ const DashboardNovo: React.FC = () => {
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-md border-b border-white/10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <Link to="/home2" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img
               src="/lovable-uploads/76f92d5d-608b-47a5-a829-bdb436a60274.png"
               alt="Synergy AI"

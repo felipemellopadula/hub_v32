@@ -504,7 +504,7 @@ const Image2Page = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <Link to="/home2" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
                 <ImageIcon className="h-5 w-5 text-purple-500" />
               </div>

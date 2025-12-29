@@ -32,7 +32,7 @@ export default function SkinEnhancer() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/home2");
+    navigate("/");
   };
 
   const handleFileSelect = useCallback((file: File) => {
@@ -147,7 +147,7 @@ export default function SkinEnhancer() {
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
-            <Link to="/home2" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <img
                 src="/images/logo-light-optimized.webp"
                 alt="Logo"

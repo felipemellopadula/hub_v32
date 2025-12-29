@@ -962,7 +962,7 @@ const VideoPage: React.FC = () => {
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <Link to="/home2" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <VideoIcon className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold text-foreground">Vídeo</h1>
             </Link>

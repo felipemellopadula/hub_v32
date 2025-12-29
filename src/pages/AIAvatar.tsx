@@ -268,7 +268,7 @@ const AIAvatar = () => {
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <Link to="/home2" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <UserCircle className="h-5 w-5 text-white" />
               </div>

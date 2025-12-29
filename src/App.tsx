@@ -8,8 +8,8 @@ import AuthProvider from "@/contexts/AuthContext";
 
 // Import essential components directly (immediate loading)
 import ProtectedRoute from "./components/ProtectedRoute";
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Home2 from "./pages/Home2";
 
 // Lazy load internal pages (on-demand loading)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -22,7 +22,7 @@ const WritePage = lazy(() => import("./pages/Write"));
 const TranscribePage = lazy(() => import("./pages/Transcribe"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const Share = lazy(() => import("./pages/Share"));
-const Home2 = lazy(() => import("./pages/Home2"));
+
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DashboardNovo = lazy(() => import("./pages/DashboardNovo"));
@@ -60,8 +60,8 @@ const App = () => (
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/home2" element={<Home2 />} />
+          <Route path="/" element={<Home2 />} />
+          <Route path="/home2" element={<Home2 />} /> {/* Alias for compatibility */}
           <Route path="/share" element={<Share />} />
           <Route path="/admin" element={<AdminLogin />} />
           

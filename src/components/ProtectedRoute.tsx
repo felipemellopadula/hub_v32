@@ -77,7 +77,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
           </p>
           <Button 
             variant="link" 
-            onClick={() => window.location.href = '/home2'}
+            onClick={() => window.location.href = '/'}
             className="mt-2"
           >
             Voltar para a página inicial
@@ -134,7 +134,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
                   <Button 
                     variant={plan.buttonVariant}
                     className={`w-full mb-4 ${plan.popular ? "bg-primary hover:bg-primary/90" : ""}`}
-                    onClick={() => window.location.href = '/home2#pricing'}
+                    onClick={() => window.location.href = '/#pricing'}
                   >
                     Assinar
                   </Button>
@@ -154,7 +154,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
             <div className="text-center">
               <Button 
                 variant="ghost" 
-                onClick={() => window.location.href = '/home2'}
+                onClick={() => window.location.href = '/'}
               >
                 Voltar para a página inicial
               </Button>

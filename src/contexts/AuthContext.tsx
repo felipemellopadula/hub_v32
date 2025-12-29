@@ -228,11 +228,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setProfile(null);
           // Only redirect if explicitly signed out
-          if (event === 'SIGNED_OUT' && window.location.pathname !== '/home2') {
+          if (event === 'SIGNED_OUT' && window.location.pathname !== '/') {
             if (navigate) {
-              navigate('/home2', { replace: true });
+              navigate('/', { replace: true });
             } else {
-              window.location.replace('/home2');
+              window.location.replace('/');
             }
           }
         }
@@ -325,13 +325,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Aguardar um pouco para garantir que o logout foi processado
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      console.log('Logout completed, redirecting to /home2...');
+      console.log('Logout completed, redirecting to /...');
       
-      // Redirecionamento para /home2
+      // Redirecionamento para /
       if (navigate) {
-        setTimeout(() => navigate('/home2', { replace: true }), 300);
+        setTimeout(() => navigate('/', { replace: true }), 300);
       } else {
-        setTimeout(() => window.location.replace('/home2'), 300);
+        setTimeout(() => window.location.replace('/'), 300);
       }
     } catch (error) {
       console.error('Error signing out:', error);
@@ -339,9 +339,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.clear();
       sessionStorage.clear();
       if (navigate) {
-        setTimeout(() => navigate('/home2', { replace: true }), 100);
+        setTimeout(() => navigate('/', { replace: true }), 100);
       } else {
-        setTimeout(() => window.location.replace('/home2'), 100);
+        setTimeout(() => window.location.replace('/'), 100);
       }
     }
   };
