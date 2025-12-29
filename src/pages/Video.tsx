@@ -114,17 +114,17 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "1:1-1440p", label: "1:1 (Square) - 1440p", w: 1440, h: 1440 },
     { id: "9:16-1080p", label: "9:16 (Tall / Portrait) - 1080p", w: 1080, h: 1920 },
   ],
-  // Sora 2 - apenas 2 formatos
+  // Sora 2 - resoluções 720p suportadas
   "openai:3@1": [
-    { id: "9:16", label: "9:16 (Portrait)", w: 1080, h: 1920 },
-    { id: "16:9", label: "16:9 (Landscape)", w: 1920, h: 1080 },
+    { id: "16:9", label: "16:9 (Landscape) - 720p", w: 1280, h: 720 },
+    { id: "9:16", label: "9:16 (Portrait) - 720p", w: 720, h: 1280 },
   ],
-  // Sora 2 Pro - 4 formatos
+  // Sora 2 Pro - 4 formatos suportados
   "openai:3@2": [
-    { id: "9:16", label: "9:16 (Portrait)", w: 1080, h: 1920 },
-    { id: "16:9", label: "16:9 (Landscape)", w: 1920, h: 1080 },
-    { id: "4:7", label: "4:7 (Portrait)", w: 768, h: 1344 },
-    { id: "7:4", label: "7:4 (Landscape)", w: 1344, h: 768 },
+    { id: "16:9", label: "16:9 (Landscape) - 720p", w: 1280, h: 720 },
+    { id: "9:16", label: "9:16 (Portrait) - 720p", w: 720, h: 1280 },
+    { id: "7:4", label: "7:4 (Landscape)", w: 1792, h: 1024 },
+    { id: "4:7", label: "4:7 (Portrait)", w: 1024, h: 1792 },
   ],
   // MiniMax Hailuo 2.3 - 2 formatos
   "minimax:4@1": [
