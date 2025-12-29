@@ -630,10 +630,47 @@ Generate the edited image now.`;
                 </p>
               </div>
             )}
+
+            {/* Generation progress overlay */}
+            {isGenerating && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-40 bg-[#0d0d0d]/90 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-6 max-w-xs w-full px-6">
+                  {/* Animated icon */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+                    </div>
+                  </div>
+                  
+                  {/* Progress bar */}
+                  <div className="w-full space-y-2">
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full animate-[progress_2s_ease-in-out_infinite]"
+                        style={{
+                          animation: "progress 2s ease-in-out infinite",
+                        }}
+                      />
+                    </div>
+                    <p className="text-center text-sm text-muted-foreground">
+                      Gerando sua imagem...
+                    </p>
+                  </div>
+
+                  {/* Animated dots */}
+                  <div className="flex gap-1.5">
+                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Generated image overlay - shown when generation is complete */}
             {generatedImage && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-50 bg-[#0d0d0d]">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-50 bg-[#0d0d0d] animate-fade-in">
                 {/* Action buttons */}
                 <div className="absolute top-4 right-4 flex gap-2 z-10">
                   <Button
@@ -658,7 +695,7 @@ Generate the edited image now.`;
                 <img 
                   src={generatedImage} 
                   alt="Resultado" 
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-scale-in"
                 />
                 <p className="text-muted-foreground text-sm mt-4">
                   Clique no X para começar de novo ou baixe a imagem
