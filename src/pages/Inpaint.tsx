@@ -56,9 +56,15 @@ const Inpaint = () => {
     if (!canvasRef.current || !containerRef.current) return;
 
     const container = containerRef.current;
+    const canvasElement = canvasRef.current;
+    let canvas: FabricCanvas | null = null;
+    let isDisposed = false;
+    let resizeHandler: (() => void) | null = null;
 
     // Wait for layout to stabilize before initializing canvas
     const initCanvas = () => {
+      if (isDisposed) return;
+      
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
@@ -67,48 +73,54 @@ const Inpaint = () => {
         return;
       }
 
-      const canvas = new FabricCanvas(canvasRef.current!, {
-        width: containerWidth,
-        height: containerHeight,
-        backgroundColor: "#1a1a1a",
-        isDrawingMode: true,
-      });
+      try {
+        canvas = new FabricCanvas(canvasElement, {
+          width: containerWidth,
+          height: containerHeight,
+          backgroundColor: "#1a1a1a",
+          isDrawingMode: true,
+        });
 
-      // Set up brush
-      const brush = new PencilBrush(canvas);
-      brush.color = "rgba(0, 255, 128, 0.6)";
-      brush.width = brushSize;
-      canvas.freeDrawingBrush = brush;
+        // Set up brush
+        const brush = new PencilBrush(canvas);
+        brush.color = "rgba(0, 255, 128, 0.6)";
+        brush.width = brushSize;
+        canvas.freeDrawingBrush = brush;
 
-      setFabricCanvas(canvas);
+        setFabricCanvas(canvas);
 
-      // Handle resize
-      const handleResize = () => {
-        if (container) {
-          canvas.setDimensions({
-            width: container.clientWidth,
-            height: container.clientHeight,
-          });
-          canvas.renderAll();
-        }
-      };
+        // Handle resize
+        resizeHandler = () => {
+          if (canvas && container && !isDisposed) {
+            canvas.setDimensions({
+              width: container.clientWidth,
+              height: container.clientHeight,
+            });
+            canvas.renderAll();
+          }
+        };
 
-      window.addEventListener("resize", handleResize);
-
-      // Store cleanup function
-      (window as any).__inpaintCleanup = () => {
-        window.removeEventListener("resize", handleResize);
-        canvas.dispose();
-      };
+        window.addEventListener("resize", resizeHandler);
+      } catch (err) {
+        console.error("Error initializing canvas:", err);
+      }
     };
 
     requestAnimationFrame(initCanvas);
 
     return () => {
-      if ((window as any).__inpaintCleanup) {
-        (window as any).__inpaintCleanup();
-        delete (window as any).__inpaintCleanup;
+      isDisposed = true;
+      if (resizeHandler) {
+        window.removeEventListener("resize", resizeHandler);
       }
+      if (canvas) {
+        try {
+          canvas.dispose();
+        } catch (err) {
+          console.warn("Canvas already disposed:", err);
+        }
+      }
+      setFabricCanvas(null);
     };
   }, []);
 
