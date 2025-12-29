@@ -30,6 +30,7 @@ const SkinEnhancer = lazy(() => import("./pages/SkinEnhancer"));
 const ImageEditor = lazy(() => import("./pages/ImageEditor"));
 const AIAvatar = lazy(() => import("./pages/AIAvatar"));
 const Inpaint = lazy(() => import("./pages/Inpaint"));
+const Home3 = lazy(() => import("./pages/Home3"));
 
 // Create queryClient
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={<Home2 />} />
           <Route path="/home2" element={<Home2 />} /> {/* Alias for compatibility */}
+          <Route path="/home3" element={<Home3 />} />
           <Route path="/share" element={<Share />} />
           <Route path="/admin" element={<AdminLogin />} />
           
