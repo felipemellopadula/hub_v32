@@ -46,6 +46,10 @@ serve(async (req) => {
         frameStartUrl,
         frameEndUrl,
         outputFormat = "MP4",
+        // Motion Transfer (Kling 2.6 Pro)
+        referenceVideoUrl,
+        characterOrientation = "imageOrientation",
+        keepOriginalSound = false,
       } = body;
 
       // Usar exatamente o AIR informado pelo cliente, sem remapeamentos
@@ -61,23 +65,62 @@ serve(async (req) => {
 
       const taskUUID = crypto.randomUUID();
 
-      const tasks: any[] = [
-        { taskType: "authentication", apiKey: RUNWARE_API_KEY },
-        {
-          taskType: "videoInference",
-          taskUUID,
-          model: resolvedModel,
-          positivePrompt,
-          duration,
-          width,
-          height,
-          fps: 24,
-          numberResults,
-          outputFormat: "mp4", // Força mp4 minúsculo
-          includeCost: true,
-          deliveryMethod: "async",
-        },
-      ];
+      // ✅ Motion Transfer: Kling 2.6 Pro suporta referenceVideoUrl para capturar movimentos
+      const isMotionTransfer = referenceVideoUrl && resolvedModel.includes('klingai');
+      
+      let tasks: any[];
+      
+      if (isMotionTransfer) {
+        // Modo Motion Transfer: usa video como referência de movimento + imagem do personagem
+        console.log("[runware-video] 🎬 Motion Transfer mode activated");
+        tasks = [
+          { taskType: "authentication", apiKey: RUNWARE_API_KEY },
+          {
+            taskType: "videoInference",
+            taskUUID,
+            model: resolvedModel,
+            positivePrompt,
+            duration,
+            width,
+            height,
+            fps: 24,
+            numberResults,
+            outputFormat: "mp4",
+            includeCost: true,
+            deliveryMethod: "async",
+            // ✅ Motion Control Request parameters
+            motionReference: {
+              videoUrl: referenceVideoUrl,
+              characterOrientation: characterOrientation, // "imageOrientation" ou "videoOrientation"
+              keepOriginalSound: keepOriginalSound,
+            },
+          },
+        ];
+        
+        // Adiciona a imagem do personagem (frameStartUrl) como inputImage para o motion transfer
+        if (frameStartUrl) {
+          tasks[1].inputImage = frameStartUrl;
+        }
+      } else {
+        // Modo padrão: videoInference normal
+        tasks = [
+          { taskType: "authentication", apiKey: RUNWARE_API_KEY },
+          {
+            taskType: "videoInference",
+            taskUUID,
+            model: resolvedModel,
+            positivePrompt,
+            duration,
+            width,
+            height,
+            fps: 24,
+            numberResults,
+            outputFormat: "mp4",
+            includeCost: true,
+            deliveryMethod: "async",
+          },
+        ];
+      }
 
       // Adiciona configurações específicas do provider para bytedance
       if (resolvedModel.includes('bytedance')) {
@@ -88,15 +131,17 @@ serve(async (req) => {
         };
       }
 
-      console.log("[runware-video] start -> resolvedModel", resolvedModel);
-      console.log("[runware-video] start -> tasks:", tasks);
+      console.log("[runware-video] start -> resolvedModel", resolvedModel, "motionTransfer:", isMotionTransfer);
+      console.log("[runware-video] start -> tasks:", JSON.stringify(tasks, null, 2));
 
-
-      const frameImages: any[] = [];
-      if (frameStartUrl) frameImages.push({ inputImage: frameStartUrl, frame: "first" });
-      if (frameEndUrl) frameImages.push({ inputImage: frameEndUrl, frame: "last" });
-      if (frameImages.length > 0) {
-        tasks[1].frameImages = frameImages;
+      // Frames de referência (apenas para modo normal, não motion transfer)
+      if (!isMotionTransfer) {
+        const frameImages: any[] = [];
+        if (frameStartUrl) frameImages.push({ inputImage: frameStartUrl, frame: "first" });
+        if (frameEndUrl) frameImages.push({ inputImage: frameEndUrl, frame: "last" });
+        if (frameImages.length > 0) {
+          tasks[1].frameImages = frameImages;
+        }
       }
 
       const makeRequest = async (modelAir: string) => {

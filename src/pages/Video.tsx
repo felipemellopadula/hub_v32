@@ -131,6 +131,13 @@ const SUPPORTS_AUDIO: Record<string, boolean> = {
   "klingai:kling-video@2.6-pro": true,
 };
 
+// ✅ Motion Transfer: Kling 2.6 Pro suporta capturar movimentos de vídeo e aplicar em imagem
+const SUPPORTS_MOTION_TRANSFER: Record<string, boolean> = {
+  "bytedance:seedance@1.5-pro": false,
+  "google:3@3": false,
+  "klingai:kling-video@2.6-pro": true,
+};
+
 const FORMATS = ["mp4", "webm", "mov"];
 const MAX_VIDEOS = 12;
 
@@ -348,6 +355,12 @@ const VideoPage: React.FC = () => {
   const [generateAudio] = useState<boolean>(false); // off (Veo comentado)
   const [frameStartUrl, setFrameStartUrl] = useState("");
   const [frameEndUrl, setFrameEndUrl] = useState("");
+  // ✅ Motion Transfer states (Kling 2.6 Pro)
+  const [referenceVideoUrl, setReferenceVideoUrl] = useState("");
+  const [characterOrientation, setCharacterOrientation] = useState<"imageOrientation" | "videoOrientation">("imageOrientation");
+  const [keepOriginalSound, setKeepOriginalSound] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [isDragOverVideo, setIsDragOverVideo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskUUID, setTaskUUID] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -368,6 +381,7 @@ const VideoPage: React.FC = () => {
   const allowedDurations = useMemo<number[]>(() => DURATIONS_BY_MODEL[modelId] || [5], [modelId]);
   const supportsLastFrame = SUPPORTS_LAST_FRAME[modelId];
   const supportsAudio = SUPPORTS_AUDIO[modelId];
+  const supportsMotionTransfer = SUPPORTS_MOTION_TRANSFER[modelId];
 
   const res = useMemo<Resolution>(() => {
     const found = allowedResolutions.find((r) => r.id === resolution);
@@ -543,6 +557,12 @@ const VideoPage: React.FC = () => {
       // apenas por consistência; Veo está desativado
       // setGenerateAudio(false);
     }
+    // ✅ Limpar dados de motion transfer se modelo não suportar
+    if (!SUPPORTS_MOTION_TRANSFER[modelId] && referenceVideoUrl) {
+      setReferenceVideoUrl("");
+      setCharacterOrientation("imageOrientation");
+      setKeepOriginalSound(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelId]);
 
@@ -587,6 +607,43 @@ const VideoPage: React.FC = () => {
         });
       } finally {
         setter(false);
+      }
+    },
+    [toast, user?.id]
+  );
+
+  // ✅ Upload de vídeo de referência para Motion Transfer
+  const uploadReferenceVideo = useCallback(
+    async (file: File) => {
+      setUploadingVideo(true);
+
+      try {
+        const validTypes = ["video/mp4", "video/webm", "video/quicktime", "video/mov"];
+        if (!validTypes.includes(file.type)) throw new Error("Tipo de vídeo não suportado. Use MP4, WebM ou MOV.");
+        if (file.size > 100 * 1024 * 1024) throw new Error("Arquivo muito grande. Máximo 100MB.");
+
+        const safeFileName = `${user?.id || "temp"}_motion_${Date.now()}.mp4`;
+
+        const { data, error } = await supabase.storage.from("video-refs").upload(safeFileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+        if (error) throw error;
+
+        const { data: publicData } = supabase.storage.from("video-refs").getPublicUrl(data.path);
+        if (!publicData.publicUrl) throw new Error("Falha ao gerar URL pública");
+
+        setReferenceVideoUrl(publicData.publicUrl);
+        toast({ title: "Sucesso", description: "Vídeo de referência carregado." });
+      } catch (e: any) {
+        console.error("Upload error:", e);
+        toast({
+          title: "Erro no upload",
+          description: e.message || "Tente novamente com um vídeo diferente.",
+          variant: "destructive",
+        });
+      } finally {
+        setUploadingVideo(false);
       }
     },
     [toast, user?.id]
@@ -772,6 +829,12 @@ const VideoPage: React.FC = () => {
         deliveryMethod: "async",
         frameStartUrl: frameStartUrl || undefined,
         frameEndUrl: supportsLastFrame ? frameEndUrl || undefined : undefined,
+        // ✅ Motion Transfer parameters (Kling 2.6 Pro)
+        ...(supportsMotionTransfer && referenceVideoUrl ? {
+          referenceVideoUrl,
+          characterOrientation,
+          keepOriginalSound,
+        } : {}),
       };
 
       if (outputFormat === "mov") {
@@ -813,9 +876,13 @@ const VideoPage: React.FC = () => {
     res.h,
     res.w,
     supportsLastFrame,
+    supportsMotionTransfer,
     duration,
     frameEndUrl,
     frameStartUrl,
+    referenceVideoUrl,
+    characterOrientation,
+    keepOriginalSound,
   ]);
 
   const handleDownload = useCallback(
@@ -1150,6 +1217,146 @@ const VideoPage: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* ✅ Motion Transfer (Kling 2.6 Pro) */}
+              {supportsMotionTransfer && (
+                <div className="space-y-4 p-4 border border-primary/20 rounded-lg bg-primary/5">
+                  <div className="flex items-center gap-2">
+                    <VideoIcon className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-semibold">Motion Transfer</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Faça upload de um vídeo de movimentos e aplique esses movimentos na imagem do personagem (Frame Inicial).
+                  </p>
+                  
+                  {/* Upload de vídeo de referência */}
+                  <div className="flex flex-col">
+                    <Label className="mb-2">Vídeo de Referência (movimentos)</Label>
+                    <label
+                      htmlFor="video-upload"
+                      className={`border border-border rounded-md p-4 text-center ${
+                        !isProcessing ? "cursor-pointer hover:bg-accent" : "opacity-60 cursor-not-allowed"
+                      } flex flex-col items-center justify-center h-28 transition-colors ${
+                        isDragOverVideo ? "bg-accent border-primary border-dashed" : ""
+                      }`}
+                      onDragEnter={(e) => {
+                        if (!isProcessing) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDragOverVideo(true);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const { clientX: x, clientY: y } = e;
+                        if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+                          setIsDragOverVideo(false);
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        if (!isProcessing) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }
+                      }}
+                      onDrop={(e) => {
+                        if (!isProcessing) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDragOverVideo(false);
+                          const files = Array.from(e.dataTransfer.files);
+                          const videoFile = files.find((f) => f.type.startsWith("video/"));
+                          if (videoFile) uploadReferenceVideo(videoFile);
+                          else toast({ title: "Tipo de arquivo inválido", description: "Por favor, arraste apenas arquivos de vídeo.", variant: "destructive" });
+                        }
+                      }}
+                    >
+                      <Suspense fallback={<div className="h-6 w-6 rounded bg-muted mb-1" />}>
+                        <UploadIcon className="h-6 w-6 mb-1 text-muted-foreground" />
+                      </Suspense>
+                      <span className="text-sm">{isDragOverVideo ? "Solte o vídeo aqui" : "Carregar ou Arrastar Vídeo (MP4, WebM)"}</span>
+                    </label>
+                    <Input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      id="video-upload"
+                      onChange={(e) => e.target.files?.[0] && uploadReferenceVideo(e.target.files[0])}
+                      disabled={isProcessing}
+                    />
+                    <Input
+                      placeholder="Ou cole a URL do vídeo aqui"
+                      value={referenceVideoUrl}
+                      onChange={(e) => setReferenceVideoUrl(e.target.value)}
+                      className="mt-2"
+                      disabled={isProcessing}
+                    />
+                    {uploadingVideo && <p className="text-sm text-muted-foreground mt-1">Enviando vídeo...</p>}
+                    {referenceVideoUrl && (
+                      <div className="mt-2 inline-block relative">
+                        <video
+                          src={referenceVideoUrl}
+                          className="w-24 h-16 rounded border border-border object-cover"
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background/80 hover:bg-accent"
+                          onClick={() => setReferenceVideoUrl("")}
+                          aria-label="Remover vídeo de referência"
+                          disabled={isProcessing}
+                        >
+                          <Suspense fallback={<div className="h-4 w-4 rounded bg-muted" />}>
+                            <XIcon className="h-4 w-4" />
+                          </Suspense>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Opções de Motion Transfer */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="mb-2">Orientação do Personagem</Label>
+                      <Select 
+                        value={characterOrientation} 
+                        onValueChange={(v) => setCharacterOrientation(v as "imageOrientation" | "videoOrientation")}
+                        disabled={isProcessing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a orientação" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="imageOrientation">Usar orientação da imagem</SelectItem>
+                          <SelectItem value="videoOrientation">Usar orientação do vídeo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 pt-2">
+                      <Switch
+                        id="keep-sound"
+                        checked={keepOriginalSound}
+                        onCheckedChange={setKeepOriginalSound}
+                        disabled={isProcessing}
+                      />
+                      <Label htmlFor="keep-sound">Manter áudio original do vídeo</Label>
+                    </div>
+                  </div>
+
+                  {referenceVideoUrl && !frameStartUrl && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      ⚠️ Para usar Motion Transfer, você também precisa enviar uma imagem do personagem no "Frame Inicial" acima.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <Button className="w-full" onClick={() => debounce(startGeneration)} disabled={isProcessing || isDebouncing || !prompt}>
                 {isProcessing ? (
