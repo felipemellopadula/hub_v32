@@ -36,9 +36,9 @@ interface PublicImage {
 const heroCards = [
   {
     video: "https://videos.pexels.com/video-files/3129671/3129671-sd_640_360_30fps.mp4",
-    title: "PROMOÇÃO DE FIM DE ANO",
-    description: "Até 67% off em todos os planos + 1 ano de gerações ilimitadas",
-    badge: "-67% OFF",
+    title: "PROMOÇÃO DE LANÇAMENTO",
+    description: "Até 60% off em todos os planos de +1 ano de gerações ilimitadas",
+    badge: "-60% OFF",
     badgeColor: "bg-red-500",
     href: "#pricing",
   },
@@ -346,10 +346,6 @@ const Home2 = () => {
                   <p className="text-sm text-white/80">{card.description}</p>
                 </div>
 
-                {/* Logo overlay */}
-                <div className="absolute top-4 left-4 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <img src="/images/logo-light-optimized.webp" alt="Synergy" className="h-5 w-auto" />
-                </div>
               </div>
             );
           })}
