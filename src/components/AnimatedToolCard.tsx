@@ -6,6 +6,7 @@ interface Tool {
   name: string;
   images?: string[];
   image?: string;
+  video?: string;
   path?: string;
   hasArrow?: boolean;
   animated?: boolean;
@@ -54,8 +55,17 @@ export const AnimatedToolCard = ({ tool }: AnimatedToolCardProps) => {
       className="group relative flex-shrink-0 w-[140px] cursor-pointer"
     >
       <div className="relative rounded-xl overflow-hidden aspect-[3/4] bg-card hover:ring-2 hover:ring-primary/50 transition-all">
-        {/* Stack all images, only current one visible */}
-        {tool.animated && images.length > 1 ? (
+        {/* Video, animated images, or static image */}
+        {tool.video ? (
+          <video
+            src={tool.video}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-200"
+          />
+        ) : tool.animated && images.length > 1 ? (
           images.map((img, index) => (
             <img
               key={img}

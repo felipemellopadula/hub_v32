@@ -3,12 +3,14 @@ import { LazyVideo } from "@/components/LazyVideo";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Check, Zap, Crown, Star, ArrowRight, LogOut, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
 import { supabase } from "@/integrations/supabase/client";
 import LogoLoop from "@/components/LogoLoop";
 import { AnimatedToolCard } from "@/components/AnimatedToolCard";
+import { ContactForm } from "@/components/ContactForm";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,11 +54,11 @@ const heroCards = [
   },
   {
     video: "https://videos.pexels.com/video-files/3141207/3141207-sd_640_360_25fps.mp4",
-    title: "SHOTS",
-    description: "Uma imagem se torna 9 shots. Escolha e melhore seus favoritos",
-    badge: null,
-    badgeColor: "",
-    path: "/image2",
+    title: "MOTION TRANSFER",
+    description: "Transfira os movimentos de um vídeo diretamente para um personagem estático.",
+    badge: "KLING 2.6",
+    badgeColor: "bg-primary",
+    path: "/video?model=klingai:kling-video@2.6-pro",
   },
   {
     video: "https://videos.pexels.com/video-files/3195394/3195394-sd_640_360_25fps.mp4",
@@ -84,7 +86,7 @@ const tools = [
   },
   {
     name: "CRIAR VÍDEO",
-    image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=400&fit=crop",
+    video: "https://videos.pexels.com/video-files/857251/857251-hd_1920_1080_25fps.mp4",
     hasArrow: true,
     path: "/video",
   },
@@ -267,6 +269,12 @@ const Home2 = () => {
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 Preços
+              </a>
+              <a
+                href="#contact"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Contato
               </a>
             </nav>
           </div>
@@ -505,6 +513,21 @@ const Home2 = () => {
               </ul>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="container mx-auto px-4 py-16 scroll-mt-20">
+        <div className="max-w-xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-4">Entre em Contato</h2>
+            <p className="text-muted-foreground">
+              Tem dúvidas ou quer saber mais? Envie uma mensagem!
+            </p>
+          </div>
+          <Card className="p-6">
+            <ContactForm />
+          </Card>
         </div>
       </section>
 

@@ -20,7 +20,7 @@ import React, {
   startTransition,
   memo,
 } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -342,6 +342,7 @@ const SavedVideo = memo(function SavedVideo({
 // --- PÁGINA PRINCIPAL ---
 const VideoPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const { debounce, isDebouncing } = useButtonDebounce(2000);
@@ -376,6 +377,21 @@ const VideoPage: React.FC = () => {
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [isSaving, setIsSaving] = useState(false); // ✅ Flag para prevenir salvamentos simultâneos
   const savedVideoUrls = useRef(new Set<string>()); // ✅ Controle de URLs já salvas
+
+  // ✅ Ler modelo da URL (para Motion Transfer link)
+  useEffect(() => {
+    const modelParam = searchParams.get("model");
+    if (modelParam && MODELS.some(m => m.id === modelParam)) {
+      setModelId(modelParam);
+      // Ajustar resolution e duration para valores válidos do novo modelo
+      const newResolutions = RESOLUTIONS_BY_MODEL[modelParam] || [];
+      if (newResolutions.length > 0) {
+        setResolution(newResolutions[0].id);
+      }
+      const newDurations = DURATIONS_BY_MODEL[modelParam] || [5];
+      setDuration(newDurations[0]);
+    }
+  }, [searchParams]);
 
   // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
