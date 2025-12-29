@@ -386,7 +386,7 @@ const VideoPage: React.FC = () => {
 
   const res = useMemo<Resolution>(() => {
     const found = allowedResolutions.find((r) => r.id === resolution);
-    return found || allowedResolutions[0];
+    return found || allowedResolutions[0] || { id: "16:9-720p", label: "16:9", w: 1280, h: 720 };
   }, [allowedResolutions, resolution]);
 
   // Carrega vídeos salvos (com startTransition para não travar UI)
