@@ -35,12 +35,12 @@ interface ReferenceImage {
 const Inpaint = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refImageInputRef = useRef<HTMLInputElement>(null);
   
-  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [canvasReady, setCanvasReady] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>("brush");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
@@ -51,19 +51,18 @@ const Inpaint = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // Initialize Fabric canvas
+  // Initialize Fabric canvas - create canvas element dynamically
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+    const container = canvasContainerRef.current;
+    if (!container) return;
 
-    const container = containerRef.current;
-    const canvasElement = canvasRef.current;
     let canvas: FabricCanvas | null = null;
-    let isDisposed = false;
+    let canvasElement: HTMLCanvasElement | null = null;
     let resizeHandler: (() => void) | null = null;
+    let isDisposed = false;
 
-    // Wait for layout to stabilize before initializing canvas
     const initCanvas = () => {
-      if (isDisposed) return;
+      if (isDisposed || !container) return;
       
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
@@ -74,6 +73,11 @@ const Inpaint = () => {
       }
 
       try {
+        // Create canvas element dynamically - React won't manage it
+        canvasElement = document.createElement('canvas');
+        canvasElement.id = 'inpaint-canvas';
+        container.appendChild(canvasElement);
+
         canvas = new FabricCanvas(canvasElement, {
           width: containerWidth,
           height: containerHeight,
@@ -84,10 +88,11 @@ const Inpaint = () => {
         // Set up brush
         const brush = new PencilBrush(canvas);
         brush.color = "rgba(0, 255, 128, 0.6)";
-        brush.width = brushSize;
+        brush.width = 20;
         canvas.freeDrawingBrush = brush;
 
-        setFabricCanvas(canvas);
+        fabricCanvasRef.current = canvas;
+        setCanvasReady(true);
 
         // Handle resize
         resizeHandler = () => {
@@ -106,53 +111,73 @@ const Inpaint = () => {
       }
     };
 
-    requestAnimationFrame(initCanvas);
+    // Delay initialization slightly to ensure container is ready
+    const timer = setTimeout(initCanvas, 50);
 
     return () => {
       isDisposed = true;
+      clearTimeout(timer);
+      
       if (resizeHandler) {
         window.removeEventListener("resize", resizeHandler);
       }
+      
       if (canvas) {
         try {
           canvas.dispose();
         } catch (err) {
-          console.warn("Canvas already disposed:", err);
+          console.warn("Canvas dispose error:", err);
         }
       }
-      setFabricCanvas(null);
+
+      fabricCanvasRef.current = null;
+      
+      // Remove the canvas element we created
+      if (canvasElement && container.contains(canvasElement)) {
+        // Fabric.js wraps the canvas, so we need to remove the wrapper
+        const wrapper = canvasElement.parentElement;
+        if (wrapper && wrapper !== container) {
+          try {
+            container.removeChild(wrapper);
+          } catch (err) {
+            console.warn("Wrapper removal error:", err);
+          }
+        }
+      }
     };
   }, []);
 
   // Update brush settings when tool changes
   useEffect(() => {
-    if (!fabricCanvas) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
 
     if (activeTool === "brush") {
-      fabricCanvas.isDrawingMode = true;
-      if (fabricCanvas.freeDrawingBrush) {
-        fabricCanvas.freeDrawingBrush.color = "rgba(0, 255, 128, 0.6)";
-        fabricCanvas.freeDrawingBrush.width = brushSize;
+      canvas.isDrawingMode = true;
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = "rgba(0, 255, 128, 0.6)";
+        canvas.freeDrawingBrush.width = brushSize;
       }
     } else if (activeTool === "eraser") {
-      fabricCanvas.isDrawingMode = true;
-      if (fabricCanvas.freeDrawingBrush) {
-        fabricCanvas.freeDrawingBrush.color = "rgba(0, 0, 0, 1)";
-        fabricCanvas.freeDrawingBrush.width = brushSize * 2;
+      canvas.isDrawingMode = true;
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = "rgba(0, 0, 0, 1)";
+        canvas.freeDrawingBrush.width = brushSize * 2;
       }
     } else if (activeTool === "hand") {
-      fabricCanvas.isDrawingMode = false;
+      canvas.isDrawingMode = false;
     }
-  }, [activeTool, fabricCanvas, brushSize]);
+  }, [activeTool, canvasReady, brushSize]);
 
   // Load uploaded image onto canvas
   useEffect(() => {
-    if (!fabricCanvas || !uploadedImage) {
-      console.log("🖼️ Aguardando canvas ou imagem:", { hasCanvas: !!fabricCanvas, hasImage: !!uploadedImage });
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !uploadedImage) {
+      console.log("🖼️ Aguardando canvas ou imagem:", { hasCanvas: !!canvas, hasImage: !!uploadedImage });
       return;
     }
 
-    const container = containerRef.current;
+    const container = canvasContainerRef.current;
     if (!container) {
       console.log("🖼️ Container não encontrado");
       return;
@@ -182,7 +207,7 @@ const Inpaint = () => {
       }
 
       // Update canvas dimensions first
-      fabricCanvas.setDimensions({
+      canvas.setDimensions({
         width: containerWidth,
         height: containerHeight,
       });
@@ -211,11 +236,11 @@ const Inpaint = () => {
               evented: false,
             });
 
-            fabricCanvas.clear();
-            fabricCanvas.backgroundColor = "#1a1a1a";
-            fabricCanvas.add(img);
-            fabricCanvas.sendObjectToBack(img);
-            fabricCanvas.renderAll();
+            canvas.clear();
+            canvas.backgroundColor = "#1a1a1a";
+            canvas.add(img);
+            canvas.sendObjectToBack(img);
+            canvas.renderAll();
 
             console.log("🖼️ Imagem adicionada ao canvas com sucesso");
             // Save initial state
@@ -238,43 +263,47 @@ const Inpaint = () => {
 
     // Use setTimeout to ensure canvas is fully initialized
     setTimeout(loadImage, 50);
-  }, [uploadedImage, fabricCanvas]);
+  }, [uploadedImage, canvasReady]);
 
   const saveToHistory = () => {
-    if (!fabricCanvas) return;
-    const json = JSON.stringify(fabricCanvas.toJSON());
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const json = JSON.stringify(canvas.toJSON());
     setHistory(prev => [...prev.slice(0, historyIndex + 1), json]);
     setHistoryIndex(prev => prev + 1);
   };
 
   const handleUndo = () => {
-    if (!fabricCanvas || historyIndex <= 0) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
-    fabricCanvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
-      fabricCanvas.renderAll();
+    canvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
+      canvas.renderAll();
       setHistoryIndex(newIndex);
     });
   };
 
   const handleRedo = () => {
-    if (!fabricCanvas || historyIndex >= history.length - 1) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || historyIndex >= history.length - 1) return;
     const newIndex = historyIndex + 1;
-    fabricCanvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
-      fabricCanvas.renderAll();
+    canvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
+      canvas.renderAll();
       setHistoryIndex(newIndex);
     });
   };
 
   const handleClearMask = () => {
-    if (!fabricCanvas) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
     // Remove all paths (drawings), keep background image
-    const objects = fabricCanvas.getObjects();
+    const objects = canvas.getObjects();
     objects.forEach((obj) => {
       if (obj.type === "path") {
-        fabricCanvas.remove(obj);
+        canvas.remove(obj);
       }
     });
-    fabricCanvas.renderAll();
+    canvas.renderAll();
     saveToHistory();
     toast.success("Máscara limpa!");
   };
@@ -319,17 +348,19 @@ const Inpaint = () => {
   const handleDeleteImage = () => {
     setUploadedImage(null);
     setGeneratedImage(null);
-    if (fabricCanvas) {
-      fabricCanvas.clear();
-      fabricCanvas.backgroundColor = "#1a1a1a";
-      fabricCanvas.renderAll();
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      canvas.clear();
+      canvas.backgroundColor = "#1a1a1a";
+      canvas.renderAll();
     }
     setHistory([]);
     setHistoryIndex(-1);
   };
 
   const handleGenerate = async () => {
-    if (!fabricCanvas || !uploadedImage) {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !uploadedImage) {
       toast.error("Por favor, faça upload de uma imagem primeiro");
       return;
     }
@@ -343,14 +374,14 @@ const Inpaint = () => {
 
     try {
       // Get canvas with mask as data URL
-      const canvasDataUrl = fabricCanvas.toDataURL({
+      const canvasDataUrl = canvas.toDataURL({
         format: "png",
         quality: 1,
         multiplier: 1,
       });
 
       // Check if there are any drawn paths (mask)
-      const hasDrawnMask = fabricCanvas.getObjects().length > 0;
+      const hasDrawnMask = canvas.getObjects().length > 0;
 
       // Build inpainting-specific prompt that explains the mask to the model
       let inpaintPrompt: string;
@@ -541,19 +572,14 @@ Generate the edited image now with the green masked areas replaced according to 
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col">
           <div 
-            ref={containerRef}
+            ref={canvasContainerRef}
             className="flex-1 relative bg-[#0d0d0d] overflow-hidden"
           >
-            {/* Canvas wrapper - Fabric.js creates additional DOM elements */}
-            <div 
-              className={`absolute inset-0 ${(!uploadedImage || generatedImage) ? 'invisible pointer-events-none' : ''}`}
-              style={{ zIndex: uploadedImage && !generatedImage ? 5 : 1 }}
-            >
-              <canvas ref={canvasRef} className="w-full h-full" />
-            </div>
+            {/* Fabric.js canvas is created dynamically inside this container */}
             
+            {/* Upload prompt overlay - shown when no image is uploaded */}
             {!uploadedImage && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-[#0d0d0d]">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -576,8 +602,9 @@ Generate the edited image now with the green masked areas replaced according to 
               </div>
             )}
             
+            {/* Generated image overlay - shown when generation is complete */}
             {generatedImage && (
-              <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
+              <div className="absolute inset-0 flex items-center justify-center p-4 z-20 bg-[#0d0d0d]">
                 <img 
                   src={generatedImage} 
                   alt="Resultado" 
