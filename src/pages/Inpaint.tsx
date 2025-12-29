@@ -387,23 +387,30 @@ const Inpaint = () => {
       let inpaintPrompt: string;
       
       if (hasDrawnMask) {
-        // User painted areas - explain the mask to the model
-        inpaintPrompt = `INPAINTING TASK: In the provided image, there are areas painted with bright green/neon color (semi-transparent green, RGB approximately 0,255,128). These green painted areas are MASKS indicating exactly WHERE you must apply the following edit.
+        // User painted areas - explain the mask to the model with better context understanding
+        inpaintPrompt = `IMAGE EDITING TASK:
 
-USER'S EDIT REQUEST: "${prompt}"
+The user has painted/marked certain areas of this image with a bright green/neon color. This green marking indicates the REGION OF INTEREST where the edit should be applied.
 
-CRITICAL INSTRUCTIONS:
-1. Identify ALL green/neon painted areas in the image - these are the ONLY areas you should modify
-2. COMPLETELY REMOVE the green paint/mask color from those areas
-3. REPLACE those masked areas with content that matches the user's request: "${prompt}"
-4. Keep ALL other parts of the image COMPLETELY UNCHANGED - do not modify anything outside the green masked areas
-5. The result should look natural with seamless blending between edited and unedited areas
-6. The output image must have NO green mask visible - the mask must be replaced entirely
+USER'S REQUEST: "${prompt}"
 
-Generate the edited image now with the green masked areas replaced according to the instructions.`;
+IMPORTANT - INTELLIGENT INTERPRETATION:
+- The green paint shows the GENERAL AREA or ELEMENT the user wants to modify
+- If the green touches part of a shape, color region, or object, the user likely wants to edit THE ENTIRE connected element, not just the painted pixels
+- For example: if user paints part of a blue stripe and says "make it red", change the ENTIRE blue stripe to red
+- Think about what makes visual sense - users paint to INDICATE what they want changed, not to precisely outline it
+
+YOUR TASK:
+1. Identify what element/region the green marking is pointing to
+2. Apply "${prompt}" to that entire element or region intelligently  
+3. Remove all green paint from the result
+4. Keep unrelated parts of the image unchanged
+5. Blend naturally
+
+Generate the edited image now.`;
       } else {
         // No mask - general edit on entire image
-        inpaintPrompt = `Edit this image with the following instruction: ${prompt}. Generate the edited image now.`;
+        inpaintPrompt = `Edit this image according to this instruction: ${prompt}. Generate the edited image now.`;
       }
 
       // Usar Runware com Nano Banana 2 Pro (google:4@2)
@@ -609,12 +616,36 @@ Generate the edited image now with the green masked areas replaced according to 
             
             {/* Generated image overlay - shown when generation is complete */}
             {generatedImage && (
-              <div className="absolute inset-0 flex items-center justify-center p-4 z-50 bg-[#0d0d0d]">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-50 bg-[#0d0d0d]">
+                {/* Action buttons */}
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleDownload}
+                    className="bg-black/50 border-white/20 hover:bg-white/10"
+                    title="Download"
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setGeneratedImage(null)}
+                    className="bg-black/50 border-white/20 hover:bg-red-500/20 hover:border-red-500/50"
+                    title="Fechar e editar novamente"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
                 <img 
                   src={generatedImage} 
                   alt="Resultado" 
                   className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                 />
+                <p className="text-muted-foreground text-sm mt-4">
+                  Clique no X para voltar a editar ou baixe a imagem
+                </p>
               </div>
             )}
           </div>
