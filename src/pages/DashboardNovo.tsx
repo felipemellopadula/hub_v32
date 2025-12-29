@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, Transition } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronDown, Sparkles, ArrowUpCircle, UserCircle, Smile, Video, LogOut, ZoomIn, Wand2 } from 'lucide-react';
+import { ChevronDown, Sparkles, UserCircle, Smile, Video, LogOut, ZoomIn, Wand2, Paintbrush } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -200,6 +200,10 @@ const ImageCarousel: React.FC<CarouselProps> = ({ isActive, isTabletOrMobile }) 
                 <Wand2 className="w-4 h-4" />
                 Image Editor
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/inpaint')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+                <Paintbrush className="w-4 h-4" />
+                Inpaint
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </motion.div>
@@ -279,10 +283,6 @@ const VideoLoop: React.FC<VideoLoopProps> = ({ isActive, isTabletOrMobile }) => 
               <DropdownMenuItem onClick={() => navigate('/video')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
                 <Video className="w-4 h-4" />
                 Gerar Vídeo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/video?mode=upscale')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
-                <ArrowUpCircle className="w-4 h-4" />
-                Upscale
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

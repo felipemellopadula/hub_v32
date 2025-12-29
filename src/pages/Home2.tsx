@@ -48,7 +48,7 @@ const heroCards = [
     description: "Pincel para editar áreas específicas ou transformar imagens inteiras",
     badge: "NANO BANANA",
     badgeColor: "bg-primary",
-    path: "/image-editor",
+    path: "/inpaint",
   },
   {
     video: "https://videos.pexels.com/video-files/3141207/3141207-sd_640_360_25fps.mp4",

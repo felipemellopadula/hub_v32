@@ -29,6 +29,7 @@ const Upscale = lazy(() => import("./pages/Upscale"));
 const SkinEnhancer = lazy(() => import("./pages/SkinEnhancer"));
 const ImageEditor = lazy(() => import("./pages/ImageEditor"));
 const AIAvatar = lazy(() => import("./pages/AIAvatar"));
+const Inpaint = lazy(() => import("./pages/Inpaint"));
 
 // Create queryClient
 const queryClient = new QueryClient();
@@ -106,6 +107,9 @@ const App = () => (
           } />
           <Route path="/ai-avatar" element={
             <ProtectedRoute><AIAvatar /></ProtectedRoute>
+          } />
+          <Route path="/inpaint" element={
+            <ProtectedRoute><Inpaint /></ProtectedRoute>
           } />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           
