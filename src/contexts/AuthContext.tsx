@@ -215,24 +215,24 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user && event !== 'SIGNED_OUT') {
           fetchProfile(session.user.id, session.user);
           
-          // Redirect to dashboard for sign-in events (only from login pages, not /home2)
+          // Redirect to dashboard-novo for sign-in events (only from login pages, not /home2)
           if ((event === 'SIGNED_IN' || (event === 'TOKEN_REFRESHED' && window.location.pathname === '/')) && 
               (window.location.pathname === '/' || window.location.pathname === '/auth')) {
-            console.log('Redirecting to /dashboard...');
+            console.log('Redirecting to /dashboard-novo...');
             if (navigate) {
-              navigate('/dashboard', { replace: true });
+              navigate('/dashboard-novo', { replace: true });
             } else {
-              window.location.replace('/dashboard');
+              window.location.replace('/dashboard-novo');
             }
           }
         } else {
           setProfile(null);
           // Only redirect if explicitly signed out
-          if (event === 'SIGNED_OUT' && window.location.pathname !== '/') {
+          if (event === 'SIGNED_OUT' && window.location.pathname !== '/home2') {
             if (navigate) {
-              navigate('/', { replace: true });
+              navigate('/home2', { replace: true });
             } else {
-              window.location.replace('/');
+              window.location.replace('/home2');
             }
           }
         }
@@ -252,13 +252,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (session?.user) {
         fetchProfile(session.user.id, session.user);
         
-        // If user has session and is on homepage, redirect to dashboard
+        // If user has session and is on homepage or auth, redirect to dashboard-novo
         if (window.location.pathname === '/' || window.location.pathname === '/auth') {
-          console.log('Initial redirect to dashboard...');
+          console.log('Initial redirect to dashboard-novo...');
           if (navigate) {
-            navigate('/dashboard', { replace: true });
+            navigate('/dashboard-novo', { replace: true });
           } else {
-            window.location.replace('/dashboard');
+            window.location.replace('/dashboard-novo');
           }
         }
       }
@@ -281,7 +281,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signUp = async (email: string, password: string, name: string, phone?: string) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}/dashboard-novo`;
     const normalizedEmail = email.trim().toLowerCase();
     
     const { error } = await supabase.auth.signUp({
@@ -299,7 +299,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}/dashboard-novo`;
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
