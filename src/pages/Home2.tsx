@@ -69,8 +69,8 @@ const heroCards = [
 ];
 
 const tools = [
-  { 
-    name: "CRIAR IMAGEM", 
+  {
+    name: "CRIAR IMAGEM",
     images: [
       "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=400&fit=crop",
       "https://images.unsplash.com/photo-1686191128892-3b37add4b5fd?w=300&h=400&fit=crop",
@@ -79,16 +79,16 @@ const tools = [
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
     ],
     animated: true,
-    path: "/image2" 
+    path: "/image2",
   },
-  { 
-    name: "CRIAR VÍDEO", 
-    image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=400&fit=crop", 
-    hasArrow: true, 
-    path: "/video" 
+  {
+    name: "CRIAR VÍDEO",
+    image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=400&fit=crop",
+    hasArrow: true,
+    path: "/video",
   },
-  { 
-    name: "IMAGE EDITOR", 
+  {
+    name: "IMAGE EDITOR",
     images: [
       "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop",
       "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&h=400&fit=crop",
@@ -96,20 +96,20 @@ const tools = [
       "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=300&h=400&fit=crop",
     ],
     animated: true,
-    path: "/image-editor" 
+    path: "/image-editor",
   },
-  { 
-    name: "SKIN ENHANCER", 
-    image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop", 
-    path: "/skin-enhancer" 
+  {
+    name: "SKIN ENHANCER",
+    image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop",
+    path: "/skin-enhancer",
   },
-  { 
-    name: "UPSCALE 4K", 
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=400&fit=crop", 
-    path: "/upscale" 
+  {
+    name: "UPSCALE 4K",
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=400&fit=crop",
+    path: "/upscale",
   },
-  { 
-    name: "AVATAR IA", 
+  {
+    name: "AVATAR IA",
     images: [
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop",
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=400&fit=crop",
@@ -117,7 +117,7 @@ const tools = [
       "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&h=400&fit=crop",
     ],
     animated: true,
-    path: "/ai-avatar" 
+    path: "/ai-avatar",
   },
 ];
 
@@ -139,12 +139,7 @@ const pricingPlans = [
     period: "/mês",
     buttonText: "Começar Agora",
     buttonVariant: "outline" as const,
-    features: [
-      "100 créditos de geração",
-      "Acesso ao modelo Gemini Flash",
-      "Licença de uso pessoal",
-      "Upscale HD",
-    ],
+    features: ["100 créditos de geração", "Acesso ao modelo Gemini Flash", "Licença de uso pessoal", "Upscale HD"],
   },
   {
     name: "Pro",
@@ -233,18 +228,43 @@ const Home2 = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <img 
-                src="/lovable-uploads/76f92d5d-608b-47a5-a829-bdb436a60274.png" 
-                alt="Synergy AI" 
+              <img
+                src="/lovable-uploads/76f92d5d-608b-47a5-a829-bdb436a60274.png"
+                alt="Synergy AI"
                 className="h-7 w-auto"
               />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
-              <Link to="/image2" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Imagem</Link>
-              <Link to="/video" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Vídeo</Link>
-              <Link to="/image2" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Editar</Link>
-              <Link to="/chat" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Personagens</Link>
-              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Preços</a>
+              <Link
+                to="/image2"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Imagem
+              </Link>
+              <Link
+                to="/video"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Vídeo
+              </Link>
+              <Link
+                to="/image2"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Editar
+              </Link>
+              <Link
+                to="/chat"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Personagens
+              </Link>
+              <a
+                href="#pricing"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Preços
+              </a>
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -253,22 +273,20 @@ const Home2 = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2">
                     <Avatar className="h-7 w-7">
-                      <AvatarImage src={profile?.avatar_url || ''} />
+                      <AvatarImage src={profile?.avatar_url || ""} />
                       <AvatarFallback className="text-xs">
-                        {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {profile?.name?.charAt(0)?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="hidden md:inline">{profile?.name || 'Usuário'}</span>
+                    <span className="hidden md:inline">{profile?.name || "Usuário"}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/dashboard-novo')}>
+                  <DropdownMenuItem onClick={() => navigate("/dashboard-novo")}>
                     <User className="mr-2 h-4 w-4" />
                     Dashboard
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    Configurações
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>Configurações</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -297,46 +315,37 @@ const Home2 = () => {
             const handleClick = () => {
               if (card.href) {
                 const element = document.querySelector(card.href);
-                element?.scrollIntoView({ behavior: 'smooth' });
+                element?.scrollIntoView({ behavior: "smooth" });
               } else if (card.path) {
                 navigate(card.path);
               }
             };
 
             return (
-              <div 
+              <div
                 key={index}
                 onClick={handleClick}
                 className="relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
               >
-                <LazyVideo
-                  src={card.video}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <LazyVideo src={card.video} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                
+
                 {/* Badge */}
                 {card.badge && (
                   <div className="absolute top-4 right-4">
-                    <Badge className={`${card.badgeColor} text-white font-semibold`}>
-                      {card.badge}
-                    </Badge>
+                    <Badge className={`${card.badgeColor} text-white font-semibold`}>{card.badge}</Badge>
                   </div>
                 )}
-                
+
                 {/* Content */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
                   <h3 className="text-lg font-bold text-white mb-1">{card.title}</h3>
                   <p className="text-sm text-white/80">{card.description}</p>
                 </div>
-                
+
                 {/* Logo overlay */}
                 <div className="absolute top-4 left-4 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <img 
-                    src="/images/logo-light-optimized.webp" 
-                    alt="Synergy" 
-                    className="h-5 w-auto"
-                  />
+                  <img src="/images/logo-light-optimized.webp" alt="Synergy" className="h-5 w-auto" />
                 </div>
               </div>
             );
@@ -351,7 +360,8 @@ const Home2 = () => {
             {/* Left side - Text */}
             <div className="flex-shrink-0 lg:w-[280px]">
               <h2 className="text-2xl md:text-3xl font-bold italic leading-tight">
-                O QUE VOCÊ VAI<br />
+                O QUE VOCÊ VAI
+                <br />
                 <span className="text-primary">CRIAR HOJE?</span>
               </h2>
               <p className="text-muted-foreground text-sm mt-3">
@@ -398,14 +408,14 @@ const Home2 = () => {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">Criações Recentes</h2>
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               variant={activeTab === "recent" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setActiveTab("recent")}
             >
               Mais recentes
             </Button>
-            <Button 
+            <Button
               variant={activeTab === "popular" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setActiveTab("popular")}
@@ -422,10 +432,7 @@ const Home2 = () => {
             </div>
           ) : publicImages.length > 0 ? (
             publicImages.map((image) => (
-              <div 
-                key={image.id}
-                className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group"
-              >
+              <div key={image.id} className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group">
                 <img
                   src={getImageUrl(image.image_path)}
                   alt={image.prompt || "Criação pública"}
@@ -435,10 +442,7 @@ const Home2 = () => {
             ))
           ) : (
             fallbackCreations.map((creation, index) => (
-              <div 
-                key={index}
-                className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group"
-              >
+              <div key={index} className="break-inside-avoid rounded-xl overflow-hidden cursor-pointer group">
                 <img
                   src={creation.image}
                   alt={`Creation ${index + 1}`}
@@ -461,12 +465,10 @@ const Home2 = () => {
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {pricingPlans.map((plan, index) => (
-            <div 
+            <div
               key={index}
               className={`relative rounded-2xl p-6 ${
-                plan.popular 
-                  ? "border-2 border-primary bg-card" 
-                  : "border border-border bg-card/50"
+                plan.popular ? "border-2 border-primary bg-card" : "border border-border bg-card/50"
               }`}
             >
               {plan.popular && (
@@ -474,26 +476,26 @@ const Home2 = () => {
                   <Badge className="bg-primary text-primary-foreground">MAIS POPULAR</Badge>
                 </div>
               )}
-              
+
               <div className="flex items-center gap-3 mb-4">
                 <plan.icon className={`w-5 h-5 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
               </div>
-              
+
               <p className="text-sm text-muted-foreground mb-6">{plan.description}</p>
-              
+
               <div className="flex items-baseline gap-1 mb-6">
                 <span className="text-4xl font-bold">{plan.price}</span>
                 <span className="text-muted-foreground">{plan.period}</span>
               </div>
-              
-              <Button 
+
+              <Button
                 variant={plan.buttonVariant}
                 className={`w-full mb-6 ${plan.popular ? "bg-primary hover:bg-primary/90" : ""}`}
               >
                 {plan.buttonText}
               </Button>
-              
+
               <ul className="space-y-3">
                 {plan.features.map((feature, fIndex) => (
                   <li key={fIndex} className="flex items-start gap-2 text-sm">
@@ -512,15 +514,10 @@ const Home2 = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <img 
-                src="/images/logo-light-optimized.webp" 
-                alt="Synergy" 
-                className="h-8 w-auto mb-4"
-              />
+              <img src="/images/logo-light-optimized.webp" alt="Synergy" className="h-8 w-auto mb-4" />
               <p className="text-sm text-muted-foreground">
-                A maior biblioteca do mundo de conteúdo gerado por IA.
-                Descubra fotos, vídeos e vetores de alta qualidade
-                criados por nossos modelos de ponta, incluindo Gemini e Veo.
+                A maior biblioteca do mundo de conteúdo gerado por IA. Descubra fotos, vídeos e vetores de alta
+                qualidade criados por nossos modelos de ponta, incluindo Gemini e Veo.
               </p>
               <div className="flex gap-3 mt-4">
                 {[1, 2, 3, 4].map((i) => (
@@ -528,43 +525,93 @@ const Home2 = () => {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Conteúdo</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Novos ativos</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Mais populares</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Tendências de busca</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Blog</a></li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Novos ativos
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Mais populares
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Tendências de busca
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Blog
+                  </a>
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Informações</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Preços</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Sobre nós</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">API</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Carreiras</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Venda seu conteúdo</a></li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Preços
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Sobre nós
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    API
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Carreiras
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Venda seu conteúdo
+                  </a>
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Termos de uso</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Política de privacidade</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Política de cookies</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Copyright</a></li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Termos de uso
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Política de privacidade
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Política de cookies
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Copyright
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              © 2024 Synergy AI / Freepik Clone. Todos os direitos reservados.
-            </p>
+            <p className="text-sm text-muted-foreground">© 2026 Synergy IA. Todos os direitos reservados.</p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>Português (Brasil)</span>
               <span>BRL</span>
