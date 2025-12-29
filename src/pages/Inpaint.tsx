@@ -447,7 +447,7 @@ Generate the edited image now with the green masked areas replaced according to 
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -494,7 +494,7 @@ Generate the edited image now with the green masked areas replaced according to 
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Toolbar */}
         <div className="w-14 bg-[#111] border-r border-white/10 flex flex-col items-center py-4 gap-2">
           <Button
@@ -573,7 +573,7 @@ Generate the edited image now with the green masked areas replaced according to 
         <div className="flex-1 flex flex-col">
           <div 
             ref={canvasContainerRef}
-            className="flex-1 relative bg-[#0d0d0d] overflow-hidden"
+            className="flex-1 relative bg-[#0d0d0d] overflow-hidden min-h-0"
           >
             {/* Fabric.js canvas is created dynamically inside this container */}
             
