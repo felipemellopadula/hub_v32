@@ -40,11 +40,15 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash-image-preview",
         messages: [
           {
+            role: "system",
+            content: "You are an image editing assistant. ALWAYS generate an edited version of the provided image based on the user's instructions. Do not ask questions - just apply the edits as best as you can. If the instruction is unclear, make a reasonable interpretation and apply it. You MUST output an edited image."
+          },
+          {
             role: "user",
             content: [
               {
                 type: "text",
-                text: prompt
+                text: `Edit this image with the following instruction: ${prompt}. Generate the edited image now.`
               },
               {
                 type: "image_url",
