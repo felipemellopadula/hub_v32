@@ -20,8 +20,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const aiLogos = [
   { src: "/images/logos/google.svg", alt: "Google", title: "Google" },
   { src: "/images/logos/openai.svg", alt: "OpenAI", title: "OpenAI" },
-  { src: "/images/logos/kling.svg", alt: "KlingAI", title: "KlingAI" },
-  { src: "/images/logos/seedream.png", alt: "Seedream", title: "Seedream" },
+  { src: "/images/logos/kling.svg", alt: "Kling AI", title: "Kling AI" },
+  { src: "/images/logos/bytedance.svg", alt: "ByteDance", title: "ByteDance" },
 ];
 
 interface PublicImage {
