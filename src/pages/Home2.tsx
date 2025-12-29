@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
 import { supabase } from "@/integrations/supabase/client";
 import LogoLoop from "@/components/LogoLoop";
+import { AnimatedToolCard } from "@/components/AnimatedToolCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,12 +69,56 @@ const heroCards = [
 ];
 
 const tools = [
-  { name: "CRIAR IMAGEM", image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=300&fit=crop", path: "/image2" },
-  { name: "CRIAR VÍDEO", image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=300&fit=crop", hasArrow: true, path: "/video" },
-  { name: "IMAGE EDITOR", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop", path: "/image-editor" },
-  { name: "SKIN ENHANCER", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=300&fit=crop", path: "/skin-enhancer" },
-  { name: "UPSCALE 4K", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop", path: "/upscale" },
-  { name: "AVATAR IA", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop", path: "/ai-avatar" },
+  { 
+    name: "CRIAR IMAGEM", 
+    images: [
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1686191128892-3b37add4b5fd?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1579762715118-a6f1d4b934f1?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
+    ],
+    animated: true,
+    path: "/image2" 
+  },
+  { 
+    name: "CRIAR VÍDEO", 
+    image: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=400&fit=crop", 
+    hasArrow: true, 
+    path: "/video" 
+  },
+  { 
+    name: "IMAGE EDITOR", 
+    images: [
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=300&h=400&fit=crop",
+    ],
+    animated: true,
+    path: "/image-editor" 
+  },
+  { 
+    name: "SKIN ENHANCER", 
+    image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop", 
+    path: "/skin-enhancer" 
+  },
+  { 
+    name: "UPSCALE 4K", 
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=400&fit=crop", 
+    path: "/upscale" 
+  },
+  { 
+    name: "AVATAR IA", 
+    images: [
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&h=400&fit=crop",
+    ],
+    animated: true,
+    path: "/ai-avatar" 
+  },
 ];
 
 // Fallback estático caso não haja imagens públicas
@@ -318,24 +363,7 @@ const Home2 = () => {
             <div className="flex-1 overflow-x-auto pb-2">
               <div className="flex gap-4 min-w-max">
                 {tools.map((tool, index) => (
-                  <div 
-                    key={index}
-                    onClick={() => tool.path && navigate(tool.path)}
-                    className="group relative flex-shrink-0 w-[140px] cursor-pointer"
-                  >
-                    <div className="relative rounded-xl overflow-hidden aspect-[3/4] bg-card hover:ring-2 hover:ring-primary/50 transition-all">
-                      <img
-                        src={tool.image}
-                        alt={tool.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <span className="text-xs font-medium text-foreground">{tool.name}</span>
-                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                  </div>
+                  <AnimatedToolCard key={index} tool={tool} />
                 ))}
               </div>
             </div>
