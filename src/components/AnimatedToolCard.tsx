@@ -18,9 +18,7 @@ interface AnimatedToolCardProps {
 
 export const AnimatedToolCard = ({ tool }: AnimatedToolCardProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const navigate = useNavigate();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Preload images
   useEffect(() => {
@@ -32,35 +30,23 @@ export const AnimatedToolCard = ({ tool }: AnimatedToolCardProps) => {
     }
   }, [tool.images, tool.animated]);
 
-  // Animate through images
+  // Animate through images - simple index rotation
   useEffect(() => {
     if (!tool.animated || !tool.images || tool.images.length <= 1) return;
 
     const intervalSpeed = tool.speed || 1500;
     
-    intervalRef.current = setInterval(() => {
-      setIsTransitioning(true);
-      
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % tool.images!.length);
-        setIsTransitioning(false);
-      }, 300);
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % tool.images!.length);
     }, intervalSpeed);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [tool.animated, tool.images]);
+    return () => clearInterval(interval);
+  }, [tool.animated, tool.images, tool.speed]);
 
-  const currentImage = tool.animated && tool.images 
-    ? tool.images[currentIndex] 
-    : tool.image;
-
-  const nextImage = tool.animated && tool.images 
-    ? tool.images[(currentIndex + 1) % tool.images.length] 
-    : tool.image;
+  // Get current and next image for crossfade
+  const images = tool.images || [tool.image];
+  const currentImage = images[currentIndex];
+  const nextImage = images[(currentIndex + 1) % images.length];
 
   return (
     <div 
@@ -68,22 +54,25 @@ export const AnimatedToolCard = ({ tool }: AnimatedToolCardProps) => {
       className="group relative flex-shrink-0 w-[140px] cursor-pointer"
     >
       <div className="relative rounded-xl overflow-hidden aspect-[3/4] bg-card hover:ring-2 hover:ring-primary/50 transition-all">
-        {/* Next image (underneath) */}
-        {tool.animated && (
+        {/* Stack all images, only current one visible */}
+        {tool.animated && images.length > 1 ? (
+          images.map((img, index) => (
+            <img
+              key={img}
+              src={img}
+              alt={tool.name}
+              className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-opacity duration-300 ${
+                index === currentIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ))
+        ) : (
           <img
-            src={nextImage}
+            src={currentImage}
             alt={tool.name}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-200"
           />
         )}
-        {/* Current image (on top, fades out) */}
-        <img
-          src={currentImage}
-          alt={tool.name}
-          className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-200 ${
-            isTransitioning ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
       <div className="flex items-center justify-center gap-1 mt-2">
