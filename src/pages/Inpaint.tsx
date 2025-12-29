@@ -56,37 +56,59 @@ const Inpaint = () => {
     if (!canvasRef.current || !containerRef.current) return;
 
     const container = containerRef.current;
-    const canvas = new FabricCanvas(canvasRef.current, {
-      width: container.clientWidth,
-      height: container.clientHeight,
-      backgroundColor: "#1a1a1a",
-      isDrawingMode: true,
-    });
 
-    // Set up brush
-    const brush = new PencilBrush(canvas);
-    brush.color = "rgba(0, 255, 128, 0.6)";
-    brush.width = brushSize;
-    canvas.freeDrawingBrush = brush;
+    // Wait for layout to stabilize before initializing canvas
+    const initCanvas = () => {
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
 
-    setFabricCanvas(canvas);
-
-    // Handle resize
-    const handleResize = () => {
-      if (container) {
-        canvas.setDimensions({
-          width: container.clientWidth,
-          height: container.clientHeight,
-        });
-        canvas.renderAll();
+      if (containerWidth === 0 || containerHeight === 0) {
+        requestAnimationFrame(initCanvas);
+        return;
       }
+
+      const canvas = new FabricCanvas(canvasRef.current!, {
+        width: containerWidth,
+        height: containerHeight,
+        backgroundColor: "#1a1a1a",
+        isDrawingMode: true,
+      });
+
+      // Set up brush
+      const brush = new PencilBrush(canvas);
+      brush.color = "rgba(0, 255, 128, 0.6)";
+      brush.width = brushSize;
+      canvas.freeDrawingBrush = brush;
+
+      setFabricCanvas(canvas);
+
+      // Handle resize
+      const handleResize = () => {
+        if (container) {
+          canvas.setDimensions({
+            width: container.clientWidth,
+            height: container.clientHeight,
+          });
+          canvas.renderAll();
+        }
+      };
+
+      window.addEventListener("resize", handleResize);
+
+      // Store cleanup function
+      (window as any).__inpaintCleanup = () => {
+        window.removeEventListener("resize", handleResize);
+        canvas.dispose();
+      };
     };
 
-    window.addEventListener("resize", handleResize);
+    requestAnimationFrame(initCanvas);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      canvas.dispose();
+      if ((window as any).__inpaintCleanup) {
+        (window as any).__inpaintCleanup();
+        delete (window as any).__inpaintCleanup;
+      }
     };
   }, []);
 
@@ -115,32 +137,56 @@ const Inpaint = () => {
   useEffect(() => {
     if (!fabricCanvas || !uploadedImage) return;
 
-    FabricImage.fromURL(uploadedImage).then((img) => {
-      const container = containerRef.current;
-      if (!container) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-      const scale = Math.min(
-        container.clientWidth / (img.width || 1),
-        container.clientHeight / (img.height || 1)
-      ) * 0.9;
+    const loadImage = () => {
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
 
-      img.scale(scale);
-      img.set({
-        left: (container.clientWidth - (img.width || 0) * scale) / 2,
-        top: (container.clientHeight - (img.height || 0) * scale) / 2,
-        selectable: false,
-        evented: false,
+      // Wait for valid dimensions
+      if (containerWidth === 0 || containerHeight === 0) {
+        requestAnimationFrame(loadImage);
+        return;
+      }
+
+      // Update canvas dimensions first
+      fabricCanvas.setDimensions({
+        width: containerWidth,
+        height: containerHeight,
       });
 
-      fabricCanvas.clear();
-      fabricCanvas.backgroundColor = "#1a1a1a";
-      fabricCanvas.add(img);
-      fabricCanvas.sendObjectToBack(img);
-      fabricCanvas.renderAll();
+      FabricImage.fromURL(uploadedImage)
+        .then((img) => {
+          const scale = Math.min(
+            containerWidth / (img.width || 1),
+            containerHeight / (img.height || 1)
+          ) * 0.9;
 
-      // Save initial state
-      saveToHistory();
-    });
+          img.scale(scale);
+          img.set({
+            left: (containerWidth - (img.width || 0) * scale) / 2,
+            top: (containerHeight - (img.height || 0) * scale) / 2,
+            selectable: false,
+            evented: false,
+          });
+
+          fabricCanvas.clear();
+          fabricCanvas.backgroundColor = "#1a1a1a";
+          fabricCanvas.add(img);
+          fabricCanvas.sendObjectToBack(img);
+          fabricCanvas.renderAll();
+
+          // Save initial state
+          saveToHistory();
+        })
+        .catch((err) => {
+          console.error("Erro ao carregar imagem:", err);
+          toast.error("Erro ao carregar imagem no canvas");
+        });
+    };
+
+    requestAnimationFrame(loadImage);
   }, [uploadedImage, fabricCanvas]);
 
   const saveToHistory = () => {
