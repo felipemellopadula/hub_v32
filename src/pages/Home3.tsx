@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { AuthModal } from '@/components/AuthModal';
-import { ContactForm } from '@/components/ContactForm';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { AuthModal } from "@/components/AuthModal";
+import { ContactForm } from "@/components/ContactForm";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { ThemeToggle } from '@/components/ThemeToggle';
+} from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Menu,
   X,
@@ -34,7 +34,7 @@ import {
   Instagram,
   Facebook,
   Linkedin,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Types
 interface NavItem {
@@ -68,186 +68,178 @@ interface HeroSlide {
 
 // Navigation items
 const navItems: NavItem[] = [
-  { label: 'Imagem', href: '/image2' },
-  { label: 'Vídeo', href: '/video' },
-  { label: 'Editar', href: '/image-editor' },
-  { label: 'Personagem', href: '/ai-avatar' },
-  { label: 'Inpaint', href: '/inpaint' },
-  { label: 'Preços', href: '#pricing' },
-  { label: 'Contato', href: '#contact' },
+  { label: "Imagem", href: "/image2" },
+  { label: "Vídeo", href: "/video" },
+  { label: "Editar", href: "/image-editor" },
+  { label: "Personagem", href: "/ai-avatar" },
+  { label: "Inpaint", href: "/inpaint" },
+  { label: "Preços", href: "#pricing" },
+  { label: "Contato", href: "#contact" },
 ];
 
 // Hero slides
 const heroSlides: HeroSlide[] = [
   {
-    id: '1',
-    title: 'SEEDANCE 1.5 PRO',
-    subtitle: 'Narrativas Multi-shot com Áudio',
-    imageUrl: '/Seedream.webp',
-    ctaText: 'Experimentar',
-    path: '/video',
+    id: "1",
+    title: "SEEDANCE 1.5 PRO",
+    subtitle: "Narrativas Multi-shot com Áudio",
+    imageUrl: "/Seedream.webp",
+    ctaText: "Experimentar",
+    path: "/video",
   },
   {
-    id: '2',
-    title: 'MOTION CONTROL 2.6',
-    subtitle: 'Controle preciso de expressões',
-    imageUrl: '/FLUX_Kontext_Max.png',
-    ctaText: 'Animar',
-    path: '/video?model=klingai:kling-video@2.6-pro',
+    id: "2",
+    title: "MOTION CONTROL 2.6",
+    subtitle: "Controle preciso de expressões",
+    imageUrl: "/FLUX_Kontext_Max.png",
+    ctaText: "Animar",
+    path: "/video?model=klingai:kling-video@2.6-pro",
   },
   {
-    id: '3',
-    title: 'INPAINT',
-    subtitle: 'Pinte diretamente na imagem e edite suas imagens de forma intuitiva',
-    imageUrl: 'https://images.pexels.com/photos/29645160/pexels-photo-29645160/free-photo-of-caneta-para-tablet-grafico-ferramenta-de-design-tinta-escrita-nota-estudio-interior.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-    ctaText: 'Editar',
-    path: '/inpaint',
+    id: "3",
+    title: "INPAINT",
+    subtitle: "Pinte diretamente na imagem e edite suas imagens de forma intuitiva",
+    imageUrl:
+      "https://images.pexels.com/photos/29645160/pexels-photo-29645160/free-photo-of-caneta-para-tablet-grafico-ferramenta-de-design-tinta-escrita-nota-estudio-interior.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+    ctaText: "Editar",
+    path: "/inpaint",
   },
   {
-    id: '4',
-    title: 'NANO BANANA',
-    subtitle: 'Geração Ultra Rápida',
-    imageUrl: '/GPT_IMAGE.png',
-    ctaText: 'Gerar',
-    path: '/image2',
+    id: "4",
+    title: "NANO BANANA",
+    subtitle: "Geração Ultra Rápida",
+    imageUrl: "/GPT_IMAGE.png",
+    ctaText: "Gerar",
+    path: "/image2",
   },
 ];
 
 // Tools data
 const tools: ToolCard[] = [
   {
-    id: '1',
-    title: 'Criar Imagem',
-    description: 'Texto para imagem',
+    id: "1",
+    title: "Criar Imagem",
+    description: "Texto para imagem",
     images: [
-      '/images/criar-imagem-1.png',
-      '/images/criar-imagem-2.png',
-      '/images/criar-imagem-3.png',
-      '/images/criar-imagem-4.png',
-      '/images/criar-imagem-5.jpeg',
+      "/images/criar-imagem-1.png",
+      "/images/criar-imagem-2.png",
+      "/images/criar-imagem-3.png",
+      "/images/criar-imagem-4.png",
+      "/images/criar-imagem-5.jpeg",
     ],
     animated: true,
     speed: 600,
-    path: '/image2',
+    path: "/image2",
   },
   {
-    id: '2',
-    title: 'Criar Vídeo',
-    description: 'Texto/Imagem para vídeo',
-    video: 'https://videos.pexels.com/video-files/4309834/4309834-uhd_2560_1440_24fps.mp4',
-    path: '/video',
+    id: "2",
+    title: "Criar Vídeo",
+    description: "Texto/Imagem para vídeo",
+    video: "https://videos.pexels.com/video-files/4309834/4309834-uhd_2560_1440_24fps.mp4",
+    path: "/video",
   },
   {
-    id: '3',
-    title: 'Editar Imagem',
-    description: 'Inpaint & Outpaint',
-    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop',
-    path: '/image-editor',
+    id: "3",
+    title: "Editar Imagem",
+    description: "Inpaint & Outpaint",
+    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop",
+    path: "/image-editor",
   },
   {
-    id: '4',
-    title: 'Inpaint',
-    description: 'Edição precisa',
-    imageUrl: 'https://images.pexels.com/photos/29645160/pexels-photo-29645160/free-photo-of-caneta-para-tablet-grafico-ferramenta-de-design-tinta-escrita-nota-estudio-interior.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1',
-    path: '/inpaint',
+    id: "4",
+    title: "Inpaint",
+    description: "Edição precisa",
+    imageUrl:
+      "https://images.pexels.com/photos/29645160/pexels-photo-29645160/free-photo-of-caneta-para-tablet-grafico-ferramenta-de-design-tinta-escrita-nota-estudio-interior.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1",
+    path: "/inpaint",
   },
   {
-    id: '5',
-    title: 'Upscale',
-    description: 'Até 4K de resolução',
-    imageUrl: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=400&fit=crop',
-    path: '/upscale',
+    id: "5",
+    title: "Upscale",
+    description: "Até 4K de resolução",
+    imageUrl: "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=400&fit=crop",
+    path: "/upscale",
   },
   {
-    id: '6',
-    title: 'Nano Banana Pro',
-    description: 'Modelo exclusivo',
-    images: [
-      '/images/banana-1.png',
-      '/images/banana-2.png',
-      '/images/banana-3.png',
-      '/images/banana-4.png',
-    ],
+    id: "6",
+    title: "Nano Banana Pro",
+    description: "Modelo exclusivo",
+    images: ["/images/banana-1.png", "/images/banana-2.png", "/images/banana-3.png", "/images/banana-4.png"],
     animated: true,
     speed: 400,
     isPro: true,
-    path: '/image2',
+    path: "/image2",
   },
   {
-    id: '7',
-    title: 'Skin Enhancer',
-    description: 'Melhore a pele',
-    imageUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop',
-    path: '/skin-enhancer',
+    id: "7",
+    title: "Skin Enhancer",
+    description: "Melhore a pele",
+    imageUrl: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop",
+    path: "/skin-enhancer",
   },
   {
-    id: '8',
-    title: 'AI Avatar',
-    description: 'Crie seu avatar',
+    id: "8",
+    title: "AI Avatar",
+    description: "Crie seu avatar",
     images: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&h=400&fit=crop',
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&h=400&fit=crop",
     ],
     animated: true,
     speed: 1500,
     isNew: true,
-    path: '/ai-avatar',
+    path: "/ai-avatar",
   },
 ];
 
 // Pricing plans mapped to stripe_products table
 const pricingPlans = [
   {
-    name: 'Start',
+    name: "Start",
     monthlyPrice: 40,
     annualPrice: 50,
-    description: 'Perfeito para começar',
+    description: "Perfeito para começar",
     icon: Star,
-    features: [
-      '1.000 tokens/mês',
-      'Modelos básicos de imagem',
-      'Geração de vídeo limitada',
-      'Suporte por email',
-    ],
-    monthlyPlanId: 'basic_monthly',
-    annualPlanId: 'basic_annual',
+    features: ["1.000 tokens/mês", "Modelos básicos de imagem", "Geração de vídeo limitada", "Suporte por email"],
+    monthlyPlanId: "basic_monthly",
+    annualPlanId: "basic_annual",
     popular: false,
   },
   {
-    name: 'Pro',
+    name: "Pro",
     monthlyPrice: 200,
     annualPrice: 210,
-    description: 'Para criadores sérios',
+    description: "Para criadores sérios",
     icon: Crown,
     features: [
-      '5.000 tokens/mês',
-      'Todos os modelos de imagem',
-      'Vídeos em alta qualidade',
-      'Skin Enhancer & Upscale',
-      'Suporte prioritário',
+      "5.000 tokens/mês",
+      "Todos os modelos de imagem",
+      "Vídeos em alta qualidade",
+      "Skin Enhancer & Upscale",
+      "Suporte prioritário",
     ],
-    monthlyPlanId: 'pro_monthly',
-    annualPlanId: 'pro_annual',
+    monthlyPlanId: "pro_monthly",
+    annualPlanId: "pro_annual",
     popular: true,
   },
   {
-    name: 'Creator',
+    name: "Creator",
     monthlyPrice: 500,
     annualPrice: 510,
-    description: 'Para profissionais',
+    description: "Para profissionais",
     icon: Zap,
     features: [
-      '15.000 tokens/mês',
-      'Acesso ilimitado a modelos',
-      'Vídeos 4K',
-      'API access',
-      'Suporte 24/7',
-      'Early access a novos recursos',
+      "15.000 tokens/mês",
+      "Acesso ilimitado a modelos",
+      "Vídeos 4K",
+      "API access",
+      "Suporte 24/7",
+      "Early access a novos recursos",
     ],
-    monthlyPlanId: 'pro_monthly', // Uses pro for now until creator plan is created
-    annualPlanId: 'pro_annual',
+    monthlyPlanId: "pro_monthly", // Uses pro for now until creator plan is created
+    annualPlanId: "pro_annual",
     popular: false,
   },
 ];
@@ -292,7 +284,7 @@ const AnimatedToolCardContent: React.FC<{
             src={img}
             alt={tool.title}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-              idx === currentIndex ? 'opacity-100' : 'opacity-0'
+              idx === currentIndex ? "opacity-100" : "opacity-0"
             }`}
           />
         ))}
@@ -313,7 +305,7 @@ const Home3: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -325,31 +317,31 @@ const Home3: React.FC = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/home3');
+    navigate("/home3");
   };
 
   const openLogin = () => {
-    setAuthMode('login');
+    setAuthMode("login");
     setShowAuthModal(true);
   };
 
   const openSignup = () => {
-    setAuthMode('signup');
+    setAuthMode("signup");
     setShowAuthModal(true);
   };
 
   const handleNavClick = (href: string, e: React.MouseEvent) => {
-    if (href.startsWith('#')) {
+    if (href.startsWith("#")) {
       e.preventDefault();
       const element = document.querySelector(href);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: "smooth" });
       }
       setMobileMenuOpen(false);
     } else if (!user) {
@@ -377,45 +369,45 @@ const Home3: React.FC = () => {
 
     setIsSubscribing(true);
     try {
-      console.log('[Home3] Iniciando checkout para:', planId);
-      
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { planId }
+      console.log("[Home3] Iniciando checkout para:", planId);
+
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: { planId },
       });
 
-      console.log('[Home3] Resposta recebida:', { data, error });
+      console.log("[Home3] Resposta recebida:", { data, error });
 
       if (error) {
-        console.error('[Home3] Erro da função:', error);
+        console.error("[Home3] Erro da função:", error);
         throw error;
       }
-      
+
       if (data?.url) {
-        console.log('[Home3] Redirecionando para:', data.url);
-        const newWindow = window.open(data.url, '_blank');
-        
+        console.log("[Home3] Redirecionando para:", data.url);
+        const newWindow = window.open(data.url, "_blank");
+
         if (!newWindow) {
-          console.log('[Home3] Popup bloqueado, redirecionando na mesma aba');
+          console.log("[Home3] Popup bloqueado, redirecionando na mesma aba");
           window.location.href = data.url;
         } else {
           setIsSubscribing(false);
-          toast.success('Checkout aberto! Complete o pagamento na nova aba.');
+          toast.success("Checkout aberto! Complete o pagamento na nova aba.");
         }
       } else {
-        console.error('[Home3] URL não recebida:', data);
-        throw new Error('URL de checkout não recebida');
+        console.error("[Home3] URL não recebida:", data);
+        throw new Error("URL de checkout não recebida");
       }
     } catch (error) {
-      console.error('[Home3] Erro ao criar checkout:', error);
+      console.error("[Home3] Erro ao criar checkout:", error);
       setIsSubscribing(false);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar o checkout. Tente novamente.');
+      toast.error(error instanceof Error ? error.message : "Não foi possível iniciar o checkout. Tente novamente.");
     }
   };
 
   const scrollToPricing = () => {
-    const element = document.querySelector('#pricing');
+    const element = document.querySelector("#pricing");
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -424,9 +416,7 @@ const Home3: React.FC = () => {
       {/* Navigation */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
-          isScrolled
-            ? 'bg-background/90 backdrop-blur-md border-border py-3'
-            : 'bg-transparent border-transparent py-5'
+          isScrolled ? "bg-background/90 backdrop-blur-md border-border py-3" : "bg-transparent border-transparent py-5"
         }`}
       >
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -479,11 +469,11 @@ const Home3: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => navigate('/dashboard-novo')}>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard-novo")}>
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
                       <Settings className="mr-2 h-4 w-4" />
                       Configurações
                     </DropdownMenuItem>
@@ -505,10 +495,7 @@ const Home3: React.FC = () => {
             </div>
 
             {/* Mobile Menu Toggle */}
-            <button
-              className="xl:hidden text-foreground"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
+            <button className="xl:hidden text-foreground" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
               {mobileMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
@@ -536,15 +523,12 @@ const Home3: React.FC = () => {
             {user ? (
               <>
                 <button
-                  onClick={() => navigate('/dashboard-novo')}
+                  onClick={() => navigate("/dashboard-novo")}
                   className="w-full text-left py-2 text-muted-foreground"
                 >
                   Dashboard
                 </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left py-2 text-muted-foreground"
-                >
+                <button onClick={handleLogout} className="w-full text-left py-2 text-muted-foreground">
                   Sair
                 </button>
               </>
@@ -565,7 +549,7 @@ const Home3: React.FC = () => {
       {/* Hero Section */}
       <div className="pt-24 pb-8 overflow-hidden">
         <div className="w-full overflow-x-auto hide-scrollbar">
-          <div className="flex gap-4 pb-4 px-4 sm:px-6 lg:px-8 snap-x snap-mandatory" style={{ width: 'max-content' }}>
+          <div className="flex gap-4 pb-4 px-4 sm:px-6 lg:px-8 snap-x snap-mandatory" style={{ width: "max-content" }}>
             {heroSlides.map((slide) => (
               <div
                 key={slide.id}
@@ -583,18 +567,14 @@ const Home3: React.FC = () => {
                 <div className="absolute bottom-0 left-0 w-full p-6 md:p-8 flex flex-col items-start">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="text-primary w-4 h-4" />
-                    <span className="text-primary text-xs font-bold tracking-widest uppercase">
-                      Destaque
-                    </span>
+                    <span className="text-primary text-xs font-bold tracking-widest uppercase">Destaque</span>
                   </div>
 
                   <h2 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2">
                     {slide.title}
                   </h2>
 
-                  <p className="text-gray-300 text-sm md:text-base mb-6 max-w-md">
-                    {slide.subtitle}
-                  </p>
+                  <p className="text-gray-300 text-sm md:text-base mb-6 max-w-md">{slide.subtitle}</p>
 
                   <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary">
                     {slide.ctaText}
@@ -617,8 +597,8 @@ const Home3: React.FC = () => {
             <div
               className="absolute inset-0 opacity-20"
               style={{
-                backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-                backgroundSize: '24px 24px',
+                backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+                backgroundSize: "24px 24px",
               }}
             ></div>
           </div>
@@ -634,8 +614,8 @@ const Home3: React.FC = () => {
                 Desbloqueie o Synergy Pro
               </h2>
               <p className="text-yellow-100 text-sm md:text-base max-w-xl">
-                Tenha acesso a gerações ilimitadas, modelos exclusivos (Nano Banana Pro) e
-                renderização 4K rápida. Oferta termina em breve.
+                Tenha acesso a gerações ilimitadas, modelos exclusivos (Nano Banana Pro) e renderização 4K rápida.
+                Oferta termina em breve.
               </p>
             </div>
 
@@ -699,9 +679,7 @@ const Home3: React.FC = () => {
                   <h3 className="text-foreground font-bold text-sm md:text-base leading-tight group-hover:text-primary transition-colors">
                     {tool.title}
                   </h3>
-                  {tool.description && (
-                    <span className="text-xs text-muted-foreground mt-1">{tool.description}</span>
-                  )}
+                  {tool.description && <span className="text-xs text-muted-foreground mt-1">{tool.description}</span>}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-background/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all transform group-hover:rotate-[-45deg]">
                   <ArrowRight size={14} />
@@ -717,10 +695,8 @@ const Home3: React.FC = () => {
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
-              Escolha seu{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">
-                Plano
-              </span>
+              Escolha seu{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">Plano</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Comece gratuitamente e evolua conforme suas necessidades. Cancele quando quiser.
@@ -733,8 +709,8 @@ const Home3: React.FC = () => {
               onClick={() => setIsAnnual(false)}
               className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
                 !isAnnual
-                  ? 'bg-primary text-primary-foreground shadow-lg'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
               Mensal
@@ -743,8 +719,8 @@ const Home3: React.FC = () => {
               onClick={() => setIsAnnual(true)}
               className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
                 isAnnual
-                  ? 'bg-primary text-primary-foreground shadow-lg'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
               Anual
@@ -761,8 +737,8 @@ const Home3: React.FC = () => {
                   key={plan.name}
                   className={`relative rounded-2xl p-6 border transition-all duration-300 hover:shadow-xl ${
                     plan.popular
-                      ? 'border-primary bg-card shadow-lg scale-105'
-                      : 'border-border bg-card/50 hover:border-primary/50'
+                      ? "border-primary bg-card shadow-lg scale-105"
+                      : "border-border bg-card/50 hover:border-primary/50"
                   }`}
                 >
                   {plan.popular && (
@@ -776,7 +752,7 @@ const Home3: React.FC = () => {
                   <div className="flex items-center gap-3 mb-4">
                     <div
                       className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                        plan.popular ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                       }`}
                     >
                       <IconComponent size={20} />
@@ -803,10 +779,10 @@ const Home3: React.FC = () => {
                   <Button
                     onClick={() => handlePricingClick(currentPlanId)}
                     className="w-full"
-                    variant={plan.popular ? 'default' : 'outline'}
+                    variant={plan.popular ? "default" : "outline"}
                     disabled={isSubscribing}
                   >
-                    {isSubscribing ? 'Processando...' : 'Começar Agora'}
+                    {isSubscribing ? "Processando..." : "Começar Agora"}
                   </Button>
                 </div>
               );
@@ -820,10 +796,8 @@ const Home3: React.FC = () => {
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
-              Entre em{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">
-                Contato
-              </span>
+              Entre em{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">Contato</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Tem alguma dúvida? Fale conosco e responderemos o mais rápido possível.
@@ -851,8 +825,8 @@ const Home3: React.FC = () => {
                 />
               </div>
               <p className="text-muted-foreground text-sm max-w-sm">
-                Potencializando a criatividade humana com inteligência artificial avançada. Crie
-                vídeos, imagens e histórias sem limites.
+                Potencializando a criatividade humana com inteligência artificial avançada. Crie vídeos, imagens e
+                histórias sem limites.
               </p>
 
               {/* Social Icons */}
@@ -948,7 +922,7 @@ const Home3: React.FC = () => {
           </div>
 
           <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center text-xs text-muted-foreground">
-            <p>© 2024 Synergy IA Hub. Todos os direitos reservados.</p>
+            <p>© 2026 Synergy IA Hub. Todos os direitos reservados.</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground transition-colors">
                 Privacidade
@@ -962,10 +936,7 @@ const Home3: React.FC = () => {
       </footer>
 
       {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 };
