@@ -63,6 +63,7 @@ interface HeroSlide {
   subtitle: string;
   imageUrl: string;
   ctaText: string;
+  path: string;
 }
 
 // Navigation items
@@ -84,6 +85,7 @@ const heroSlides: HeroSlide[] = [
     subtitle: 'Narrativas Multi-shot com Áudio',
     imageUrl: '/Seedream.webp',
     ctaText: 'Experimentar',
+    path: '/video',
   },
   {
     id: '2',
@@ -91,6 +93,7 @@ const heroSlides: HeroSlide[] = [
     subtitle: 'Controle preciso de expressões',
     imageUrl: '/FLUX_Kontext_Max.png',
     ctaText: 'Animar',
+    path: '/video?model=klingai:kling-video@2.6-pro',
   },
   {
     id: '3',
@@ -98,6 +101,7 @@ const heroSlides: HeroSlide[] = [
     subtitle: 'Pinte diretamente na imagem e edite suas imagens de forma intuitiva',
     imageUrl: '/Nano_Banana_2_Pro.png',
     ctaText: 'Editar',
+    path: '/inpaint',
   },
   {
     id: '4',
@@ -105,6 +109,7 @@ const heroSlides: HeroSlide[] = [
     subtitle: 'Geração Ultra Rápida',
     imageUrl: '/GPT_IMAGE.png',
     ctaText: 'Gerar',
+    path: '/image2',
   },
 ];
 
@@ -561,6 +566,7 @@ const Home3: React.FC = () => {
             {heroSlides.map((slide) => (
               <div
                 key={slide.id}
+                onClick={(e) => handleToolClick(slide.path, e)}
                 className="snap-center shrink-0 w-[80vw] md:w-[550px] lg:w-[650px] h-[280px] md:h-[380px] relative rounded-2xl overflow-hidden group cursor-pointer border border-border hover:border-primary/50 transition-colors"
               >
                 <img
@@ -604,7 +610,7 @@ const Home3: React.FC = () => {
           onClick={scrollToPricing}
           className="w-full relative overflow-hidden rounded-2xl my-8 group cursor-pointer"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-900 to-red-700">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-yellow-500">
             <div
               className="absolute inset-0 opacity-20"
               style={{
@@ -617,14 +623,14 @@ const Home3: React.FC = () => {
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-8 py-6 md:py-10 gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider">
+                <span className="bg-amber-800 text-white text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider">
                   Oferta Limitada
                 </span>
               </div>
               <h2 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-2">
                 Desbloqueie o Synergy Pro
               </h2>
-              <p className="text-red-100 text-sm md:text-base max-w-xl">
+              <p className="text-yellow-100 text-sm md:text-base max-w-xl">
                 Tenha acesso a gerações ilimitadas, modelos exclusivos (Nano Banana Pro) e
                 renderização 4K rápida. Oferta termina em breve.
               </p>
@@ -648,26 +654,16 @@ const Home3: React.FC = () => {
 
       {/* Tools Grid */}
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-none mb-2">
-              O que você vai <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">
-                criar hoje?
-              </span>
-            </h2>
-            <p className="text-muted-foreground mt-2 max-w-lg">
-              Crie imagens autênticas e vídeos com texturas naturais e estilo fácil.
-            </p>
-          </div>
-
-          <button
-            onClick={() => (user ? navigate('/dashboard-novo') : setShowAuthModal(true))}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-transform hover:-translate-y-1 self-start md:self-auto"
-          >
-            Explorar todas as ferramentas
-            <Sparkles size={16} />
-          </button>
+        <div className="mb-8">
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-none mb-2">
+            O que você vai <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">
+              criar hoje?
+            </span>
+          </h2>
+          <p className="text-muted-foreground mt-2 max-w-lg">
+            Crie imagens autênticas e vídeos com texturas naturais e estilo fácil.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
