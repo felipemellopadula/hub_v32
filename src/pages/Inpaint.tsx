@@ -544,13 +544,15 @@ Generate the edited image now with the green masked areas replaced according to 
             ref={containerRef}
             className="flex-1 relative bg-[#0d0d0d] overflow-hidden"
           >
-            {/* Canvas is always rendered but hidden when not needed */}
-            <canvas 
-              ref={canvasRef} 
-              className={`absolute inset-0 ${(!uploadedImage || generatedImage) ? 'invisible pointer-events-none' : ''}`} 
-            />
+            {/* Canvas wrapper - Fabric.js creates additional DOM elements */}
+            <div 
+              className={`absolute inset-0 ${(!uploadedImage || generatedImage) ? 'invisible pointer-events-none' : ''}`}
+              style={{ zIndex: uploadedImage && !generatedImage ? 5 : 1 }}
+            >
+              <canvas ref={canvasRef} className="w-full h-full" />
+            </div>
             
-            {!uploadedImage ? (
+            {!uploadedImage && (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
                 <input
                   ref={fileInputRef}
@@ -572,7 +574,9 @@ Generate the edited image now with the green masked areas replaced according to 
                   Arraste uma imagem ou clique para selecionar
                 </p>
               </div>
-            ) : generatedImage ? (
+            )}
+            
+            {generatedImage && (
               <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
                 <img 
                   src={generatedImage} 
@@ -580,7 +584,7 @@ Generate the edited image now with the green masked areas replaced according to 
                   className="max-w-full max-h-full object-contain rounded-lg"
                 />
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* Bottom Input Area */}
