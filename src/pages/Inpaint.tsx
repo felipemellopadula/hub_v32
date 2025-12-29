@@ -506,56 +506,60 @@ Generate the edited image now.`;
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Toolbar */}
-        <div className="w-14 bg-[#111] border-r border-white/10 flex flex-col items-center py-4 gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setActiveTool("brush")}
-            className={`w-10 h-10 ${activeTool === "brush" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
-          >
-            <Paintbrush className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setActiveTool("eraser")}
-            className={`w-10 h-10 ${activeTool === "eraser" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
-          >
-            <Eraser className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setActiveTool("hand")}
-            className={`w-10 h-10 ${activeTool === "hand" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
-          >
-            <Hand className="w-5 h-5" />
-          </Button>
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        {/* Toolbar - horizontal no mobile, vertical no desktop */}
+        <div className="order-2 md:order-1 flex md:flex-col md:w-14 w-full h-14 md:h-auto bg-[#111] border-t md:border-t-0 md:border-r border-white/10 items-center justify-center md:justify-start py-2 md:py-4 gap-1 md:gap-2">
+          <div className="flex md:flex-col items-center gap-1 md:gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveTool("brush")}
+              className={`w-10 h-10 ${activeTool === "brush" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
+            >
+              <Paintbrush className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveTool("eraser")}
+              className={`w-10 h-10 ${activeTool === "eraser" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
+            >
+              <Eraser className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveTool("hand")}
+              className={`w-10 h-10 ${activeTool === "hand" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
+            >
+              <Hand className="w-5 h-5" />
+            </Button>
+          </div>
           
-          <div className="w-8 h-px bg-white/10 my-2" />
+          <div className="w-px md:w-8 h-6 md:h-px bg-white/10 mx-1 md:mx-0 md:my-2" />
           
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleUndo}
-            disabled={historyIndex <= 0}
-            className="w-10 h-10 text-muted-foreground hover:text-white disabled:opacity-30"
-          >
-            <Undo2 className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRedo}
-            disabled={historyIndex >= history.length - 1}
-            className="w-10 h-10 text-muted-foreground hover:text-white disabled:opacity-30"
-          >
-            <Redo2 className="w-5 h-5" />
-          </Button>
+          <div className="flex md:flex-col items-center gap-1 md:gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="w-10 h-10 text-muted-foreground hover:text-white disabled:opacity-30"
+            >
+              <Undo2 className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="w-10 h-10 text-muted-foreground hover:text-white disabled:opacity-30"
+            >
+              <Redo2 className="w-5 h-5" />
+            </Button>
+          </div>
           
-          <div className="w-8 h-px bg-white/10 my-2" />
+          <div className="w-px md:w-8 h-6 md:h-px bg-white/10 mx-1 md:mx-0 md:my-2" />
           
           <Button
             variant="ghost"
@@ -566,8 +570,8 @@ Generate the edited image now.`;
             <Trash2 className="w-5 h-5" />
           </Button>
 
-          {/* Brush size slider */}
-          <div className="mt-4 flex flex-col items-center gap-2">
+          {/* Brush size slider - only desktop */}
+          <div className="hidden md:flex flex-col items-center gap-2 mt-4">
             <span className="text-xs text-muted-foreground">{brushSize}</span>
             <input
               type="range"
@@ -579,10 +583,23 @@ Generate the edited image now.`;
               style={{ width: "80px" }}
             />
           </div>
+          
+          {/* Brush size - mobile only */}
+          <div className="flex md:hidden items-center gap-2 ml-2">
+            <input
+              type="range"
+              min="5"
+              max="100"
+              value={brushSize}
+              onChange={(e) => setBrushSize(Number(e.target.value))}
+              className="w-20"
+            />
+            <span className="text-xs text-muted-foreground w-6">{brushSize}</span>
+          </div>
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col order-1 md:order-2 min-h-0">
           <div 
             ref={canvasContainerRef}
             className="flex-1 relative bg-[#0d0d0d] overflow-hidden min-h-0"
