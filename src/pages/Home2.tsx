@@ -18,12 +18,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const aiLogos = [
-  { src: "/images/logos/openai.svg", alt: "OpenAI", title: "OpenAI" },
-  { src: "/images/logos/anthropic.svg", alt: "Anthropic", title: "Anthropic" },
   { src: "/images/logos/google.svg", alt: "Google", title: "Google" },
-  { src: "/images/logos/meta.svg", alt: "Meta", title: "Meta" },
-  { src: "/images/logos/deepseek.svg", alt: "DeepSeek", title: "DeepSeek" },
-  { src: "/images/logos/xai.svg", alt: "xAI", title: "xAI" },
+  { src: "/images/logos/openai.svg", alt: "OpenAI", title: "OpenAI" },
+  { src: "/images/logos/kling.svg", alt: "KlingAI", title: "KlingAI" },
+  { src: "/images/logos/seedream.png", alt: "Seedream", title: "Seedream" },
 ];
 
 interface PublicImage {
