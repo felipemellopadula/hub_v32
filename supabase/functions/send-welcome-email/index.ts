@@ -133,7 +133,7 @@ const createEmailTemplate = (data: WelcomeEmailRequest) => {
               <!-- CTA Button -->
               <tr>
                 <td style="padding: 0 40px 40px 40px; text-align: center;">
-                  <a href="${Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovable.app') || 'https://app.synergyai.com.br'}/dashboard" 
+                  <a href="https://synergyia.com.br/dashboard-novo" 
                      style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
                     Acessar Dashboard →
                   </a>
