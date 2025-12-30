@@ -110,7 +110,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
   
   if (requireSubscription) {
     // Profile já deve estar carregado neste ponto devido ao check de profileLoading acima
-    const hasActiveSubscription = profile?.subscription_type === 'paid' || profile?.subscription_type === 'admin';
+  // Aceitar todos os tipos válidos de assinatura premium
+  const validSubscriptionTypes = ['paid', 'admin', 'basic', 'plus', 'pro'];
+  const hasActiveSubscription = validSubscriptionTypes.includes(profile?.subscription_type || '');
     
     if (!hasActiveSubscription) {
       return (
