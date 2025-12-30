@@ -61,9 +61,8 @@ const App = () => (
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public routes */}
-            <Route path="/" element={<Home3 />} />
-            <Route path="/home2" element={<Home2 />} /> {/* Alias for compatibility */}
-            <Route path="/home3" element={<Home3 />} /> {/* Alias for compatibility */}
+          <Route path="/" element={<Home3 />} />
+          <Route path="/home2" element={<Home2 />} />
           <Route path="/share" element={<Share />} />
           <Route path="/admin" element={<AdminLogin />} />
           
