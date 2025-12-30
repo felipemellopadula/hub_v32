@@ -62,6 +62,7 @@ interface HeroSlide {
   title: string;
   subtitle: string;
   imageUrl: string;
+  videoUrl?: string;
   ctaText: string;
   path: string;
 }
@@ -90,8 +91,9 @@ const heroSlides: HeroSlide[] = [
   {
     id: "2",
     title: "MOTION CONTROL 2.6",
-    subtitle: "Controle preciso de expressões",
-    imageUrl: "/FLUX_Kontext_Max.png",
+    subtitle: "Controle preciso de movimento",
+    imageUrl: "",
+    videoUrl: "https://videos.pexels.com/video-files/2795730/2795730-uhd_2560_1440_25fps.mp4",
     ctaText: "Animar",
     path: "/video?model=klingai:kling-video@2.6-pro",
   },
@@ -548,11 +550,22 @@ const Home3: React.FC = () => {
                 onClick={(e) => handleToolClick(slide.path, e)}
                 className="snap-center shrink-0 w-[80vw] md:w-[550px] lg:w-[650px] h-[280px] md:h-[380px] relative rounded-2xl overflow-hidden group cursor-pointer border border-border hover:border-primary/50 transition-colors"
               >
-                <img
-                  src={slide.imageUrl}
-                  alt={slide.title}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+                {slide.videoUrl ? (
+                  <video
+                    src={slide.videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                ) : (
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
 
