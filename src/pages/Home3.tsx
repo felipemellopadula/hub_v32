@@ -61,8 +61,9 @@ interface HeroSlide {
   id: string;
   title: string;
   subtitle: string;
-  imageUrl: string;
+  imageUrl?: string;
   videoUrl?: string;
+  images?: string[];
   ctaText: string;
   path: string;
 }
@@ -110,7 +111,7 @@ const heroSlides: HeroSlide[] = [
     id: "4",
     title: "NANO BANANA",
     subtitle: "Geração Ultra Rápida",
-    imageUrl: "/GPT_IMAGE.png",
+    images: ["/images/banana-1.png", "/images/banana-2.png", "/images/banana-3.png", "/images/banana-4.png"],
     ctaText: "Gerar",
     path: "/image2",
   },
@@ -299,6 +300,61 @@ const AnimatedToolCardContent: React.FC<{
       src={tool.imageUrl}
       alt={tool.title}
       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
+};
+
+// Animated Hero Slide Content Component
+const AnimatedHeroSlideContent: React.FC<{
+  slide: HeroSlide;
+}> = ({ slide }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (!slide.images || slide.images.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % slide.images!.length);
+    }, 400); // Same speed as Nano Banana Pro card
+
+    return () => clearInterval(interval);
+  }, [slide.images]);
+
+  if (slide.videoUrl) {
+    return (
+      <video
+        src={slide.videoUrl}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      />
+    );
+  }
+
+  if (slide.images && slide.images.length > 0) {
+    return (
+      <div className="absolute inset-0 w-full h-full">
+        {slide.images.map((img, idx) => (
+          <img
+            key={idx}
+            src={img}
+            alt={slide.title}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              idx === currentIndex ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={slide.imageUrl}
+      alt={slide.title}
+      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
     />
   );
 };
@@ -550,22 +606,7 @@ const Home3: React.FC = () => {
                 onClick={(e) => handleToolClick(slide.path, e)}
                 className="snap-center shrink-0 w-[80vw] md:w-[550px] lg:w-[650px] h-[280px] md:h-[380px] relative rounded-2xl overflow-hidden group cursor-pointer border border-border hover:border-primary/50 transition-colors"
               >
-                {slide.videoUrl ? (
-                  <video
-                    src={slide.videoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                ) : (
-                  <img
-                    src={slide.imageUrl}
-                    alt={slide.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                )}
+                <AnimatedHeroSlideContent slide={slide} />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
 
