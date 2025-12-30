@@ -139,10 +139,10 @@ serve(async (req) => {
           ? new Date(subscription.current_period_end * 1000).toISOString() 
           : null;
 
-        // Criar registro de assinatura
+        // Criar ou atualizar registro de assinatura (idempotente - usa upsert)
         const { data: subscriptionData, error: subError } = await supabase
           .from("stripe_subscriptions")
-          .insert({
+          .upsert({
             user_id: userId,
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
@@ -152,14 +152,30 @@ serve(async (req) => {
             current_period_start: periodStart,
             current_period_end: periodEnd,
             cancel_at_period_end: subscription.cancel_at_period_end,
-            tokens_per_period: product.tokens_included
+            tokens_per_period: product.tokens_included,
+            updated_at: new Date().toISOString()
+          }, { 
+            onConflict: 'stripe_subscription_id',
+            ignoreDuplicates: false 
           })
           .select()
           .single();
 
         if (subError) {
-          console.error("[Webhook] Erro ao criar subscription:", subError);
-          break;
+          console.error("[Webhook] Erro ao criar/atualizar subscription:", subError);
+          // NÃO usar break aqui - continuar para atualizar perfil e enviar email
+          // Tentar buscar subscription existente para obter o ID
+          const { data: existingSub } = await supabase
+            .from("stripe_subscriptions")
+            .select("id")
+            .eq("stripe_subscription_id", subscriptionId)
+            .single();
+          
+          if (existingSub) {
+            console.log(`[Webhook] Subscription já existia, continuando com ID: ${existingSub.id}`);
+          }
+        } else {
+          console.log(`[Webhook] Subscription criada/atualizada: ${subscriptionData?.id}`);
         }
 
         // Determinar subscription_type baseado no plan_id
