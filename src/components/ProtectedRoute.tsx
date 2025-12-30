@@ -18,7 +18,7 @@ const pricingPlans = [
   {
     name: "Start",
     icon: Star,
-    price: "R$40",
+    price: "R$1",
     period: "/mês",
     planId: "basic_monthly",
     buttonVariant: "outline" as const,
@@ -31,7 +31,7 @@ const pricingPlans = [
   {
     name: "Pro",
     icon: Zap,
-    price: "R$200",
+    price: "R$1",
     period: "/mês",
     planId: "pro_monthly",
     buttonVariant: "default" as const,
@@ -45,9 +45,9 @@ const pricingPlans = [
   {
     name: "Creator",
     icon: Crown,
-    price: "R$500",
+    price: "R$1",
     period: "/mês",
-    planId: "pro_monthly", // Fallback para pro conforme configurado
+    planId: "pro_monthly",
     buttonVariant: "outline" as const,
     features: [
       "Tudo ilimitado",

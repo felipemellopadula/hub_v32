@@ -201,8 +201,8 @@ const tools: ToolCard[] = [
 const pricingPlans = [
   {
     name: "Start",
-    monthlyPrice: 40,
-    annualPrice: 50,
+    monthlyPrice: 1,
+    annualPrice: 1,
     description: "Perfeito para começar",
     icon: Star,
     features: ["1.000 tokens/mês", "Modelos básicos de imagem", "Geração de vídeo limitada", "Suporte por email"],
@@ -212,8 +212,8 @@ const pricingPlans = [
   },
   {
     name: "Pro",
-    monthlyPrice: 200,
-    annualPrice: 210,
+    monthlyPrice: 1,
+    annualPrice: 1,
     description: "Para criadores sérios",
     icon: Crown,
     features: [
@@ -229,8 +229,8 @@ const pricingPlans = [
   },
   {
     name: "Creator",
-    monthlyPrice: 500,
-    annualPrice: 510,
+    monthlyPrice: 1,
+    annualPrice: 1,
     description: "Para profissionais",
     icon: Zap,
     features: [
@@ -241,7 +241,7 @@ const pricingPlans = [
       "Suporte 24/7",
       "Early access a novos recursos",
     ],
-    monthlyPlanId: "pro_monthly", // Uses pro for now until creator plan is created
+    monthlyPlanId: "pro_monthly",
     annualPlanId: "pro_annual",
     popular: false,
   },
