@@ -176,7 +176,7 @@ export default function Transcribe() {
           
           <div className="flex items-center gap-2 sm:gap-4">
             <UserProfile />
-            <ThemeToggle />
+            
           </div>
         </div>
       </header>

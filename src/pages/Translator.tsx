@@ -197,7 +197,7 @@ ${humanizeInput}`,
           </div>
           <div className="flex items-center gap-4">
             <UserProfile />
-            <ThemeToggle />
+            
           </div>
         </div>
       </header>

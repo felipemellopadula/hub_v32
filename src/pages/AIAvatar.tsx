@@ -301,7 +301,7 @@ const AIAvatar = () => {
             <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
               <UserProfile />
             </Suspense>
-            <ThemeToggle />
+            
           </div>
         </div>
       </header>

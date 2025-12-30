@@ -501,8 +501,6 @@ const Home3: React.FC = () => {
 
             {/* Right Side: Actions */}
             <div className="hidden md:flex items-center gap-4">
-              <ThemeToggle />
-
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

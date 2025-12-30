@@ -133,7 +133,6 @@ const Index = () => {
             </a>
           </nav>
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
             {user ? (
               <Button
                 onClick={() => navigate("/dashboard")}

@@ -152,7 +152,7 @@ const Dashboard = () => {
             <Suspense fallback={<div className="w-8 h-8 animate-pulse bg-muted rounded-full" />}>
               <UserProfile />
             </Suspense>
-            <ThemeToggle />
+            
             <Button
               variant="outline"
               onClick={handleSignOut}

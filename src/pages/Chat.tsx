@@ -2733,18 +2733,8 @@ ${text}`;
             <Suspense fallback={<div className="h-6 w-6 bg-muted rounded-full" />}>
               <UserProfileLazy />
             </Suspense>
-            <div className="flex-shrink-0">
-              <Suspense fallback={<div className="h-6 w-10 bg-muted rounded" />}>
-                <ThemeToggleLazy />
-              </Suspense>
-            </div>
           </div>
           <div className="md:hidden flex items-center gap-1">
-            <div className="flex-shrink-0">
-              <Suspense fallback={<div className="h-6 w-10 bg-muted rounded" />}>
-                <ThemeToggleLazy />
-              </Suspense>
-            </div>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">

@@ -1074,9 +1074,6 @@ const VideoPage: React.FC = () => {
             <Suspense fallback={<div className="h-6 w-6 rounded-full bg-muted" />}>
               <UserProfileLazy />
             </Suspense>
-            <Suspense fallback={<div className="h-6 w-10 rounded bg-muted" />}>
-              <ThemeToggleLazy />
-            </Suspense>
           </div>
         </div>
       </header>

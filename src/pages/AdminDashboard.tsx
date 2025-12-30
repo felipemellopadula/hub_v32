@@ -1158,7 +1158,7 @@ const AdminDashboard = () => {
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
             </Button>
-            <ThemeToggle />
+            
           </div>
         </div>
 

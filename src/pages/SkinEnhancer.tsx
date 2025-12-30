@@ -165,7 +165,7 @@ export default function SkinEnhancer() {
             <Suspense fallback={<div className="w-8 h-8 rounded-full bg-muted animate-pulse" />}>
               <UserProfile />
             </Suspense>
-            <ThemeToggle />
+            
             <Button
               variant="ghost"
               size="sm"

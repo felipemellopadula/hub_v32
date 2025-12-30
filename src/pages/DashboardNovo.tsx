@@ -371,7 +371,7 @@ const DashboardNovo: React.FC = () => {
             <Suspense fallback={<div className="w-7 h-7 animate-pulse bg-white/20 rounded-full" />}>
               <UserProfile />
             </Suspense>
-            <ThemeToggle />
+            
             <Button
               variant="outline"
               size="sm"
