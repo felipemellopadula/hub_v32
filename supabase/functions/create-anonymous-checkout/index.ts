@@ -61,6 +61,14 @@ serve(async (req) => {
 
     // Create checkout session without requiring authentication
     // Stripe will collect email and name during checkout
+    // Note: customer_creation is NOT used with mode: "subscription" - Stripe creates customer automatically
+    logStep("Creating Stripe checkout session", {
+      priceId: product.stripe_price_id,
+      planId,
+      origin,
+      mode: "subscription"
+    });
+
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -71,8 +79,6 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#pricing`,
-      // This allows new customers to be created automatically
-      customer_creation: "always",
       // Collect billing address for better fraud protection
       billing_address_collection: "required",
       // Store plan info in metadata for the webhook
@@ -83,6 +89,11 @@ serve(async (req) => {
       },
       // Allow promo codes
       allow_promotion_codes: true,
+    });
+
+    logStep("Checkout session created successfully", { 
+      sessionId: session.id, 
+      url: session.url?.substring(0, 50) + "..."
     });
 
     logStep("Checkout session created", { 
