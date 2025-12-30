@@ -28,33 +28,69 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        let userId = session.client_reference_id || session.metadata?.user_id;
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
+        const customerEmail = session.customer_details?.email;
+        const customerName = session.customer_details?.name || "Usuário";
 
-        console.log(`[Webhook] Checkout completo - Customer: ${customerId}, Subscription: ${subscriptionId}`);
+        console.log(`[Webhook] Checkout completo - Customer: ${customerId}, Email: ${customerEmail}`);
 
-        // Se não temos userId, buscar pelo email do customer
-        if (!userId) {
-          const customer = await stripe.customers.retrieve(customerId);
-          const customerEmail = (customer as Stripe.Customer).email;
+        // Buscar ou criar usuário
+        let userId: string | null = session.client_reference_id || session.metadata?.user_id || null;
+
+        // Se não temos userId, buscar pelo email
+        if (!userId && customerEmail) {
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", customerEmail)
+            .single();
+
+          if (existingProfile) {
+            userId = existingProfile.id;
+            console.log(`[Webhook] Usuário existente encontrado: ${userId}`);
+          }
+        }
+
+        // Se ainda não temos usuário, criar um novo via auth.admin
+        if (!userId && customerEmail) {
+          console.log(`[Webhook] Criando novo usuário para: ${customerEmail}`);
           
-          if (customerEmail) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("id")
-              .eq("email", customerEmail)
-              .single();
-            
-            if (profile) {
-              userId = profile.id;
-              console.log(`[Webhook] Usuário encontrado pelo email: ${userId}`);
+          // Gerar senha temporária segura
+          const tempPassword = crypto.randomUUID() + "Aa1!";
+          
+          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email: customerEmail,
+            password: tempPassword,
+            email_confirm: false, // Enviar email de confirmação
+            user_metadata: {
+              name: customerName,
+              created_via: "stripe_checkout"
             }
+          });
+
+          if (createError) {
+            console.error(`[Webhook] Erro ao criar usuário:`, createError);
+            // Tentar buscar se o usuário já existe
+            const { data: users } = await supabase.auth.admin.listUsers();
+            const existingUser = users?.users?.find(u => u.email === customerEmail);
+            if (existingUser) {
+              userId = existingUser.id;
+              console.log(`[Webhook] Usuário já existia no auth: ${userId}`);
+            }
+          } else if (newUser?.user) {
+            userId = newUser.user.id;
+            console.log(`[Webhook] Novo usuário criado: ${userId}`);
+            
+            // O trigger handle_new_user criará o profile automaticamente
+            // Mas vamos garantir que existe com os dados corretos
+            await new Promise(resolve => setTimeout(resolve, 500)); // Aguardar trigger
           }
         }
 
         if (!userId) {
-          console.error("[Webhook] Não foi possível identificar o usuário");
+          console.error("[Webhook] Não foi possível identificar/criar o usuário");
+          // Não quebrar o webhook - logar e continuar
           break;
         }
 
@@ -62,12 +98,25 @@ serve(async (req) => {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const priceId = subscription.items.data[0].price.id;
 
-        // Buscar plano no banco
-        const { data: product } = await supabase
+        // Buscar plano no banco - primeiro pelo price_id, depois pelo metadata
+        let product = null;
+        const { data: productByPrice } = await supabase
           .from("stripe_products")
           .select("*")
           .eq("stripe_price_id", priceId)
           .single();
+
+        if (productByPrice) {
+          product = productByPrice;
+        } else if (session.metadata?.plan_id) {
+          // Fallback: buscar pelo plan_id do metadata
+          const { data: productByPlanId } = await supabase
+            .from("stripe_products")
+            .select("*")
+            .eq("plan_id", session.metadata.plan_id)
+            .single();
+          product = productByPlanId;
+        }
 
         if (!product) {
           console.error("[Webhook] Produto não encontrado:", priceId);
@@ -100,7 +149,6 @@ serve(async (req) => {
         }
 
         // Determinar subscription_type baseado no plan_id
-        // IMPORTANTE: Usuários com assinatura ativa NUNCA devem ficar como 'free'
         let subscriptionType: 'paid' | 'basic' | 'plus' | 'pro' | 'admin' = 'paid';
         const planIdLower = product.plan_id.toLowerCase();
         
@@ -111,7 +159,6 @@ serve(async (req) => {
         } else if (planIdLower.includes('basic') || planIdLower.includes('standard') || planIdLower.includes('start')) {
           subscriptionType = 'basic';
         }
-        // Se nenhum match específico, mantém 'paid' como default (nunca 'free')
 
         // Atualizar perfil com tokens, customer_id, subscription_type e current_subscription_id
         const { error: updateError } = await supabase
@@ -120,7 +167,8 @@ serve(async (req) => {
             tokens_remaining: product.tokens_included,
             stripe_customer_id: customerId,
             subscription_type: subscriptionType,
-            current_subscription_id: subscriptionData?.id
+            current_subscription_id: subscriptionData?.id,
+            name: customerName // Atualizar nome se veio do Stripe
           })
           .eq("id", userId);
 
@@ -128,7 +176,7 @@ serve(async (req) => {
           console.error("[Webhook] Erro ao atualizar perfil:", updateError);
         }
 
-        console.log(`[Webhook] ✅ Usuário atualizado - Tokens: ${product.tokens_included}, Tipo: ${subscriptionType}`);
+        console.log(`[Webhook] ✅ Usuário ${userId} atualizado - Tokens: ${product.tokens_included}, Tipo: ${subscriptionType}`);
 
         // Enviar email de boas-vindas em background
         const sendWelcomeEmail = async () => {

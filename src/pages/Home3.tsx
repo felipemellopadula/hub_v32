@@ -362,16 +362,15 @@ const Home3: React.FC = () => {
   const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handlePricingClick = async (planId: string) => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-
+    // Não precisa mais verificar se o usuário está logado
+    // O checkout anônimo permite pagamento primeiro, cadastro depois
+    
     setIsSubscribing(true);
     try {
-      console.log("[Home3] Iniciando checkout para:", planId);
+      console.log("[Home3] Iniciando checkout anônimo para:", planId);
 
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+      // Usar a nova função pública que não requer autenticação
+      const { data, error } = await supabase.functions.invoke("create-anonymous-checkout", {
         body: { planId },
       });
 
@@ -383,16 +382,9 @@ const Home3: React.FC = () => {
       }
 
       if (data?.url) {
-        console.log("[Home3] Redirecionando para:", data.url);
-        const newWindow = window.open(data.url, "_blank");
-
-        if (!newWindow) {
-          console.log("[Home3] Popup bloqueado, redirecionando na mesma aba");
-          window.location.href = data.url;
-        } else {
-          setIsSubscribing(false);
-          toast.success("Checkout aberto! Complete o pagamento na nova aba.");
-        }
+        console.log("[Home3] Redirecionando para Stripe:", data.url);
+        // Abrir na mesma aba para melhor experiência
+        window.location.href = data.url;
       } else {
         console.error("[Home3] URL não recebida:", data);
         throw new Error("URL de checkout não recebida");

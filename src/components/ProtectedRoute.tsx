@@ -74,9 +74,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
     
     setIsSubscribing(true);
     try {
-      console.log('🛒 Iniciando checkout para plano:', planId);
+      console.log('🛒 Iniciando checkout anônimo para plano:', planId);
       
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      // Usar a função pública que não requer autenticação
+      const { data, error } = await supabase.functions.invoke('create-anonymous-checkout', {
         body: { planId }
       });
 
@@ -92,14 +93,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
 
       if (data?.url) {
         console.log('✅ Redirecionando para Stripe:', data.url);
-        window.open(data.url, '_blank');
-      } else if (data?.sessionId) {
-        // Fallback se só tiver sessionId
-        console.log('✅ Session criada:', data.sessionId);
-        toast({
-          title: "Sessão criada",
-          description: "Redirecionando para o pagamento...",
-        });
+        // Redirecionar na mesma aba para melhor experiência
+        window.location.href = data.url;
       } else {
         console.error('❌ Resposta inesperada:', data);
         toast({

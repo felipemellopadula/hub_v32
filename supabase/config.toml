@@ -1,5 +1,8 @@
 project_id = "myqgnnqltemfpzdxwybj"
 
+[functions.create-anonymous-checkout]
+verify_jwt = false
+
 [functions.openai-chat]
 verify_jwt = true
 

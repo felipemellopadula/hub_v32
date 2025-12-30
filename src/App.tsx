@@ -31,6 +31,7 @@ const ImageEditor = lazy(() => import("./pages/ImageEditor"));
 const AIAvatar = lazy(() => import("./pages/AIAvatar"));
 const Inpaint = lazy(() => import("./pages/Inpaint"));
 const Home3 = lazy(() => import("./pages/Home3"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 
 // Create queryClient
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/" element={<Home3 />} />
           <Route path="/home2" element={<Home2 />} />
           <Route path="/share" element={<Share />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/admin" element={<AdminLogin />} />
           
           {/* Protected routes */}
