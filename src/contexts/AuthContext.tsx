@@ -18,7 +18,7 @@ interface Profile {
   email: string;
   phone?: string;
   avatar_url?: string;
-  subscription_type: 'free' | 'paid' | 'admin';
+  subscription_type: 'free' | 'paid' | 'admin' | 'basic' | 'plus' | 'pro';
   tokens_remaining: number;
   created_at: string;
   updated_at: string;

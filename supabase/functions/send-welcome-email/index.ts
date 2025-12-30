@@ -186,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("[Welcome Email] Enviando email para:", { user_email, plan_name });
 
     const emailResponse = await resend.emails.send({
-      from: "Synergy AI <onboarding@resend.dev>",
+      from: "Synergy AI <noreply@synergyia.com.br>",
       to: [user_email],
       subject: `🎉 Bem-vindo ao Synergy AI - ${plan_name}`,
       html: createEmailTemplate({ user_name, user_email, plan_name, tokens_included }),
