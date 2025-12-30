@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
 import seedanceVideo from "@/assets/videos/seedance-hero.mp4";
+import { LazyVideo } from "@/components/LazyVideo";
 import { ContactForm } from "@/components/ContactForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -323,16 +324,9 @@ const AnimatedHeroSlideContent: React.FC<{
 
   if (slide.videoUrl) {
     return (
-      <video
+      <LazyVideo
         src={slide.videoUrl}
-        autoPlay
-        loop
-        muted
-        playsInline
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-        onError={(e) => {
-          console.error("Erro ao carregar vídeo:", slide.videoUrl, e);
-        }}
       />
     );
   }
