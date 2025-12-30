@@ -4,8 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Crown, Zap, Star, Check } from 'lucide-react';
+import { Crown, Zap, Star, Check, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,6 +20,7 @@ const pricingPlans = [
     icon: Star,
     price: "R$40",
     period: "/mês",
+    planId: "basic_monthly",
     buttonVariant: "outline" as const,
     features: [
       "100 créditos de geração",
@@ -30,6 +33,7 @@ const pricingPlans = [
     icon: Zap,
     price: "R$200",
     period: "/mês",
+    planId: "pro_monthly",
     buttonVariant: "default" as const,
     popular: true,
     features: [
@@ -43,6 +47,7 @@ const pricingPlans = [
     icon: Crown,
     price: "R$500",
     period: "/mês",
+    planId: "pro_monthly", // Fallback para pro conforme configurado
     buttonVariant: "outline" as const,
     features: [
       "Tudo ilimitado",
@@ -58,9 +63,61 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handleCloseAuthModal = () => {
     navigate('/', { replace: true });
+  };
+
+  const handleCheckout = async (planId: string) => {
+    if (isSubscribing) return;
+    
+    setIsSubscribing(true);
+    try {
+      console.log('🛒 Iniciando checkout para plano:', planId);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { planId }
+      });
+
+      if (error) {
+        console.error('❌ Erro ao criar sessão de checkout:', error);
+        toast({
+          title: "Erro ao iniciar checkout",
+          description: error.message || "Tente novamente em alguns instantes",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.url) {
+        console.log('✅ Redirecionando para Stripe:', data.url);
+        window.open(data.url, '_blank');
+      } else if (data?.sessionId) {
+        // Fallback se só tiver sessionId
+        console.log('✅ Session criada:', data.sessionId);
+        toast({
+          title: "Sessão criada",
+          description: "Redirecionando para o pagamento...",
+        });
+      } else {
+        console.error('❌ Resposta inesperada:', data);
+        toast({
+          title: "Erro",
+          description: "Resposta inesperada do servidor",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error('❌ Erro inesperado:', err);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao processar sua solicitação",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
   };
 
   // Timeout de fallback para evitar loading infinito
@@ -95,7 +152,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
           </p>
           <Button 
             variant="link" 
-            onClick={() => window.location.href = '/'}
+            onClick={() => navigate('/')}
             className="mt-2"
           >
             Voltar para a página inicial
@@ -157,9 +214,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
                   <Button 
                     variant={plan.buttonVariant}
                     className={`w-full mb-4 ${plan.popular ? "bg-primary hover:bg-primary/90" : ""}`}
-                    onClick={() => window.location.href = '/#pricing'}
+                    onClick={() => handleCheckout(plan.planId)}
+                    disabled={isSubscribing}
                   >
-                    Assinar
+                    {isSubscribing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Assinar"
+                    )}
                   </Button>
                   
                   <ul className="space-y-2">
@@ -177,7 +242,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
             <div className="text-center">
               <Button 
                 variant="ghost" 
-                onClick={() => window.location.href = '/'}
+                onClick={() => navigate('/')}
               >
                 Voltar para a página inicial
               </Button>
