@@ -85,7 +85,7 @@ const heroSlides: HeroSlide[] = [
     id: "1",
     title: "SEEDANCE 1.5 PRO",
     subtitle: "Narrativas Multi-shot com Áudio",
-    imageUrl: "/Seedream.webp",
+    videoUrl: "/videos/seedance-hero.mp4",
     ctaText: "Experimentar",
     path: "/video",
   },
