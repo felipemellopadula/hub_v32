@@ -205,59 +205,51 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     let mounted = true;
-    let lastEventTime = 0;
+    let hasRedirected = false;
 
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
         
-        // Evitar eventos duplicados SIGNED_IN em menos de 500ms
-        const now = Date.now();
-        if (event === 'SIGNED_IN' && now - lastEventTime < 500) {
-          console.log('Auth event SIGNED_IN duplicado ignorado');
-          return;
-        }
-        lastEventTime = now;
-        
         console.log('Auth state change:', event, session?.user?.id);
         
+        // Atualizar estado de forma síncrona
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         
         if (session?.user && event !== 'SIGNED_OUT') {
-          // Usar setTimeout(0) para evitar deadlock com fetchProfile
+          // Buscar perfil em setTimeout para evitar deadlock
           setTimeout(() => {
             if (mounted) {
               fetchProfile(session.user.id, session.user);
             }
           }, 0);
           
-          // Redirect to dashboard-novo for SIGNED_IN events (always redirect after login)
-          if (event === 'SIGNED_IN') {
-            console.log('Redirecting to /dashboard-novo...');
-            if (navigate) {
-              navigate('/dashboard-novo', { replace: true });
-            } else {
-              window.location.replace('/dashboard-novo');
-            }
+          // Redirecionar APENAS no evento SIGNED_IN e apenas uma vez
+          if (event === 'SIGNED_IN' && !hasRedirected) {
+            hasRedirected = true;
+            console.log('Login detectado, redirecionando para /dashboard-novo...');
+            // Aguardar um pouco para o perfil começar a carregar
+            setTimeout(() => {
+              if (mounted && navigate) {
+                navigate('/dashboard-novo', { replace: true });
+              }
+            }, 150);
           }
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setProfile(null);
-          // Only redirect if explicitly signed out
-          if (event === 'SIGNED_OUT' && window.location.pathname !== '/home3') {
+          if (window.location.pathname !== '/home3' && window.location.pathname !== '/') {
             if (navigate) {
               navigate('/home3', { replace: true });
-            } else {
-              window.location.replace('/home3');
             }
           }
         }
       }
     );
 
-    // Check for existing session asynchronously
+    // Check for existing session - SEM redirecionamento aqui
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       
@@ -269,16 +261,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (session?.user) {
         fetchProfile(session.user.id, session.user);
-        
-        // If user has session and is on homepage or auth, redirect to dashboard-novo
-        if (window.location.pathname === '/' || window.location.pathname === '/auth') {
-          console.log('Initial redirect to dashboard-novo...');
-          if (navigate) {
-            navigate('/dashboard-novo', { replace: true });
-          } else {
-            window.location.replace('/dashboard-novo');
-          }
-        }
+        // NÃO redirecionar aqui - deixar o usuário navegar manualmente ou via SIGNED_IN
       }
     });
 

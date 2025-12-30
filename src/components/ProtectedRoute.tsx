@@ -57,13 +57,26 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSubscr
   const location = useLocation();
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   const handleCloseAuthModal = () => {
     navigate('/', { replace: true });
   };
 
-  // Show loading spinner while checking auth or loading profile
-  if (loading || profileLoading) {
+  // Timeout de fallback para evitar loading infinito
+  useEffect(() => {
+    if (loading || profileLoading) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [loading, profileLoading]);
+
+  // Show loading spinner while checking auth or loading profile (max 3s)
+  if ((loading || profileLoading) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
