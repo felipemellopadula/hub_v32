@@ -229,9 +229,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }, 0);
           
-          // Redirect to dashboard-novo for sign-in events (only from login pages, not /home2)
-          if ((event === 'SIGNED_IN' || (event === 'TOKEN_REFRESHED' && window.location.pathname === '/')) && 
-              (window.location.pathname === '/' || window.location.pathname === '/auth')) {
+          // Redirect to dashboard-novo for SIGNED_IN events (always redirect after login)
+          if (event === 'SIGNED_IN') {
             console.log('Redirecting to /dashboard-novo...');
             if (navigate) {
               navigate('/dashboard-novo', { replace: true });
