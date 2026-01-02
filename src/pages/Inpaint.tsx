@@ -488,8 +488,10 @@ Generate the edited image now.`;
           <Link to="/dashboard-novo" className="text-muted-foreground hover:text-white transition-colors">
             ←
           </Link>
-          <span className="text-sm font-medium text-primary">Nano Banana Pro Inpaint</span>
-          <span className="text-muted-foreground">›</span>
+          <div className="flex items-center gap-2">
+            <Paintbrush className="w-5 h-5 text-primary" />
+            <span className="text-sm font-medium text-white">Inpaint</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {(uploadedImage || generatedImage) && (
