@@ -190,7 +190,7 @@ const ImageCarousel: React.FC<CarouselProps> = ({ isActive, isTabletOrMobile }) 
                 <ZoomIn className="w-4 h-4" />
                 Upscale
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/image2?mode=skin')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
+              <DropdownMenuItem onClick={() => navigate('/skin-enhancer')} className="hover:bg-cyan-500/20 focus:bg-cyan-500/20 cursor-pointer gap-2">
                 <Smile className="w-4 h-4" />
                 Skin Enhancer
               </DropdownMenuItem>
@@ -412,7 +412,7 @@ const DashboardNovo: React.FC = () => {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="/synergy-uploads/76f92d5d-608b-47a5-a829-bdb436a60274.png"
+              src="/images/synergy-icon.webp"
               alt="Synergy AI"
               className="h-7 w-auto"
             />
