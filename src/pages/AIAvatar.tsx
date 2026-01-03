@@ -268,12 +268,15 @@ const AIAvatar = () => {
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <UserCircle className="h-5 w-5 text-white" />
-              </div>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/images/synergy-logo.webp" 
+                alt="Synergy AI" 
+                className="h-6 w-auto"
+              />
+              <span className="text-muted-foreground">|</span>
               <h1 className="text-xl font-bold">AI Avatar</h1>
-            </Link>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {displayImage && (

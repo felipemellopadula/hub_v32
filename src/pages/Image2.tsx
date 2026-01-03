@@ -510,10 +510,13 @@ const Image2Page = () => {
               Voltar
             </Button>
             <div className="h-6 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center">
-                <ImageIcon className="h-5 w-5 text-white" />
-              </div>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/images/synergy-logo.webp" 
+                alt="Synergy AI" 
+                className="h-6 w-auto"
+              />
+              <span className="text-muted-foreground">|</span>
               <h1 className="text-xl font-bold">Imagem</h1>
             </div>
           </div>
