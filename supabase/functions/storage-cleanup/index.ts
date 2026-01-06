@@ -5,6 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Buckets that should NEVER be cleaned (permanent storage for assets like hero videos)
+const PROTECTED_BUCKETS = ['assets']
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -32,8 +35,9 @@ Deno.serve(async (req) => {
 
     // Get ALL buckets
     const { data: allBuckets } = await supabaseClient.storage.listBuckets()
-    const buckets = allBuckets?.map(bucket => bucket.name) || []
+    let buckets = allBuckets?.map(bucket => bucket.name) || []
     console.log(`Found buckets: ${buckets.join(', ')}`)
+    console.log(`Protected buckets (will be skipped): ${PROTECTED_BUCKETS.join(', ')}`)
     
     // Test for additional common bucket names
     const testBuckets = ['temp', 'uploads', 'cache', 'thumbnails', 'previews', 'generated']
@@ -56,8 +60,12 @@ Deno.serve(async (req) => {
     let totalFreed = 0
     let errors = []
 
-    // Process each bucket AGGRESSIVELY
-    for (const bucketName of buckets) {
+    // Filter out protected buckets
+    const bucketsToClean = buckets.filter(b => !PROTECTED_BUCKETS.includes(b))
+    console.log(`Buckets to clean: ${bucketsToClean.join(', ')}`)
+
+    // Process each bucket AGGRESSIVELY (except protected ones)
+    for (const bucketName of bucketsToClean) {
       console.log(`\n🗂️ PROCESSING BUCKET: ${bucketName}`)
       
       try {
