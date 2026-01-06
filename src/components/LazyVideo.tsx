@@ -11,6 +11,7 @@ export const LazyVideo = ({ src, poster, className, priority = false }: LazyVide
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(priority);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -46,6 +47,7 @@ export const LazyVideo = ({ src, poster, className, priority = false }: LazyVide
       const video = videoRef.current;
       
       const handleCanPlay = () => {
+        setIsLoading(false);
         setIsPlaying(true);
         video.play().catch(() => {
           console.log("Video autoplay blocked");
@@ -74,6 +76,11 @@ export const LazyVideo = ({ src, poster, className, priority = false }: LazyVide
 
   return (
     <div ref={containerRef} className={`${className} relative overflow-hidden`}>
+      {/* Loading state - animated gradient when no poster */}
+      {isVisible && isLoading && !poster && !hasError && (
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-purple-900/40 via-gray-900/60 to-gray-900/80 animate-pulse" />
+      )}
+      
       {/* Poster shown until video plays */}
       {poster && !isPlaying && !hasError && (
         <img
