@@ -609,7 +609,7 @@ const Home3: React.FC = () => {
             <img 
               src="/images/promo-banner.png" 
               alt="Synergy AI - Impulsione sua criatividade" 
-              className="w-full h-auto object-cover"
+              className="w-full h-[100px] sm:h-[120px] md:h-auto object-cover"
             />
           </div>
         </div>
