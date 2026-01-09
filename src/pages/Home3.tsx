@@ -609,7 +609,10 @@ const Home3: React.FC = () => {
                        p-6 sm:p-8 lg:p-10 hover:shadow-2xl hover:shadow-orange-500/30 
                        transition-all duration-300 group"
           >
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8">
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_3s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            
+            <div className="relative flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8">
               {/* Texto Principal */}
               <div className="text-center lg:text-left flex-1">
                 <p className="text-sm sm:text-base font-bold text-black/70 uppercase tracking-widest mb-2">
@@ -623,13 +626,14 @@ const Home3: React.FC = () => {
                 </p>
               </div>
               
-              {/* Botão CTA */}
+              {/* Botão CTA com Pulse */}
               <button className="bg-black text-yellow-400 font-bold 
                                  px-8 py-4 sm:px-10 sm:py-5 
                                  rounded-xl text-lg sm:text-xl lg:text-2xl
                                  hover:bg-black/90 hover:scale-105
                                  transition-all duration-300 shadow-xl
-                                 whitespace-nowrap group-hover:shadow-2xl">
+                                 whitespace-nowrap group-hover:shadow-2xl
+                                 animate-[pulse_2s_ease-in-out_infinite]">
                 Ver Planos →
               </button>
             </div>
