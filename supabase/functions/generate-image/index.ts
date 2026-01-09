@@ -258,7 +258,6 @@ serve(async (req) => {
     
     console.log('Dimensões finais:', { width, height });
 
-    const numberResults: number = Math.max(1, Math.min(4, Number(body.numberResults) || 1));
     // Usar WEBP para imagens grandes para economizar recursos
     let outputFormat: string = (typeof body.outputFormat === 'string' && body.outputFormat) || 'WEBP';
     
