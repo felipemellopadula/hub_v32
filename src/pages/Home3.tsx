@@ -210,52 +210,67 @@ const tools: ToolCard[] = [
   },
 ];
 
-// Pricing plans mapped to stripe_products table
-const pricingPlans = [
+// Pricing plans - Package-based credit model
+interface PricingOption {
+  quantity: number | string;
+  price: number | string;
+  planId: string;
+}
+
+interface PricingPlan {
+  name: string;
+  icon: React.ElementType;
+  mainPrice: number;
+  mainQuantity: number;
+  description: string;
+  options: PricingOption[];
+  mainPlanId: string;
+  features: string[];
+  popular: boolean;
+}
+
+const pricingPlans: PricingPlan[] = [
   {
     name: "Start",
-    monthlyPrice: 1,
-    annualPrice: 1,
-    description: "Perfeito para começar",
     icon: Star,
-    features: ["1.000 tokens/mês", "Modelos básicos de imagem", "Geração de vídeo limitada", "Suporte por email"],
-    monthlyPlanId: "basic_monthly",
-    annualPlanId: "basic_annual",
+    mainPrice: 30,
+    mainQuantity: 10,
+    description: "Perfeito para começar",
+    options: [
+      { quantity: 20, price: 60, planId: "start_20" },
+      { quantity: 30, price: 90, planId: "start_30" },
+    ],
+    mainPlanId: "start_10",
+    features: ["Ideal para testes e pequenos projetos"],
     popular: false,
   },
   {
     name: "Pro",
-    monthlyPrice: 1,
-    annualPrice: 1,
-    description: "Para criadores sérios",
     icon: Crown,
-    features: [
-      "5.000 tokens/mês",
-      "Todos os modelos de imagem",
-      "Vídeos em alta qualidade",
-      "Skin Enhancer & Upscale",
-      "Suporte prioritário",
+    mainPrice: 150,
+    mainQuantity: 50,
+    description: "Para criadores sérios",
+    options: [
+      { quantity: 40, price: 120, planId: "pro_40" },
+      { quantity: 100, price: 300, planId: "pro_100" },
     ],
-    monthlyPlanId: "pro_monthly",
-    annualPlanId: "pro_annual",
+    mainPlanId: "pro_50",
+    features: ["Melhor custo-benefício"],
     popular: true,
   },
   {
     name: "Creator",
-    monthlyPrice: 1,
-    annualPrice: 1,
-    description: "Para profissionais",
     icon: Zap,
-    features: [
-      "15.000 tokens/mês",
-      "Acesso ilimitado a modelos",
-      "Vídeos 4K",
-      "API access",
-      "Suporte 24/7",
-      "Early access a novos recursos",
+    mainPrice: 750,
+    mainQuantity: 250,
+    description: "Para profissionais e empresas",
+    options: [
+      { quantity: 500, price: 1500, planId: "creator_500" },
+      { quantity: 1000, price: 3000, planId: "creator_1000" },
+      { quantity: "1000+", price: "Sob consulta", planId: "contact" },
     ],
-    monthlyPlanId: "pro_monthly",
-    annualPlanId: "pro_annual",
+    mainPlanId: "creator_250",
+    features: ["Escala profissional"],
     popular: false,
   },
 ];
@@ -377,7 +392,7 @@ const Home3: React.FC = () => {
   // authMode removido - modal agora é apenas login
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   // Usuários autenticados podem ver a Home3 normalmente
   // O header mostra opção de ir ao Dashboard quando logado
@@ -752,48 +767,27 @@ const Home3: React.FC = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
               Escolha seu{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">Plano</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500">Pacote</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Comece gratuitamente e evolua conforme suas necessidades. Cancele quando quiser.
+              Compre créditos para criar imagens e vídeos incríveis com IA.
             </p>
-          </div>
-
-          {/* Billing Toggle */}
-          <div className="flex justify-center gap-2 mb-10">
-            <button
-              onClick={() => setIsAnnual(false)}
-              className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
-                !isAnnual
-                  ? "bg-primary text-primary-foreground shadow-lg"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setIsAnnual(true)}
-              className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
-                isAnnual
-                  ? "bg-primary text-primary-foreground shadow-lg"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              Anual
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan) => {
               const IconComponent = plan.icon;
-              const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
-              const currentPlanId = isAnnual ? plan.annualPlanId : plan.monthlyPlanId;
+              const selectedPlanId = selectedOptions[plan.name] || plan.mainPlanId;
+              const selectedOption = plan.options.find(o => o.planId === selectedPlanId);
+              const displayPrice = selectedOption ? selectedOption.price : plan.mainPrice;
+              const displayQuantity = selectedOption ? selectedOption.quantity : plan.mainQuantity;
+              
               return (
                 <div
                   key={plan.name}
                   className={`relative rounded-2xl p-6 border transition-all duration-300 hover:shadow-xl ${
                     plan.popular
-                      ? "border-primary bg-card shadow-lg scale-105"
+                      ? "border-primary bg-card shadow-lg shadow-primary/20 md:scale-105"
                       : "border-border bg-card/50 hover:border-primary/50"
                   }`}
                 >
@@ -816,12 +810,56 @@ const Home3: React.FC = () => {
                     <h3 className="text-xl font-bold">{plan.name}</h3>
                   </div>
 
-                  <div className="mb-4">
-                    <span className="text-4xl font-black">R$ {currentPrice}</span>
-                    <span className="text-muted-foreground">/mês</span>
+                  <div className="mb-2">
+                    <span className="text-4xl sm:text-5xl font-black">
+                      {typeof displayPrice === 'number' 
+                        ? `R$ ${displayPrice.toLocaleString('pt-BR')}`
+                        : displayPrice}
+                    </span>
                   </div>
+                  <p className="text-lg text-muted-foreground mb-4">
+                    {typeof displayQuantity === 'number' 
+                      ? `${displayQuantity} imagens / vídeos`
+                      : displayQuantity}
+                  </p>
 
-                  <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
+                  <p className="text-muted-foreground text-sm mb-4">{plan.description}</p>
+
+                  {/* Options */}
+                  <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-2 uppercase font-semibold">Outras opções:</p>
+                    <div className="space-y-2">
+                      {/* Main option */}
+                      <label className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="radio"
+                          name={`option-${plan.name}`}
+                          checked={selectedPlanId === plan.mainPlanId}
+                          onChange={() => setSelectedOptions(prev => ({ ...prev, [plan.name]: plan.mainPlanId }))}
+                          className="accent-primary"
+                        />
+                        <span>{plan.mainQuantity} imagens / vídeos — R$ {plan.mainPrice.toLocaleString('pt-BR')}</span>
+                      </label>
+                      {/* Other options */}
+                      {plan.options.map((option) => (
+                        <label key={option.planId} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="radio"
+                            name={`option-${plan.name}`}
+                            checked={selectedPlanId === option.planId}
+                            onChange={() => setSelectedOptions(prev => ({ ...prev, [plan.name]: option.planId }))}
+                            className="accent-primary"
+                          />
+                          <span>
+                            {typeof option.quantity === 'number' 
+                              ? `${option.quantity} imagens / vídeos — R$ ${(option.price as number).toLocaleString('pt-BR')}`
+                              : `${option.quantity} — ${option.price}`
+                            }
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   <ul className="space-y-3 mb-6">
                     {plan.features.map((feature, idx) => (
@@ -833,12 +871,20 @@ const Home3: React.FC = () => {
                   </ul>
 
                   <Button
-                    onClick={() => handlePricingClick(currentPlanId)}
+                    onClick={() => {
+                      if (selectedPlanId === 'contact') {
+                        document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        handlePricingClick(selectedPlanId);
+                      }
+                    }}
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
-                    disabled={isSubscribing}
+                    disabled={isSubscribing && selectedPlanId !== 'contact'}
                   >
-                    {isSubscribing ? "Processando..." : "Começar Agora"}
+                    {selectedPlanId === 'contact' 
+                      ? "Fale Conosco" 
+                      : isSubscribing ? "Processando..." : "Começar Agora"}
                   </Button>
                 </div>
               );
