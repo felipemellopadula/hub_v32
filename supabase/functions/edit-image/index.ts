@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateAndDeductCredits, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +16,9 @@ serve(async (req) => {
 
   try {
     const RUNWARE_API_KEY = Deno.env.get('RUNWARE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
     if (!RUNWARE_API_KEY) {
       throw new Error('RUNWARE_API_KEY não configurada');
     }
@@ -27,6 +32,32 @@ serve(async (req) => {
 
     if (!positivePrompt || allImages.length === 0) {
       throw new Error('Prompt e imagem de entrada são obrigatórios');
+    }
+
+    // ✅ VALIDAÇÃO DE CRÉDITOS (apenas para novos usuários)
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+
+      if (user) {
+        const creditCost = 1; // 1 crédito por edição
+        const creditResult = await validateAndDeductCredits(
+          supabaseAdmin,
+          user.id,
+          creditCost,
+          'image-edit',
+          `Edição de imagem: ${positivePrompt.substring(0, 100)}`
+        );
+
+        if (!creditResult.isValid) {
+          console.log('[edit-image] ❌ Créditos insuficientes');
+          return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+        }
+
+        console.log(`[edit-image] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, remaining=${creditResult.creditsRemaining}`);
+      }
     }
 
     console.log('Editando imagem com Runware:', { model, width, height, promptLength: positivePrompt.length, imageCount: allImages.length });

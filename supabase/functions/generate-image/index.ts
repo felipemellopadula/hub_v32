@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as b64encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateAndDeductCredits, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const RUNWARE_API_KEY = Deno.env.get('RUNWARE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -55,6 +56,29 @@ serve(async (req) => {
       } catch (e) {
         console.warn('Não foi possível obter o usuário:', e);
       }
+    }
+
+    // Número de imagens a gerar
+    const numberResults: number = Math.max(1, Math.min(4, Number(body.numberResults) || 1));
+    const creditCost = numberResults; // 1 crédito por imagem
+
+    // ✅ VALIDAÇÃO DE CRÉDITOS (apenas para novos usuários)
+    if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const creditResult = await validateAndDeductCredits(
+        supabaseAdmin,
+        userId,
+        creditCost,
+        'image-generation',
+        `Geração de ${numberResults} imagem(ns): ${prompt.substring(0, 100)}`
+      );
+
+      if (!creditResult.isValid) {
+        console.log('[generate-image] ❌ Créditos insuficientes');
+        return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+      }
+
+      console.log(`[generate-image] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, remaining=${creditResult.creditsRemaining}`);
     }
 
     const model: string = (typeof body.model === 'string' && body.model.trim()) ? body.model : 'runware:100@1';

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateAndDeductCredits, calculateUpscaleCost, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,14 +51,43 @@ serve(async (req) => {
       flavor = "photo",
       ultra_detail = 30,
       sharpen = 7,
-      smart_grain = 7
+      smart_grain = 7,
+      imageWidth,
+      imageHeight
     } = body;
 
     if (!image) {
       throw new Error("Image is required");
     }
 
-    console.log("Calling Freepik API with params:", { scale_factor, flavor, ultra_detail, sharpen, smart_grain });
+    // ✅ VALIDAÇÃO DE CRÉDITOS COM CUSTO VARIÁVEL
+    const width = imageWidth || 1024;
+    const height = imageHeight || 1024;
+    const creditCost = calculateUpscaleCost(width, height);
+
+    if (creditCost < 0) {
+      return new Response(
+        JSON.stringify({ error: 'Imagem muito grande. Máximo permitido: 4K (4096px)' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const creditResult = await validateAndDeductCredits(
+      supabaseAdmin,
+      user.id,
+      creditCost,
+      'freepik-upscale',
+      `Freepik Upscale ${scale_factor}x (${width}x${height})`
+    );
+
+    if (!creditResult.isValid) {
+      console.log('[freepik-upscale] ❌ Créditos insuficientes');
+      return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+    }
+
+    console.log(`[freepik-upscale] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, cost=${creditCost}, remaining=${creditResult.creditsRemaining}`);
+
+    console.log("Calling Freepik API with params:", { scale_factor, flavor, ultra_detail, sharpen, smart_grain, creditCost });
     console.log("Image size (approx):", Math.round(image.length / 1024), "KB");
 
     // Call Freepik Upscaler API with retry logic

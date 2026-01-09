@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { validateAndDeductCredits, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,9 @@ serve(async (req) => {
 
   try {
     const RUNWARE_API_KEY = Deno.env.get("RUNWARE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     if (!RUNWARE_API_KEY) {
       return new Response(JSON.stringify({ error: "Missing RUNWARE_API_KEY secret" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -51,6 +55,32 @@ serve(async (req) => {
         characterOrientation = "imageOrientation",
         keepOriginalSound = false,
       } = body;
+
+      // ✅ VALIDAÇÃO DE CRÉDITOS (apenas para novos usuários)
+      const authHeader = req.headers.get("authorization");
+      if (authHeader && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+
+        if (user) {
+          const creditCost = 1; // 1 crédito por vídeo
+          const creditResult = await validateAndDeductCredits(
+            supabaseAdmin,
+            user.id,
+            creditCost,
+            'video-generation',
+            `Geração de vídeo: ${positivePrompt?.substring(0, 100) || 'Video'}`
+          );
+
+          if (!creditResult.isValid) {
+            console.log('[runware-video] ❌ Créditos insuficientes');
+            return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+          }
+
+          console.log(`[runware-video] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, remaining=${creditResult.creditsRemaining}`);
+        }
+      }
 
       // Usar exatamente o AIR informado pelo cliente, sem remapeamentos
       // A validação de formato será feita antes de enviar para a Runware

@@ -1,5 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateAndDeductCredits, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +15,9 @@ serve(async (req) => {
 
   try {
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY não configurada');
     }
@@ -21,6 +26,32 @@ serve(async (req) => {
 
     if (!prompt) {
       throw new Error('Prompt é obrigatório');
+    }
+
+    // ✅ VALIDAÇÃO DE CRÉDITOS (apenas para novos usuários)
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+
+      if (user) {
+        const creditCost = 1; // 1 crédito por inpaint
+        const creditResult = await validateAndDeductCredits(
+          supabaseAdmin,
+          user.id,
+          creditCost,
+          'inpaint',
+          `Inpaint: ${prompt.substring(0, 100)}`
+        );
+
+        if (!creditResult.isValid) {
+          console.log('[edit-image-nano-banana] ❌ Créditos insuficientes');
+          return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+        }
+
+        console.log(`[edit-image-nano-banana] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, remaining=${creditResult.creditsRemaining}`);
+      }
     }
 
     console.log('🎨 Editando imagem com Nano Banana (Gemini 2.5 Flash Image)');

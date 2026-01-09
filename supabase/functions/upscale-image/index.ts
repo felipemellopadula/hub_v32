@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { validateAndDeductCredits, calculateUpscaleCost, createInsufficientCreditsResponse } from "../_shared/credit-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { inputImage, upscaleFactor, outputFormat } = await req.json();
+    const { inputImage, upscaleFactor, outputFormat, imageWidth, imageHeight } = await req.json();
 
     if (!inputImage) {
       throw new Error('inputImage é obrigatório');
@@ -54,7 +55,34 @@ serve(async (req) => {
       throw new Error('upscaleFactor deve ser 2, 4 ou 8');
     }
 
-    console.log('Iniciando upscale:', { factor, format, userId: user.id });
+    // ✅ VALIDAÇÃO DE CRÉDITOS COM CUSTO VARIÁVEL
+    const width = imageWidth || 1024;
+    const height = imageHeight || 1024;
+    const creditCost = calculateUpscaleCost(width, height);
+
+    if (creditCost < 0) {
+      return new Response(
+        JSON.stringify({ error: 'Imagem muito grande. Máximo permitido: 4K (4096px)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const creditResult = await validateAndDeductCredits(
+      supabase,
+      user.id,
+      creditCost,
+      'upscale',
+      `Upscale ${factor}x (${width}x${height})`
+    );
+
+    if (!creditResult.isValid) {
+      console.log('[upscale-image] ❌ Créditos insuficientes');
+      return createInsufficientCreditsResponse(creditResult.creditsRemaining, creditCost, corsHeaders);
+    }
+
+    console.log(`[upscale-image] ✅ Créditos validados. isLegacy=${creditResult.isLegacyUser}, cost=${creditCost}, remaining=${creditResult.creditsRemaining}`);
+
+    console.log('Iniciando upscale:', { factor, format, userId: user.id, creditCost });
 
     // Converter inputImage para base64 se for URL
     let imageBase64 = inputImage;
