@@ -27,6 +27,8 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 const UserProfile = lazy(() => import("@/components/UserProfile"));
 import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
+import { PurchaseCreditsModal } from "@/components/PurchaseCreditsModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -51,6 +53,7 @@ import type { DatabaseImage } from "@/modules/image";
 const Image2Page = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isLegacyUser, checkCredits, consumeCredits, showPurchaseModal, setShowPurchaseModal } = useCredits();
   const { debounce, isDebouncing } = useButtonDebounce(1500);
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(MODELS[0].id);
@@ -211,6 +214,11 @@ const Image2Page = () => {
       return;
     }
 
+    // Verificar créditos para usuários não-legados
+    if (!isLegacyUser && !checkCredits('image')) {
+      return;
+    }
+
     setIsGenerating(true);
     try {
       let finalPrompt = prompt;
@@ -331,6 +339,10 @@ const Image2Page = () => {
 
         if (insertData) {
           setImages((prev) => [insertData, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
+          // Consumir crédito para usuários não-legados
+          if (!isLegacyUser) {
+            await consumeCredits('image', finalPrompt);
+          }
           toast.success("Imagem gerada com sucesso!");
         }
       } else {
@@ -359,6 +371,13 @@ const Image2Page = () => {
 
         const totalCount = apiData.count || apiData.images.length;
         const backgroundCount = apiData.backgroundProcessing || 0;
+        
+        // Consumir créditos para usuários não-legados (1 por imagem gerada)
+        if (!isLegacyUser) {
+          for (let i = 0; i < totalCount; i++) {
+            await consumeCredits('image', finalPrompt);
+          }
+        }
         
         if (backgroundCount > 0) {
           toast.success(`1 imagem gerada! Mais ${backgroundCount} sendo processadas...`);
@@ -826,6 +845,12 @@ const Image2Page = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de compra de créditos */}
+      <PurchaseCreditsModal 
+        open={showPurchaseModal} 
+        onOpenChange={setShowPurchaseModal} 
+      />
     </div>
   );
 };

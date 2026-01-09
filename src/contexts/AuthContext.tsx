@@ -20,6 +20,7 @@ interface Profile {
   avatar_url?: string;
   subscription_type: 'free' | 'paid' | 'admin' | 'basic' | 'plus' | 'pro';
   tokens_remaining: number;
+  is_legacy_user: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +98,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: currentUser?.email || '',
           subscription_type: 'paid' as const,
           tokens_remaining: 1000000,
+          is_legacy_user: false,
           avatar_url: extractAvatarFromUser(currentUser),
           phone: (currentUser?.user_metadata?.phone as string) || null,
           created_at: new Date().toISOString(),
@@ -124,6 +126,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: currentUser?.email || '',
           subscription_type: 'paid' as const,
           tokens_remaining: 1000000,
+          is_legacy_user: false,
           avatar_url: extractAvatarFromUser(currentUser),
           phone: (currentUser?.user_metadata?.phone as string) || null,
         };
