@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Save, Camera, ArrowLeft, Settings as SettingsIcon, Moon, Sun } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import SettingsStats from "@/components/settings/SettingsStats";
+import PurchaseHistory from "@/components/settings/PurchaseHistory";
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -225,7 +226,7 @@ const SettingsPage = () => {
       <main className="container mx-auto px-4 py-8">
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Coluna do Perfil (ocupa 2 de 3 colunas em telas grandes) */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Perfil</CardTitle>
@@ -270,6 +271,9 @@ const SettingsPage = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Histórico de Compras */}
+            <PurchaseHistory />
           </div>
           
           {/* Coluna de Stats e Gráfico (ocupa 1 de 3 colunas em telas grandes) */}
