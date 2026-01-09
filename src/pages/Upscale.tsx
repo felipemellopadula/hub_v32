@@ -24,6 +24,7 @@ export default function Upscale() {
   const navigate = useNavigate();
   
   const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [upscaledImage, setUpscaledImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -53,8 +54,17 @@ export default function Upscale() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      setOriginalImage(e.target?.result as string);
+      const dataUrl = e.target?.result as string;
+      setOriginalImage(dataUrl);
       setUpscaledImage(null);
+      
+      // Extrair dimensões da imagem
+      const img = new Image();
+      img.onload = () => {
+        setImageDimensions({ width: img.width, height: img.height });
+        console.log(`[Upscale] Imagem carregada: ${img.width}x${img.height}`);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   }, []);
@@ -92,6 +102,8 @@ export default function Upscale() {
         ultra_detail: ultraDetail[0],
         sharpen: sharpen[0],
         smart_grain: smartGrain[0],
+        imageWidth: imageDimensions?.width,
+        imageHeight: imageDimensions?.height,
       },
     });
 
@@ -113,6 +125,8 @@ export default function Upscale() {
       body: {
         inputImage: originalImage,
         upscaleFactor: parseInt(scaleFactor),
+        imageWidth: imageDimensions?.width,
+        imageHeight: imageDimensions?.height,
       },
     });
 
@@ -175,6 +189,7 @@ export default function Upscale() {
 
   const handleReset = () => {
     setOriginalImage(null);
+    setImageDimensions(null);
     setUpscaledImage(null);
   };
 
