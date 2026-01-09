@@ -827,7 +827,7 @@ const Home3: React.FC = () => {
                   </div>
                   <p className="text-lg text-muted-foreground mb-4">
                     {typeof displayQuantity === 'number' 
-                      ? `${displayQuantity} imagens / vídeos`
+                      ? `${displayQuantity} imagens / vídeos*`
                       : displayQuantity}
                   </p>
 
@@ -846,7 +846,7 @@ const Home3: React.FC = () => {
                           onChange={() => setSelectedOptions(prev => ({ ...prev, [plan.name]: plan.mainPlanId }))}
                           className="accent-primary"
                         />
-                        <span>{plan.mainQuantity} imagens / vídeos — R$ {plan.mainPrice.toLocaleString('pt-BR')}</span>
+                        <span>{plan.mainQuantity} imagens / vídeos* — R$ {plan.mainPrice.toLocaleString('pt-BR')}</span>
                       </label>
                       {/* Other options */}
                       {plan.options.map((option) => (
@@ -860,8 +860,8 @@ const Home3: React.FC = () => {
                           />
                           <span>
                             {typeof option.quantity === 'number' 
-                              ? `${option.quantity} imagens / vídeos — R$ ${(option.price as number).toLocaleString('pt-BR')}`
-                              : `${option.quantity} — ${option.price}`
+                              ? `${option.quantity} imagens / vídeos* — R$ ${(option.price as number).toLocaleString('pt-BR')}`
+                              : `${option.quantity}* — ${option.price}`
                             }
                           </span>
                         </label>
@@ -897,6 +897,16 @@ const Home3: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+
+          {/* Disclaimer sobre validade */}
+          <div className="text-center mt-8 space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Os créditos dos pacotes valem por 30 dias a partir da data da compra.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              *Exceto para Veo3 e Kling
+            </p>
           </div>
         </div>
       </section>
