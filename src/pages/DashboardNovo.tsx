@@ -15,6 +15,7 @@ import { useIsTabletOrMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { SetPasswordModal } from '@/components/SetPasswordModal';
 import { supabase } from '@/integrations/supabase/client';
+import { CreditsCounter } from '@/components/CreditsCounter';
 
 // Lazy load UserProfile
 const UserProfile = lazy(() => import("@/components/UserProfile"));
@@ -419,6 +420,9 @@ const DashboardNovo: React.FC = () => {
           </Link>
 
           <div className="flex items-center gap-3">
+            {/* Contador de Créditos */}
+            <CreditsCounter variant="compact" />
+            
             <Suspense fallback={<div className="w-7 h-7 animate-pulse bg-white/20 rounded-full" />}>
               <UserProfile />
             </Suspense>
