@@ -104,6 +104,25 @@ serve(async (req) => {
                 console.error(`[Webhook] Erro ao atualizar perfil:`, updateError);
               } else {
                 console.log(`[Webhook] ✅ Créditos adicionados: +${product.tokens_included} (total: ${newTokens}), tipo: ${subscriptionType}`);
+                
+                // Registrar compra no histórico
+                const { error: purchaseError } = await supabase
+                  .from("credit_purchases")
+                  .insert({
+                    user_id: userId,
+                    stripe_session_id: session.id,
+                    plan_id: planId,
+                    plan_name: product.plan_name,
+                    tokens_credited: product.tokens_included,
+                    amount_paid: session.amount_total,
+                    currency: session.currency || 'brl',
+                  });
+                
+                if (purchaseError) {
+                  console.error(`[Webhook] Erro ao registrar compra:`, purchaseError);
+                } else {
+                  console.log(`[Webhook] ✅ Compra registrada no histórico`);
+                }
               }
             }
           }
@@ -170,6 +189,25 @@ serve(async (req) => {
                 console.error(`[Webhook] Erro ao atualizar perfil do novo usuário:`, profileError);
               } else {
                 console.log(`[Webhook] ✅ Novo usuário configurado com ${product.tokens_included} tokens, tipo: ${subscriptionType}`);
+                
+                // Registrar compra no histórico
+                const { error: purchaseError } = await supabase
+                  .from("credit_purchases")
+                  .insert({
+                    user_id: userId,
+                    stripe_session_id: session.id,
+                    plan_id: planId,
+                    plan_name: product.plan_name,
+                    tokens_credited: product.tokens_included,
+                    amount_paid: session.amount_total,
+                    currency: session.currency || 'brl',
+                  });
+                
+                if (purchaseError) {
+                  console.error(`[Webhook] Erro ao registrar compra:`, purchaseError);
+                } else {
+                  console.log(`[Webhook] ✅ Compra registrada no histórico`);
+                }
               }
 
               // Enviar email de boas-vindas em background
