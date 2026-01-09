@@ -284,6 +284,7 @@ const SettingsPage = () => {
               cycleStart={cycleStart}
               cycleEnd={cycleEnd}
               nextReset={nextReset}
+              isLegacyUser={profile.is_legacy_user}
             />
             <ModelUsageChart cycleStart={cycleStart} cycleEnd={cycleEnd} />
           </div>
