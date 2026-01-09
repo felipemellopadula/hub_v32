@@ -233,11 +233,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Redirecionar APENAS no evento SIGNED_IN e apenas uma vez
           if (event === 'SIGNED_IN' && !hasRedirected) {
             hasRedirected = true;
-            console.log('Login detectado, redirecionando para /dashboard-novo...');
+            // Verificar se há um path pendente (definido antes do OAuth)
+            const pendingPath = localStorage.getItem('pendingRedirectPath');
+            const targetPath = pendingPath || '/dashboard-novo';
+            if (pendingPath) {
+              localStorage.removeItem('pendingRedirectPath');
+            }
+            console.log('Login detectado, redirecionando para:', targetPath);
             // Aguardar um pouco para o perfil começar a carregar
             setTimeout(() => {
               if (mounted && navigate) {
-                navigate('/dashboard-novo', { replace: true });
+                navigate(targetPath, { replace: true });
               }
             }, 150);
           }

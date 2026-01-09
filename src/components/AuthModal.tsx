@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  redirectPath?: string | null;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, redirectPath }) => {
+  const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -59,7 +62,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         title: "Login realizado com sucesso!",
         description: "Redirecionando...",
       });
+      
+      // Redirecionar para o path desejado ou dashboard
+      const targetPath = redirectPath || localStorage.getItem('pendingRedirectPath') || '/dashboard-novo';
+      localStorage.removeItem('pendingRedirectPath');
       onClose();
+      navigate(targetPath);
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -75,6 +83,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Salvar path no localStorage antes do OAuth redirect
+      if (redirectPath) {
+        localStorage.setItem('pendingRedirectPath', redirectPath);
+      }
+      
       const { error } = await signInWithGoogle();
       if (error) {
         toast({

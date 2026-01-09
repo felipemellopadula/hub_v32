@@ -389,7 +389,7 @@ const Home3: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  // authMode removido - modal agora é apenas login
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -431,10 +431,18 @@ const Home3: React.FC = () => {
   const handleToolClick = (path: string, e: React.MouseEvent) => {
     if (!user) {
       e.preventDefault();
+      setPendingPath(path);
+      localStorage.setItem('pendingRedirectPath', path);
       setShowAuthModal(true);
     } else {
       navigate(path);
     }
+  };
+
+  const handleAuthModalClose = () => {
+    setShowAuthModal(false);
+    setPendingPath(null);
+    localStorage.removeItem('pendingRedirectPath');
   };
 
   const [isSubscribing, setIsSubscribing] = useState(false);
@@ -1038,7 +1046,11 @@ const Home3: React.FC = () => {
       </footer>
 
       {/* Auth Modal */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={handleAuthModalClose}
+        redirectPath={pendingPath}
+      />
     </div>
   );
 };
