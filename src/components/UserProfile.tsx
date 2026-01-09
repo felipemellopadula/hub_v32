@@ -29,6 +29,10 @@ const UserProfile = ({ tokens }: UserProfileProps) => {
     await signOut();
   };
 
+  const isLegacy = profile.is_legacy_user;
+  const balanceLabel = isLegacy ? "tokens" : "créditos";
+  const balanceValue = profile.tokens_remaining ?? 0;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -42,7 +46,7 @@ const UserProfile = ({ tokens }: UserProfileProps) => {
           <div className="hidden md:flex flex-col items-start">
             <span className="text-sm font-medium">{profile.name}</span>
             <Badge variant="secondary" className="text-xs">
-              {profile.tokens_remaining.toLocaleString()} tokens
+              {balanceValue.toLocaleString()} {balanceLabel}
             </Badge>
           </div>
         </Button>
