@@ -453,6 +453,7 @@ serve(async (req) => {
         else if (imageURL.endsWith('.jpeg')) format = 'jpeg';
 
         // Salvar no Storage se usuário autenticado
+        let insertedImageData: any = null;
         if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
           try {
             const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -466,14 +467,17 @@ serve(async (req) => {
               console.error(`[Imagem ${index + 1}] Erro upload Storage:`, upload.error);
             } else {
               console.log(`[Imagem ${index + 1}] Upload OK: ${path}`);
-              const { error: insertErr } = await supabaseAdmin
+              const { data: insertData, error: insertErr } = await supabaseAdmin
                 .from('user_images')
-                .insert({ user_id: userId, image_path: path, prompt, width, height, format: ext });
+                .insert({ user_id: userId, image_path: path, prompt, width, height, format: ext })
+                .select()
+                .single();
               
               if (insertErr) {
                 console.error(`[Imagem ${index + 1}] Erro inserir DB:`, insertErr);
               } else {
-                console.log(`[Imagem ${index + 1}] Registro inserido no banco`);
+                console.log(`[Imagem ${index + 1}] Registro inserido no banco:`, insertData?.id);
+                insertedImageData = insertData;
                 
                 // Registrar custo apenas na PRIMEIRA imagem
                 if (isFirst) {
@@ -527,7 +531,7 @@ serve(async (req) => {
         if (isFirst) {
           const b64 = b64encode(ab);
           console.log(`[Imagem ${index + 1}] Base64 gerado para preview`);
-          return { image: b64, url: imageURL, width, height, format };
+          return { image: b64, url: imageURL, width, height, format, insertedImage: insertedImageData };
         }
         
         // Para imagens em background, retornar apenas metadata

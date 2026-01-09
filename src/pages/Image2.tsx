@@ -385,12 +385,18 @@ const Image2Page = () => {
           toast.success(`${totalCount} ${totalCount === 1 ? 'imagem gerada' : 'imagens geradas'} com sucesso!`);
         }
         
-        // Recarregar imagens do banco de dados após geração bem-sucedida
-        await loadSavedImages();
+        // Usar dados retornados diretamente para atualização imediata
+        const firstImage = apiData.images?.[0];
+        if (firstImage?.insertedImage) {
+          console.log('Usando dados inseridos diretamente:', firstImage.insertedImage.id);
+          setImages((prev) => [firstImage.insertedImage, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
+        } else {
+          // Fallback: recarregar do banco se não retornou os dados
+          await loadSavedImages();
+        }
         
-        // Se há imagens em background, recarregar novamente após delays para capturá-las
+        // Se há imagens em background, recarregar após delays para capturá-las
         if (backgroundCount > 0) {
-          // Recarregar a cada 3.5 segundos por imagem em background (500ms extra de margem)
           for (let i = 1; i <= backgroundCount; i++) {
             setTimeout(async () => {
               console.log(`Recarregando para capturar imagem ${i} de background...`);
