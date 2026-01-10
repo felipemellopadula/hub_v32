@@ -247,41 +247,8 @@ serve(async (req) => {
         });
       }
 
-      // ✅ Registrar uso no banco de dados quando vídeo iniciado com sucesso
-      try {
-        const authHeader = req.headers.get("authorization");
-        if (authHeader) {
-          const supabaseUrl = Deno.env.get("SUPABASE_URL");
-          const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-          
-          if (supabaseUrl && supabaseKey) {
-            const supabase = createClient(supabaseUrl, supabaseKey);
-            
-            // Extrair user_id do token JWT
-            const token = authHeader.replace("Bearer ", "");
-            const { data: { user } } = await supabase.auth.getUser(token);
-            
-            if (user) {
-              // Registrar uso de vídeo no token_usage com custo dinâmico
-              const videoCost = calculateVideoCost(resolvedModel);
-              await supabase.from("token_usage").insert({
-                user_id: user.id,
-                model_name: resolvedModel,
-                message_content: positivePrompt || "Video generation",
-                ai_response_content: `Video generation started - ${videoCost} credits`,
-                tokens_used: videoCost,
-                input_tokens: videoCost,
-                output_tokens: 0,
-              });
-              
-              console.log("[runware-video] ✅ Uso registrado no banco de dados para user:", user.id);
-            }
-          }
-        }
-      } catch (dbError) {
-        // Não falhar a request se o registro falhar, apenas logar
-        console.error("[runware-video] ⚠️ Erro ao registrar uso no banco:", dbError);
-      }
+      // ✅ Log de sucesso (registro de uso já feito em validateAndDeductCredits)
+      console.log("[runware-video] ✅ Vídeo iniciado com sucesso. taskUUID:", taskUUID);
 
       return new Response(JSON.stringify({ taskUUID, ack: json.data?.[0] || null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
