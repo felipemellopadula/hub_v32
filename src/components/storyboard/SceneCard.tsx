@@ -153,13 +153,6 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
     a.remove();
   };
 
-  const handleFullscreen = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (!videoRef.current) return;
-    if (videoRef.current.requestFullscreen) {
-      videoRef.current.requestFullscreen();
-    }
-  };
 
   const handlePromptBlur = () => {
     setPromptFocused(false);
@@ -236,7 +229,10 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white"
-                  onClick={handleFullscreen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (scene.video_url) onPreviewVideo(scene.video_url);
+                  }}
                   title="Ampliar"
                 >
                   <Maximize className="h-4 w-4" />
