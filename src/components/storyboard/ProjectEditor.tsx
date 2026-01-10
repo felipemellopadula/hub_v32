@@ -159,17 +159,26 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
 
           if (statusError) throw statusError;
 
-          if (statusData?.status === 'completed' && statusData?.videoUrl) {
+          // Detectar falha explícita
+          if (statusData?.failed) {
+            throw new Error(statusData?.details || 'Video generation failed');
+          }
+
+          // Extrair resultado (igual a Video.tsx)
+          const statusItem = statusData?.result;
+          const videoURL = statusItem?.videoURL || statusItem?.url;
+
+          if (videoURL) {
             // Success!
             await onUpdateScene(scene.id, { 
               video_status: 'completed', 
-              video_url: statusData.videoUrl 
+              video_url: videoURL 
             });
             
-              // Consume credits
-              if (!isLegacyUser) {
-                await consumeCredits('video' as any, `Storyboard: ${scene.prompt?.substring(0, 50) || 'Video generation'}`);
-              }
+            // Consume credits
+            if (!isLegacyUser) {
+              await consumeCredits('video' as any, `Storyboard: ${scene.prompt?.substring(0, 50) || 'Video generation'}`);
+            }
 
             toast({
               title: 'Vídeo gerado!',
@@ -178,8 +187,6 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
             
             setGeneratingSceneId(null);
             if (pollRef.current) clearTimeout(pollRef.current);
-          } else if (statusData?.status === 'failed') {
-            throw new Error(statusData?.error || 'Video generation failed');
           } else {
             // Still processing, poll again
             pollRef.current = setTimeout(poll, 5000);
