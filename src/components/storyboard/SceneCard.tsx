@@ -142,15 +142,26 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
     setIsPlaying(!isPlaying);
   };
 
-  const handleDownload = (e?: React.MouseEvent) => {
+  const handleDownload = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!scene.video_url) return;
-    const a = document.createElement('a');
-    a.href = scene.video_url;
-    a.download = `scene-${index + 1}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    
+    try {
+      // Fetch as blob for cross-origin downloads
+      const response = await fetch(scene.video_url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cena-${index + 1}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao baixar vídeo:', error);
+    }
   };
 
 
