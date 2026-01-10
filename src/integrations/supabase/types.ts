@@ -706,6 +706,93 @@ export type Database = {
         }
         Relationships: []
       }
+      storyboard_projects: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+          video_model: string | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id: string
+          video_model?: string | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+          video_model?: string | null
+        }
+        Relationships: []
+      }
+      storyboard_scenes: {
+        Row: {
+          created_at: string | null
+          duration: number | null
+          id: string
+          image_url: string
+          order_index: number
+          project_id: string
+          prompt: string | null
+          source_image_id: string | null
+          video_status: string | null
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          image_url: string
+          order_index?: number
+          project_id: string
+          prompt?: string | null
+          source_image_id?: string | null
+          video_status?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          image_url?: string
+          order_index?: number
+          project_id?: string
+          prompt?: string | null
+          source_image_id?: string | null
+          video_status?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storyboard_scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "storyboard_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storyboard_scenes_source_image_id_fkey"
+            columns: ["source_image_id"]
+            isOneToOne: false
+            referencedRelation: "user_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_customers: {
         Row: {
           created_at: string

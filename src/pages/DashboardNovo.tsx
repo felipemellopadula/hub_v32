@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, Transition } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronDown, Sparkles, UserCircle, Smile, Video, LogOut, ZoomIn, Wand2, Paintbrush } from 'lucide-react';
+import { ChevronDown, Sparkles, UserCircle, Smile, Video, LogOut, ZoomIn, Wand2, Paintbrush, LayoutGrid } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -289,6 +289,10 @@ const VideoLoop: React.FC<VideoLoopProps> = ({ isActive, isTabletOrMobile }) => 
               <DropdownMenuItem onClick={() => navigate('/video')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
                 <Video className="w-4 h-4" />
                 Gerar Vídeo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/storyboard')} className="hover:bg-fuchsia-500/20 focus:bg-fuchsia-500/20 cursor-pointer gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                Storyboard
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

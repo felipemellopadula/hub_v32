@@ -22,6 +22,7 @@ const SkinEnhancer = lazy(() => import("./pages/SkinEnhancer"));
 const ImageEditor = lazy(() => import("./pages/ImageEditor"));
 const AIAvatar = lazy(() => import("./pages/AIAvatar"));
 const Inpaint = lazy(() => import("./pages/Inpaint"));
+const Storyboard = lazy(() => import("./pages/Storyboard"));
 const Home3 = lazy(() => import("./pages/Home3"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -89,6 +90,9 @@ const App = () => (
           } />
           <Route path="/inpaint" element={
             <ProtectedRoute><Inpaint /></ProtectedRoute>
+          } />
+          <Route path="/storyboard" element={
+            <ProtectedRoute><Storyboard /></ProtectedRoute>
           } />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           
