@@ -18,6 +18,15 @@ import { useToast } from '@/hooks/use-toast';
 import imageCompression from 'browser-image-compression';
 import { cn } from '@/lib/utils';
 
+// Helper para converter image_path em URL pública
+const getImageUrl = (imagePath: string) => {
+  // Se já é uma URL completa, retorna direto
+  if (imagePath.startsWith('http')) return imagePath;
+  // Senão, converte o path relativo para URL pública
+  const { data } = supabase.storage.from('images').getPublicUrl(imagePath);
+  return data.publicUrl;
+};
+
 interface UserImage {
   id: string;
   image_path: string;
@@ -157,7 +166,9 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
   const handleConfirm = () => {
     if (selectedImage) {
-      onSelectImage(selectedImage.image_path, selectedImage.prompt || undefined, selectedImage.id);
+      // Sempre passa a URL pública completa
+      const publicUrl = getImageUrl(selectedImage.image_path);
+      onSelectImage(publicUrl, selectedImage.prompt || undefined, selectedImage.id);
       onOpenChange(false);
       setSelectedImage(null);
     }
@@ -224,8 +235,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
                         )}
                         onClick={() => setSelectedImage(image)}
                       >
-                        <img
-                          src={image.image_path}
+                      <img
+                          src={getImageUrl(image.image_path)}
                           alt={image.prompt || 'Generated image'}
                           className="w-full h-full object-cover"
                         />

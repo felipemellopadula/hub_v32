@@ -23,6 +23,16 @@ import {
 } from '@/components/ui/select';
 import { StoryboardScene } from '@/hooks/useStoryboard';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+// Helper para converter paths relativos em URLs públicas
+const getSceneImageUrl = (url: string) => {
+  // Se já é URL completa, retorna direto
+  if (url.startsWith('http')) return url;
+  // Senão, converte o path relativo para URL pública
+  const { data } = supabase.storage.from('images').getPublicUrl(url);
+  return data.publicUrl;
+};
 
 interface SceneCardProps {
   scene: StoryboardScene;
@@ -139,7 +149,7 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
               loop
               muted
               playsInline
-              poster={scene.image_url}
+              poster={getSceneImageUrl(scene.image_url)}
               onEnded={() => setIsPlaying(false)}
             />
             {/* Play/Pause Overlay */}
@@ -158,7 +168,7 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
           </>
         ) : (
           <img
-            src={scene.image_url}
+            src={getSceneImageUrl(scene.image_url)}
             alt={scene.prompt || `Cena ${index + 1}`}
             className="w-full h-full object-cover"
           />
