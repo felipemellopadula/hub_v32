@@ -1055,6 +1055,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      owns_miniagent_session: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       subscription_type: "free" | "paid" | "admin" | "basic" | "plus" | "pro"
