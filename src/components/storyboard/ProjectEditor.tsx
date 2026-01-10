@@ -8,7 +8,8 @@ import {
   Loader2,
   Image as ImageIcon,
   Coins,
-  Wand2
+  Wand2,
+  FileVideo
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,6 +141,8 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(project.name);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
 
   // Get current model cost
   const modelCost = VIDEO_MODELS.find(m => m.id === project.video_model)?.cost || 0.5;
@@ -147,6 +150,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
     s.image_status === 'completed' && (s.video_status === 'pending' || s.video_status === 'failed')
   );
   const totalVideoCost = pendingVideoScenes.length * modelCost;
+  const completedVideoScenes = scenes.filter(s => s.video_status === 'completed' && s.video_url);
 
   // Handle name update
   const handleNameSave = async () => {
@@ -441,6 +445,93 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
     });
   };
 
+  // Export all completed videos as a single file
+  const exportFullStory = async () => {
+    if (completedVideoScenes.length < 2) {
+      toast({
+        title: 'Mínimo de 2 vídeos necessários',
+        description: 'Gere pelo menos 2 cenas com vídeos para exportar a história.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+      const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+      
+      const ffmpeg = new FFmpeg();
+      
+      setExportProgress(5);
+      
+      await ffmpeg.load({
+        coreURL: await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js', 'text/javascript'),
+        wasmURL: await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
+      });
+
+      setExportProgress(15);
+
+      // Sort scenes by order_index
+      const sortedScenes = [...completedVideoScenes].sort((a, b) => a.order_index - b.order_index);
+      
+      // Download and write each video
+      const fileList: string[] = [];
+      for (let i = 0; i < sortedScenes.length; i++) {
+        const scene = sortedScenes[i];
+        const fileName = `video${i}.mp4`;
+        
+        const videoData = await fetchFile(scene.video_url!);
+        await ffmpeg.writeFile(fileName, videoData);
+        fileList.push(`file '${fileName}'`);
+        
+        setExportProgress(15 + ((i + 1) / sortedScenes.length) * 40);
+      }
+
+      // Create concat list file
+      await ffmpeg.writeFile('list.txt', fileList.join('\n'));
+
+      setExportProgress(60);
+
+      // Concatenate videos
+      await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'output.mp4']);
+
+      // Read result
+      const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
+      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
+
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.name.replace(/\s+/g, '_')}_story.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setExportProgress(100);
+      
+      toast({
+        title: 'História exportada!',
+        description: `${sortedScenes.length} cenas combinadas em um vídeo.`,
+      });
+
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Erro ao exportar',
+        description: error.message || 'Falha ao processar vídeos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-80px)]">
       {/* Main Content */}
@@ -540,6 +631,28 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
               <Plus className="h-4 w-4" />
               Nova Cena
             </Button>
+
+            {/* Export Story Button */}
+            {completedVideoScenes.length >= 2 && (
+              <Button
+                onClick={exportFullStory}
+                variant="outline"
+                className="gap-2"
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Exportando {exportProgress.toFixed(0)}%
+                  </>
+                ) : (
+                  <>
+                    <FileVideo className="h-4 w-4" />
+                    Exportar História
+                  </>
+                )}
+              </Button>
+            )}
 
             {/* Generate All Videos Button */}
             {pendingVideoScenes.length > 0 && (
