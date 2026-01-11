@@ -63,10 +63,12 @@ const ASPECT_RATIOS = [
 ];
 
 const VIDEO_MODELS = [
-  { id: 'bytedance:seedance@1.5-pro', label: 'Seedance 1.5 Pro', cost: 0.5 },
-  { id: 'google:3@3', label: 'Google Veo 3.1 Fast', cost: 1 },
-  { id: 'klingai:kling-video@2.6-pro', label: 'Kling Video 2.6 Pro', cost: 1.5 },
-  { id: 'minimax:4@1', label: 'MiniMax Hailuo 2.3', cost: 1 },
+  { id: 'bytedance:seedance@1.5-pro', label: 'Seedance 1.5 Pro', cost: 0.5, aspectRatio: null },
+  { id: 'google:3@3', label: 'Google Veo 3.1 Fast', cost: 1, aspectRatio: null },
+  { id: 'klingai:kling-video@2.6-pro', label: 'Kling Video 2.6 Pro', cost: 1.5, aspectRatio: null },
+  { id: 'minimax:4@1', label: 'MiniMax Hailuo 2.3', cost: 1, aspectRatio: null },
+  { id: 'lightricks:2@1', label: 'LTX-2 Fast', cost: 1.5, aspectRatio: '16:9' },
+  { id: 'lightricks:2@0', label: 'LTX-2 Pro', cost: 2, aspectRatio: '16:9' },
 ];
 
 const IMAGE_GENERATION_COST = 0.1;
@@ -585,6 +587,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                     <Select
                       value={project.aspect_ratio}
                       onValueChange={(v) => onUpdateProject(project.id, { aspect_ratio: v })}
+                      disabled={VIDEO_MODELS.find(m => m.id === project.video_model)?.aspectRatio === '16:9'}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -597,12 +600,29 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
+                    {VIDEO_MODELS.find(m => m.id === project.video_model)?.aspectRatio && (
+                      <p className="text-xs text-muted-foreground">
+                        O modelo selecionado suporta apenas 16:9
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Modelo de Vídeo</Label>
                     <Select
                       value={project.video_model}
-                      onValueChange={(v) => onUpdateProject(project.id, { video_model: v })}
+                      onValueChange={(v) => {
+                        const selectedModel = VIDEO_MODELS.find(m => m.id === v);
+                        // LTX models only support 16:9
+                        if (selectedModel?.aspectRatio === '16:9' && project.aspect_ratio !== '16:9') {
+                          onUpdateProject(project.id, { video_model: v, aspect_ratio: '16:9' });
+                          toast({
+                            title: 'Proporção ajustada',
+                            description: 'Modelos LTX suportam apenas 16:9. A proporção foi ajustada automaticamente.',
+                          });
+                        } else {
+                          onUpdateProject(project.id, { video_model: v });
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -610,7 +630,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                       <SelectContent>
                         {VIDEO_MODELS.map((model) => (
                           <SelectItem key={model.id} value={model.id}>
-                            {model.label} ({model.cost} créditos)
+                            {model.label} ({model.cost} créditos){model.aspectRatio && ` • ${model.aspectRatio}`}
                           </SelectItem>
                         ))}
                       </SelectContent>

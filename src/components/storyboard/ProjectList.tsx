@@ -51,6 +51,8 @@ const VIDEO_MODELS = [
   { id: 'google:3@3', label: 'Google Veo 3.1 Fast' },
   { id: 'klingai:kling-video@2.6-pro', label: 'Kling Video 2.6 Pro' },
   { id: 'minimax:4@1', label: 'MiniMax Hailuo 2.3' },
+  { id: 'lightricks:2@1', label: 'LTX-2 Fast (apenas 16:9)', aspectRatio: '16:9' },
+  { id: 'lightricks:2@0', label: 'LTX-2 Pro (apenas 16:9)', aspectRatio: '16:9' },
 ];
 
 export const ProjectList: React.FC<ProjectListProps> = ({
@@ -206,7 +208,11 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             </div>
             <div className="space-y-2">
               <Label>Proporção do Vídeo</Label>
-              <Select value={newAspectRatio} onValueChange={setNewAspectRatio}>
+              <Select 
+                value={newAspectRatio} 
+                onValueChange={setNewAspectRatio}
+                disabled={VIDEO_MODELS.find(m => m.id === newVideoModel)?.aspectRatio === '16:9'}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -221,7 +227,14 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             </div>
             <div className="space-y-2">
               <Label>Modelo de Vídeo</Label>
-              <Select value={newVideoModel} onValueChange={setNewVideoModel}>
+              <Select value={newVideoModel} onValueChange={(v) => {
+                setNewVideoModel(v);
+                // LTX models only support 16:9
+                const selectedModel = VIDEO_MODELS.find(m => m.id === v);
+                if (selectedModel?.aspectRatio === '16:9' && newAspectRatio !== '16:9') {
+                  setNewAspectRatio('16:9');
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
