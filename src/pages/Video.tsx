@@ -136,29 +136,17 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "4:3-768p", label: "4:3 (Standard / Landscape) - 768p", w: 1024, h: 768 },
     { id: "16:9-1080p", label: "16:9 (Landscape) - 1080p", w: 1920, h: 1080 },
   ],
-  // LTX-2 Fast - resoluções até 2160p
+  // LTX-2 Fast - apenas 3 resoluções 16:9
   "lightricks:2@1": [
     { id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p", w: 1920, h: 1080 },
     { id: "16:9-1440p", label: "16:9 (Wide / Landscape) - 1440p", w: 2560, h: 1440 },
     { id: "16:9-2160p", label: "16:9 (Wide / Landscape) - 2160p", w: 3840, h: 2160 },
-    { id: "9:16-1080p", label: "9:16 (Tall / Portrait) - 1080p", w: 1080, h: 1920 },
-    { id: "9:16-1440p", label: "9:16 (Tall / Portrait) - 1440p", w: 1440, h: 2560 },
-    { id: "9:16-2160p", label: "9:16 (Tall / Portrait) - 2160p", w: 2160, h: 3840 },
-    { id: "1:1-1080p", label: "1:1 (Square) - 1080p", w: 1080, h: 1080 },
-    { id: "1:1-1440p", label: "1:1 (Square) - 1440p", w: 1440, h: 1440 },
-    { id: "1:1-2160p", label: "1:1 (Square) - 2160p", w: 2160, h: 2160 },
   ],
-  // LTX-2 Pro - resoluções até 2160p
+  // LTX-2 Pro - apenas 3 resoluções 16:9
   "lightricks:2@0": [
     { id: "16:9-1080p", label: "16:9 (Wide / Landscape) - 1080p", w: 1920, h: 1080 },
     { id: "16:9-1440p", label: "16:9 (Wide / Landscape) - 1440p", w: 2560, h: 1440 },
     { id: "16:9-2160p", label: "16:9 (Wide / Landscape) - 2160p", w: 3840, h: 2160 },
-    { id: "9:16-1080p", label: "9:16 (Tall / Portrait) - 1080p", w: 1080, h: 1920 },
-    { id: "9:16-1440p", label: "9:16 (Tall / Portrait) - 1440p", w: 1440, h: 2560 },
-    { id: "9:16-2160p", label: "9:16 (Tall / Portrait) - 2160p", w: 2160, h: 3840 },
-    { id: "1:1-1080p", label: "1:1 (Square) - 1080p", w: 1080, h: 1080 },
-    { id: "1:1-1440p", label: "1:1 (Square) - 1440p", w: 1440, h: 1440 },
-    { id: "1:1-2160p", label: "1:1 (Square) - 2160p", w: 2160, h: 2160 },
   ],
 };
 
