@@ -54,6 +54,9 @@ serve(async (req) => {
         referenceVideoUrl,
         characterOrientation = "imageOrientation",
         keepOriginalSound = false,
+        // LTX models: FPS e áudio customizados
+        customFps,
+        generateAudio = false,
       } = body;
 
       // ✅ VALIDAÇÃO DE CRÉDITOS (apenas para novos usuários)
@@ -97,8 +100,12 @@ serve(async (req) => {
         });
       }
 
-      // FPS suportados por modelo - Sora 2 só suporta 30 fps
-      const getFpsForModel = (model: string): number => {
+      // FPS suportados por modelo - LTX suporta FPS customizado (25 ou 50)
+      const getFpsForModel = (model: string, customFpsValue?: number): number => {
+        // LTX models: usar FPS customizado se fornecido
+        if (model.startsWith('lightricks:') && customFpsValue) {
+          return customFpsValue;
+        }
         if (model.startsWith('openai:')) {
           return 30;
         }
@@ -125,7 +132,7 @@ serve(async (req) => {
             duration,
             width,
             height,
-            fps: getFpsForModel(resolvedModel),
+            fps: getFpsForModel(resolvedModel, customFps),
             numberResults,
             outputFormat: "mp4",
             includeCost: true,
@@ -155,7 +162,7 @@ serve(async (req) => {
             duration,
             width,
             height,
-            fps: getFpsForModel(resolvedModel),
+            fps: getFpsForModel(resolvedModel, customFps),
             numberResults,
             outputFormat: "mp4",
             includeCost: true,
@@ -171,6 +178,12 @@ serve(async (req) => {
             cameraFixed: false
           }
         };
+      }
+
+      // ✅ LTX models: suporte a generateAudio
+      if (generateAudio && resolvedModel.startsWith('lightricks:')) {
+        tasks[1].generateAudio = true;
+        console.log("[runware-video] 🔊 LTX generateAudio enabled");
       }
 
       console.log("[runware-video] start -> resolvedModel", resolvedModel, "motionTransfer:", isMotionTransfer);

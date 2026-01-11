@@ -92,6 +92,8 @@ const MODELS = [
   { id: "openai:3@1", label: "Sora 2", provider: "openai" as const },
   { id: "openai:3@2", label: "Sora 2 Pro", provider: "openai" as const },
   { id: "minimax:4@1", label: "MiniMax Hailuo 2.3", provider: "minimax" as const },
+  { id: "lightricks:2@1", label: "LTX-2 Fast", provider: "lightricks" as const },
+  { id: "lightricks:2@0", label: "LTX-2 Pro", provider: "lightricks" as const },
 ];
 
 const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
@@ -134,6 +136,17 @@ const RESOLUTIONS_BY_MODEL: Record<string, Resolution[]> = {
     { id: "4:3-768p", label: "4:3 (Standard / Landscape) - 768p", w: 1024, h: 768 },
     { id: "16:9-1080p", label: "16:9 (Landscape) - 1080p", w: 1920, h: 1080 },
   ],
+  // LTX-2 Fast e Pro - 3 formatos 720p
+  "lightricks:2@1": [
+    { id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p", w: 1280, h: 720 },
+    { id: "9:16-720p", label: "9:16 (Tall / Portrait) - 720p", w: 720, h: 1280 },
+    { id: "1:1-720p", label: "1:1 (Square) - 720p", w: 720, h: 720 },
+  ],
+  "lightricks:2@0": [
+    { id: "16:9-720p", label: "16:9 (Wide / Landscape) - 720p", w: 1280, h: 720 },
+    { id: "9:16-720p", label: "9:16 (Tall / Portrait) - 720p", w: 720, h: 1280 },
+    { id: "1:1-720p", label: "1:1 (Square) - 720p", w: 720, h: 720 },
+  ],
 };
 
 const DURATIONS_BY_MODEL: Record<string, number[]> = {
@@ -143,6 +156,13 @@ const DURATIONS_BY_MODEL: Record<string, number[]> = {
   "openai:3@1": [4, 8, 12],      // Sora 2
   "openai:3@2": [4, 8, 12],      // Sora 2 Pro
   "minimax:4@1": [6, 10],        // MiniMax Hailuo 2.3
+  "lightricks:2@1": [6, 8, 10],  // LTX-2 Fast
+  "lightricks:2@0": [6, 8, 10],  // LTX-2 Pro
+};
+
+const FPS_BY_MODEL: Record<string, number[]> = {
+  "lightricks:2@1": [25, 50],  // LTX-2 Fast
+  "lightricks:2@0": [25, 50],  // LTX-2 Pro
 };
 
 const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
@@ -152,6 +172,8 @@ const SUPPORTS_LAST_FRAME: Record<string, boolean> = {
   "openai:3@1": false,   // Sora 2
   "openai:3@2": false,   // Sora 2 Pro
   "minimax:4@1": true,   // MiniMax Hailuo 2.3
+  "lightricks:2@1": false,  // LTX-2 Fast
+  "lightricks:2@0": false,  // LTX-2 Pro
 };
 
 const SUPPORTS_AUDIO: Record<string, boolean> = {
@@ -161,6 +183,8 @@ const SUPPORTS_AUDIO: Record<string, boolean> = {
   "openai:3@1": false,   // Sora 2
   "openai:3@2": false,   // Sora 2 Pro
   "minimax:4@1": false,  // MiniMax Hailuo 2.3
+  "lightricks:2@1": true,   // LTX-2 Fast (suporta generateAudio)
+  "lightricks:2@0": true,   // LTX-2 Pro (suporta generateAudio)
 };
 
 // ✅ Motion Transfer: Kling 2.6 Pro suporta capturar movimentos de vídeo e aplicar em imagem
@@ -171,6 +195,8 @@ const SUPPORTS_MOTION_TRANSFER: Record<string, boolean> = {
   "openai:3@1": false,   // Sora 2 - não suporta
   "openai:3@2": false,   // Sora 2 Pro - não suporta
   "minimax:4@1": false,  // MiniMax Hailuo 2.3 - usa camera commands no prompt
+  "lightricks:2@1": false,  // LTX-2 Fast
+  "lightricks:2@0": false,  // LTX-2 Pro
 };
 
 const FORMATS = ["mp4", "webm", "mov"];
@@ -389,7 +415,8 @@ const VideoPage: React.FC = () => {
   const [duration, setDuration] = useState<number>(5);
   const [outputFormat, setOutputFormat] = useState<string>("mp4");
   const [cameraFixed, setCameraFixed] = useState<boolean>(false);
-  const [generateAudio] = useState<boolean>(false); // off (Veo comentado)
+  const [generateAudio, setGenerateAudio] = useState<boolean>(false);
+  const [fps, setFps] = useState<number>(25); // FPS para modelos LTX
   const [frameStartUrl, setFrameStartUrl] = useState("");
   const [frameEndUrl, setFrameEndUrl] = useState("");
   // ✅ Motion Transfer states (Kling 2.6 Pro)
@@ -431,9 +458,11 @@ const VideoPage: React.FC = () => {
   // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
   const allowedDurations = useMemo<number[]>(() => DURATIONS_BY_MODEL[modelId] || [5], [modelId]);
+  const allowedFps = useMemo<number[]>(() => FPS_BY_MODEL[modelId] || [], [modelId]);
   const supportsLastFrame = SUPPORTS_LAST_FRAME[modelId];
   const supportsAudio = SUPPORTS_AUDIO[modelId];
   const supportsMotionTransfer = SUPPORTS_MOTION_TRANSFER[modelId];
+  const isLtxModel = modelId.startsWith('lightricks:');
 
   const res = useMemo<Resolution>(() => {
     const found = allowedResolutions.find((r) => r.id === resolution);
@@ -614,6 +643,18 @@ const VideoPage: React.FC = () => {
       setReferenceVideoUrl("");
       setCharacterOrientation("imageOrientation");
       setKeepOriginalSound(false);
+    }
+    // ✅ Ajustar FPS e áudio ao trocar de modelo LTX
+    if (modelId.startsWith('lightricks:')) {
+      const fpsOptions = FPS_BY_MODEL[modelId] || [25];
+      if (!fpsOptions.includes(fps)) {
+        setFps(fpsOptions[0]);
+      }
+    } else {
+      // Limpar generateAudio se não for LTX/Veo/Kling
+      if (!SUPPORTS_AUDIO[modelId] && generateAudio) {
+        setGenerateAudio(false);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelId]);
@@ -943,7 +984,7 @@ const VideoPage: React.FC = () => {
         width: res.w,
         height: res.h,
         duration,
-        fps: 24,
+        fps: isLtxModel ? fps : 24,
         outputFormat: normalizedFormat,
         numberResults: 1,
         includeCost: true,
@@ -956,6 +997,11 @@ const VideoPage: React.FC = () => {
           referenceVideoUrl,
           characterOrientation,
           keepOriginalSound,
+        } : {}),
+        // ✅ LTX models: enviar FPS customizado e generateAudio
+        ...(isLtxModel ? {
+          customFps: fps,
+          generateAudio: generateAudio,
         } : {}),
       };
 
@@ -1022,6 +1068,9 @@ const VideoPage: React.FC = () => {
     creditsRemaining,
     setShowPurchaseModal,
     refreshProfile,
+    isLtxModel,
+    fps,
+    generateAudio,
   ]);
 
   const handleDownload = useCallback(
@@ -1223,15 +1272,52 @@ const VideoPage: React.FC = () => {
                     <Label htmlFor="camera-fixed">Camera Fixed (ByteDance)</Label>
                   </div>
                 )}
-
-                {/* Veo comentado
-                {modelId.startsWith("google") && (
-                  <div className="flex items-center gap-2 pt-2">
-                    <Switch id="veo-audio" checked={generateAudio} onCheckedChange={setGenerateAudio} disabled={isProcessing} />
-                    <Label htmlFor="veo-audio">Incluir áudio (Veo 3)</Label>
-                  </div>
-                )} */}
               </div>
+
+              {/* ✅ LTX-2: Seleção de FPS e toggle de áudio */}
+              {isLtxModel && (
+                <div className="grid md:grid-cols-2 gap-4 p-4 border border-purple-500/20 rounded-lg bg-purple-500/5">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label>FPS (Quadros por segundo)</Label>
+                    </div>
+                    <Select value={String(fps)} onValueChange={(v) => setFps(Number(v))} disabled={isProcessing}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="FPS" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allowedFps.map((f) => (
+                          <SelectItem key={f} value={String(f)}>
+                            {f} FPS {f === 50 && <span className="text-muted-foreground">(Mais fluido)</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-3 pt-6">
+                    <Switch
+                      id="ltx-audio"
+                      checked={generateAudio}
+                      onCheckedChange={setGenerateAudio}
+                      disabled={isProcessing}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="ltx-audio">Gerar Áudio</Label>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-semibold">
+                        BETA
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Veo comentado
+              {modelId.startsWith("google") && (
+                <div className="flex items-center gap-2 pt-2">
+                  <Switch id="veo-audio" checked={generateAudio} onCheckedChange={setGenerateAudio} disabled={isProcessing} />
+                  <Label htmlFor="veo-audio">Incluir áudio (Veo 3)</Label>
+                </div>
+              )} */}
 
               {/* Frames de referência */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

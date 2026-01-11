@@ -62,11 +62,17 @@ export const getVideoCreditCost = (modelId: string): number => {
   // Veo 3.1 = 3.0 créditos
   if (modelId.includes('google:3@')) return 3.0;
   
+  // LTX-2 Pro = 2.0 créditos
+  if (modelId === 'lightricks:2@0') return 2.0;
+  
   // Sora 2 = 1.5 créditos
   if (modelId === 'openai:3@1') return 1.5;
   
   // Kling 2.6 Pro = 1.5 créditos
   if (modelId.includes('klingai:')) return 1.5;
+  
+  // LTX-2 Fast = 1.5 créditos
+  if (modelId === 'lightricks:2@1') return 1.5;
   
   // Seedance (ByteDance) = 1.0 crédito
   if (modelId.includes('bytedance:') || modelId.includes('seedance')) return 1.0;
