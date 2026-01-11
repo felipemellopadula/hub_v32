@@ -93,16 +93,16 @@ const UserProfile = ({ tokens }: UserProfileProps) => {
           <div className="flex flex-col">
             <span className="font-medium">{profile.name}</span>
             <span className="text-sm text-muted-foreground">{profile.email}</span>
-            {!isLegacy && (
-              <div className={cn(
-                "flex items-center gap-1 mt-1 text-xs font-medium",
-                getTextColorClass()
-              )}>
-                <Coins className="h-3 w-3" />
-                <span>{balanceValue} crédito{balanceValue !== 1 ? 's' : ''}</span>
-                {isEmpty && <span className="text-red-400 ml-1">(vazio)</span>}
-              </div>
-            )}
+            <div className={cn(
+              "flex items-center gap-1 mt-1 text-xs font-medium",
+              isLegacy ? "text-muted-foreground" : getTextColorClass()
+            )}>
+              <Coins className="h-3 w-3" />
+              <span>
+                {balanceValue.toLocaleString()} {isLegacy ? 'tokens' : `crédito${balanceValue !== 1 ? 's' : ''}`}
+              </span>
+              {isEmpty && <span className="text-red-400 ml-1">(vazio)</span>}
+            </div>
           </div>
         </div>
         <DropdownMenuSeparator />
