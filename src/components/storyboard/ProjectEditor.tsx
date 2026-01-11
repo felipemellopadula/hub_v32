@@ -273,10 +273,19 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       }
 
       if (error) throw error;
-      if (!data?.image) throw new Error('Nenhuma imagem gerada');
+      
+      // Handle different response formats: edit-image returns { image }, generate-image returns { images: [] }
+      let imageBase64: string;
+      if (data?.image) {
+        imageBase64 = data.image;
+      } else if (data?.images && data.images.length > 0) {
+        imageBase64 = data.images[0].image;
+      } else {
+        throw new Error('Nenhuma imagem gerada');
+      }
 
       // Upload generated image to storage
-      const imageBlob = base64ToBlob(data.image);
+      const imageBlob = base64ToBlob(imageBase64);
       const fileName = `storyboard/${project.id}/${scene.id}_generated_${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
