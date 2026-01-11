@@ -122,11 +122,11 @@ const heroSlides: HeroSlide[] = [
   },
   {
     id: "4",
-    title: "NANO BANANA",
-    subtitle: "Geração Ultra Rápida",
-    images: ["/images/banana-1.png", "/images/banana-2.png", "/images/banana-3.png", "/images/banana-4.png"],
-    ctaText: "Gerar",
-    path: "/image2",
+    title: "STORYBOARD",
+    subtitle: "Organize suas cenas e crie vídeos sequenciais",
+    imageUrl: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&h=600&fit=crop",
+    ctaText: "Criar Projeto",
+    path: "/storyboard",
   },
 ];
 
