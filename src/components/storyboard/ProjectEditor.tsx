@@ -205,15 +205,6 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       return 'failed';
     }
 
-    if (references.length === 0) {
-      toast({
-        title: 'Referências necessárias',
-        description: 'Adicione pelo menos uma imagem de referência no painel lateral.',
-        variant: 'destructive',
-      });
-      return 'failed';
-    }
-
     // Check credits
     if (!isLegacyUser && creditsRemaining < IMAGE_GENERATION_COST) {
       toast({
@@ -231,37 +222,55 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       // Update scene status
       await onUpdateScene(scene.id, { image_status: 'generating' });
 
-      // Convert all reference images to base64
-      const referenceImagesBase64 = await Promise.all(
-        references.map(ref => imageUrlToBase64(ref.image_url))
-      );
-
-      // Build enhanced prompt with reference names
-      let enhancedPrompt = scene.prompt;
-      references.forEach((ref, index) => {
-        // Replace reference names like IMG1, IMG2 with actual reference indicators
-        const refPattern = new RegExp(ref.name, 'gi');
-        enhancedPrompt = enhancedPrompt.replace(refPattern, `[reference image ${index + 1}]`);
-      });
-
-      console.log('[Storyboard] Generating image with prompt:', enhancedPrompt);
-      console.log('[Storyboard] Using', references.length, 'reference images');
-
-      // Get valid dimensions for Runware API
+      // Get valid dimensions for aspect ratio
       const dimensions = getDimensionsForAspectRatio(project.aspect_ratio || '16:9');
       console.log('[Storyboard] Using dimensions:', dimensions);
 
-      // Call edit-image edge function with references
-      const { data, error } = await supabase.functions.invoke('edit-image', {
-        body: {
-          model: selectedImageModel,
-          positivePrompt: enhancedPrompt,
-          inputImage: referenceImagesBase64[0],
-          inputImages: referenceImagesBase64,
-          width: dimensions.width,
-          height: dimensions.height,
-        },
-      });
+      let data, error;
+
+      if (references.length > 0) {
+        // With references: use edit-image endpoint
+        const referenceImagesBase64 = await Promise.all(
+          references.map(ref => imageUrlToBase64(ref.image_url))
+        );
+
+        // Build enhanced prompt with reference names
+        let enhancedPrompt = scene.prompt!;
+        references.forEach((ref, index) => {
+          const refPattern = new RegExp(ref.name, 'gi');
+          enhancedPrompt = enhancedPrompt.replace(refPattern, `[reference image ${index + 1}]`);
+        });
+
+        console.log('[Storyboard] Generating image with references:', references.length);
+        console.log('[Storyboard] Enhanced prompt:', enhancedPrompt);
+
+        const result = await supabase.functions.invoke('edit-image', {
+          body: {
+            model: selectedImageModel,
+            positivePrompt: enhancedPrompt,
+            inputImage: referenceImagesBase64[0],
+            inputImages: referenceImagesBase64,
+            width: dimensions.width,
+            height: dimensions.height,
+          },
+        });
+        data = result.data;
+        error = result.error;
+      } else {
+        // No references: use generate-image endpoint
+        console.log('[Storyboard] Generating image from prompt only:', scene.prompt);
+
+        const result = await supabase.functions.invoke('generate-image', {
+          body: {
+            model: selectedImageModel,
+            positivePrompt: scene.prompt,
+            width: dimensions.width,
+            height: dimensions.height,
+          },
+        });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
       if (!data?.image) throw new Error('Nenhuma imagem gerada');

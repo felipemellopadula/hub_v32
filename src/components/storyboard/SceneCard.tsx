@@ -129,7 +129,7 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
   const VideoStatusIcon = videoStatus.icon;
 
   const hasImage = scene.image_status === 'completed' && (scene.generated_image_url || scene.image_url);
-  const canGenerateImage = hasReferences && scene.prompt && scene.image_status !== 'generating';
+  const canGenerateImage = scene.prompt && scene.image_status !== 'generating';
   const canGenerateVideo = hasImage && scene.video_status !== 'generating';
 
   const displayImageUrl = scene.generated_image_url || scene.image_url;
@@ -414,8 +414,8 @@ Ex: The man (IMG1) is holding a bottle (IMG2), extreme close up with cinematic l
 
         {/* Helper Text */}
         {!hasReferences && !hasImage && (
-          <p className="text-[10px] text-amber-600 dark:text-amber-400">
-            ⚠️ Adicione referências no painel lateral primeiro
+          <p className="text-[10px] text-muted-foreground">
+            💡 Dica: Adicione referências para manter consistência visual
           </p>
         )}
       </div>
