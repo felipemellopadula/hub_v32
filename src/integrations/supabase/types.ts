@@ -1177,6 +1177,7 @@ export type Database = {
         Args: { bucket_name: string; file_path: string }
         Returns: boolean
       }
+      has_admin_role: { Args: { _user_id: string }; Returns: boolean }
       insert_image_usage: {
         Args: {
           p_cost: number

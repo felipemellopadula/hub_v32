@@ -1,69 +1,180 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
-const ADMIN_EMAILS = [
-  'valdiney.victor@gmail.com',
-  'fmello.85@gmail.com',
-  'murilo.vicossi@gmail.com',
-  'alanvazcardoso@gmail.com'
-];
-
-const ADMIN_PASSWORD = 'SynergyAi1234';
+interface AdminAuthState {
+  user: User | null;
+  isAdmin: boolean;
+  loading: boolean;
+}
 
 export const useAdminAuth = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [state, setState] = useState<AdminAuthState>({
+    user: null,
+    isAdmin: false,
+    loading: true,
+  });
 
-  useEffect(() => {
-    // Check if user is logged in as admin (using localStorage for simplicity)
-    const adminUser = localStorage.getItem('adminUser');
-    if (adminUser) {
-      const userData = JSON.parse(adminUser);
-      setUser(userData);
-      setIsAdmin(true);
+  // Check if user is in admin_users table
+  const checkAdminStatus = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (err) {
+      console.error('Error checking admin status:', err);
+      return false;
     }
-    setLoading(false);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    // Simple validation - check if email is in admin list and password matches
-    if (!ADMIN_EMAILS.includes(email)) {
-      return { error: { message: 'Email não autorizado para acesso administrativo' } };
-    }
-    
-    if (password !== ADMIN_PASSWORD) {
-      return { error: { message: 'Senha incorreta' } };
-    }
-    
-    // Create admin user object
-    const adminUser = { 
-      email, 
-      id: email, 
-      role: 'admin',
-      name: email.split('@')[0] 
+  // Initialize auth state
+  useEffect(() => {
+    let mounted = true;
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (session?.user) {
+          const isAdmin = await checkAdminStatus(session.user.id);
+          setState({
+            user: session.user,
+            isAdmin,
+            loading: false,
+          });
+        } else {
+          setState({
+            user: null,
+            isAdmin: false,
+            loading: false,
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setState({
+            user: null,
+            isAdmin: false,
+            loading: false,
+          });
+        }
+      }
     };
-    
-    // Store in localStorage
-    localStorage.setItem('adminUser', JSON.stringify(adminUser));
-    
-    setUser(adminUser);
-    setIsAdmin(true);
-    
-    return { error: null };
+
+    // Set up auth state listener before getting session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        if (event === 'SIGNED_OUT') {
+          setState({
+            user: null,
+            isAdmin: false,
+            loading: false,
+          });
+          return;
+        }
+
+        if (session?.user) {
+          // Use setTimeout to debounce duplicate SIGNED_IN events
+          setTimeout(async () => {
+            if (!mounted) return;
+            const isAdmin = await checkAdminStatus(session.user.id);
+            setState({
+              user: session.user,
+              isAdmin,
+              loading: false,
+            });
+          }, 100);
+        }
+      }
+    );
+
+    initAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [checkAdminStatus]);
+
+  // Sign in with email and password using Supabase Auth
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error: { message: error.message } };
+      }
+
+      if (data.user) {
+        // Check if user is admin
+        const isAdmin = await checkAdminStatus(data.user.id);
+        
+        if (!isAdmin) {
+          // Sign out if not an admin
+          await supabase.auth.signOut();
+          return { error: { message: 'Email não autorizado para acesso administrativo' } };
+        }
+
+        setState({
+          user: data.user,
+          isAdmin: true,
+          loading: false,
+        });
+
+        return { error: null };
+      }
+
+      return { error: { message: 'Erro desconhecido ao fazer login' } };
+    } catch (err) {
+      console.error('Sign in error:', err);
+      return { error: { message: 'Erro ao fazer login. Tente novamente.' } };
+    }
   };
 
+  // Sign out
   const signOut = async () => {
-    localStorage.removeItem('adminUser');
-    setUser(null);
-    setIsAdmin(false);
-    return { error: null };
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        return { error: { message: error.message } };
+      }
+
+      setState({
+        user: null,
+        isAdmin: false,
+        loading: false,
+      });
+
+      return { error: null };
+    } catch (err) {
+      console.error('Sign out error:', err);
+      return { error: { message: 'Erro ao sair. Tente novamente.' } };
+    }
   };
 
   return {
-    user,
-    isAdmin,
-    loading,
+    user: state.user,
+    isAdmin: state.isAdmin,
+    loading: state.loading,
     signIn,
-    signOut
+    signOut,
   };
 };
