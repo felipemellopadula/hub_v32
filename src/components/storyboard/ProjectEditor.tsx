@@ -39,6 +39,7 @@ import { ImagePicker } from './ImagePicker';
 import { VideoPreviewModal } from './VideoPreviewModal';
 import { SceneFullScreenView } from './SceneFullScreenView';
 import { StoryboardProject, StoryboardScene, StoryboardReference } from '@/hooks/useStoryboard';
+import { MODELS as IMAGE_MODELS } from '@/modules/image/config/models';
 
 interface ProjectEditorProps {
   project: StoryboardProject;
@@ -147,6 +148,10 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [fullScreenIndex, setFullScreenIndex] = useState<number | null>(null);
+  
+  // Image model selection - filter out models that don't support references (maxImages <= 0)
+  const availableImageModels = IMAGE_MODELS.filter(m => m.maxImages > 0);
+  const [selectedImageModel, setSelectedImageModel] = useState(availableImageModels[0]?.id || 'google:4@2');
 
   // Get current model cost
   const modelCost = VIDEO_MODELS.find(m => m.id === project.video_model)?.cost || 0.5;
@@ -249,7 +254,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       // Call edit-image edge function with references
       const { data, error } = await supabase.functions.invoke('edit-image', {
         body: {
-          model: 'google:4@2', // Nano Banana 2 Pro - supports reference images
+          model: selectedImageModel,
           positivePrompt: enhancedPrompt,
           inputImage: referenceImagesBase64[0],
           inputImages: referenceImagesBase64,
@@ -304,7 +309,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       setGeneratingImageSceneId(null);
       return 'failed';
     }
-  }, [project, references, isLegacyUser, creditsRemaining, onUpdateScene, toast, setShowPurchaseModal]);
+  }, [project, references, isLegacyUser, creditsRemaining, onUpdateScene, toast, setShowPurchaseModal, selectedImageModel]);
 
   // Generate video for a scene
   const generateVideoForScene = useCallback(async (scene: StoryboardScene): Promise<'completed' | 'failed'> => {
@@ -635,6 +640,24 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Modelo de Imagem</Label>
+                    <Select value={selectedImageModel} onValueChange={setSelectedImageModel}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableImageModels.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Modelo usado para gerar imagens das cenas
+                    </p>
                   </div>
                 </div>
               </SheetContent>
