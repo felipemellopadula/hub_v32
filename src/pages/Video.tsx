@@ -20,6 +20,7 @@ import React, {
   startTransition,
   memo,
 } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1085,18 +1086,24 @@ const VideoPage: React.FC = () => {
       if (document.visibilityState === 'visible') {
         // ✅ Usar REFS que sempre têm valor atualizado (não sofrem de stale closure)
         const currentTaskUUID = taskUUIDRef.current;
-        const isCurrentlyProcessing = processingRef.current;
         
-        console.log("[Video] Tab voltou visível. taskUUID:", currentTaskUUID, "processingRef:", isCurrentlyProcessing);
+        console.log("[Video] Tab voltou visível. taskUUID:", currentTaskUUID, "videoUrlRef:", videoUrlRef.current);
         
-        // ✅ CORRIGIDO: Usar apenas taskUUIDRef e videoUrlRef (processingRef pode ter race condition)
-        // Se tem taskUUID E ainda não recebeu vídeo = processamento ativo
-        if (currentTaskUUID && !videoUrlRef.current) {
-          console.log("[Video] Processamento em andamento (taskUUID existe, video não chegou), restaurando UI...");
-          // ✅ ORDEM CRÍTICA: isSubmitting PRIMEIRO para garantir render imediato do spinner
-          setIsSubmitting(true);
-          processingRef.current = true; // ✅ Restaurar ref também
-          setVideoUrl(null);
+        // ✅ CORRIGIDO: Se tem taskUUID ativo, limpar videoUrlRef SINCRONAMENTE
+        // (useEffect de sincronização pode não ter executado ainda)
+        if (currentTaskUUID) {
+          // ✅ Limpar ref SINCRONAMENTE (não depender do useEffect)
+          videoUrlRef.current = null;
+          
+          console.log("[Video] Processamento ativo, forçando UI com flushSync...");
+          
+          // ✅ flushSync força o React a aplicar estados IMEDIATAMENTE (sem batching)
+          flushSync(() => {
+            setIsSubmitting(true);
+            setVideoUrl(null);
+          });
+          
+          processingRef.current = true;
           setTaskUUID(currentTaskUUID);
           // Reiniciar o polling para verificar status atual
           beginPolling(currentTaskUUID);
