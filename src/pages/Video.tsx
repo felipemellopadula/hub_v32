@@ -490,23 +490,31 @@ const VideoPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  // ✅ Listener para visibilitychange: quando usuário volta para a aba, sincroniza estado
+  // ✅ Ref para rastrear se há processamento em andamento (persiste entre re-renders)
+  const processingRef = useRef<boolean>(false);
+  
+  // ✅ Listener para visibilitychange: quando usuário volta para a aba, reinicia polling se necessário
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Se temos videoUrl mas ainda mostra como processing, força reset
-        if (videoUrl && (isSubmitting || taskUUID)) {
-          console.log("[Video] Tab voltou visível, forçando reset de estados de processing");
-          setIsSubmitting(false);
-          setTaskUUID(null);
-          setElapsedTime(0);
+        console.log("[Video] Tab voltou visível. taskUUID:", taskUUID, "processingRef:", processingRef.current);
+        
+        // Se ainda tem taskUUID (processamento em andamento), garantir que UI reflete isso
+        if (taskUUID && processingRef.current) {
+          console.log("[Video] Processamento ainda em andamento, reiniciando polling...");
+          // Garantir que isSubmitting está true para mostrar o spinner
+          if (!isSubmitting) {
+            setIsSubmitting(true);
+          }
+          // Reiniciar o polling para verificar status atual
+          beginPolling(taskUUID);
         }
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [videoUrl, isSubmitting, taskUUID]);
+  }, [taskUUID, isSubmitting]);
 
   // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
@@ -912,6 +920,7 @@ const VideoPage: React.FC = () => {
       window.clearInterval(elapsedRef.current);
       elapsedRef.current = null;
     }
+    processingRef.current = false; // ✅ Marcar que processamento foi cancelado
     setIsSubmitting(false);
     setTaskUUID(null);
     setElapsedTime(0);
@@ -948,6 +957,7 @@ const VideoPage: React.FC = () => {
         const elapsed = Date.now() - startTime;
         if (elapsed > MAX_DURATION) {
           if (elapsedRef.current) window.clearInterval(elapsedRef.current);
+          processingRef.current = false; // ✅ Marcar que processamento terminou por timeout
           setIsSubmitting(false);
           setTaskUUID(null);
           setElapsedTime(0);
@@ -962,6 +972,7 @@ const VideoPage: React.FC = () => {
         // ✅ Verificar limite de tentativas
         if (attempt >= MAX_ATTEMPTS) {
           if (elapsedRef.current) window.clearInterval(elapsedRef.current);
+          processingRef.current = false; // ✅ Marcar que processamento terminou por limite
           setIsSubmitting(false);
           setTaskUUID(null);
           setElapsedTime(0);
@@ -980,6 +991,7 @@ const VideoPage: React.FC = () => {
         // ✅ Detectar falha explícita da API
         if (data?.failed) {
           if (elapsedRef.current) window.clearInterval(elapsedRef.current);
+          processingRef.current = false; // ✅ Marcar que processamento falhou
           setIsSubmitting(false);
           setTaskUUID(null);
           setElapsedTime(0);
@@ -1002,6 +1014,7 @@ const VideoPage: React.FC = () => {
           if (pollRef.current) window.clearTimeout(pollRef.current);
           
           // ✅ Limpar estados de processamento PRIMEIRO para desbloquear UI
+          processingRef.current = false; // ✅ Marcar que processamento terminou
           setIsSubmitting(false);
           setTaskUUID(null);
           setElapsedTime(0);
@@ -1056,6 +1069,7 @@ const VideoPage: React.FC = () => {
         // ✅ Limite de erros consecutivos
         if (attempt >= 5) {
           if (elapsedRef.current) window.clearInterval(elapsedRef.current);
+          processingRef.current = false; // ✅ Marcar que processamento terminou com erro
           setIsSubmitting(false);
           setTaskUUID(null);
           setElapsedTime(0);
@@ -1115,6 +1129,7 @@ const VideoPage: React.FC = () => {
     setIsSubmitting(true);
     setVideoUrl(null);
     setTaskUUID(null);
+    processingRef.current = true; // ✅ Marcar que há processamento em andamento
     savedVideoUrls.current.clear(); // ✅ Limpar controle de URLs ao iniciar nova geração
 
     const normalizedFormat = outputFormat === "mov" ? "mp4" : outputFormat;
