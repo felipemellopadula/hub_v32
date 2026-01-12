@@ -1088,6 +1088,7 @@ const VideoPage: React.FC = () => {
         if (currentTaskUUID && isCurrentlyProcessing) {
           console.log("[Video] Processamento ainda em andamento, forçando UI e reiniciando polling...");
           // ✅ Forçar estados para garantir que UI mostra spinner
+          setVideoUrl(null); // Limpar vídeo anterior para que spinner apareça
           setIsSubmitting(true);
           setTaskUUID(currentTaskUUID); // Re-setar para forçar re-render
           // Reiniciar o polling para verificar status atual
