@@ -351,22 +351,33 @@ const SavedVideo = memo(function SavedVideo({
         className="w-full h-full"
       />
 
-      {/* Badge "Novo" para vídeos recém-adicionados - MUITO VISÍVEL */}
+      {/* Badge "Novo" para vídeos recém-adicionados - EXTREMAMENTE VISÍVEL */}
       {(isNew || isTemporary) && (
-        <div className="absolute top-2 left-2 z-20">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-full shadow-lg ${isTemporary ? "bg-amber-500 text-white animate-pulse" : "bg-green-500 text-white animate-bounce"}`}>
+        <div className="absolute inset-0 z-20 pointer-events-none">
+          {/* Badge grande no topo */}
+          <div className={`absolute top-3 left-3 inline-flex items-center gap-2 px-4 py-2 text-base font-bold rounded-lg shadow-2xl ${
+            isTemporary 
+              ? "bg-amber-500 text-white" 
+              : "bg-green-500 text-white"
+          }`}>
             {isTemporary ? (
               <>
-                <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-                Salvando...
+                <div className="h-3 w-3 rounded-full bg-white animate-ping" />
+                <span>Salvando...</span>
               </>
             ) : (
               <>
-                <span className="text-base">✨</span>
-                Novo!
+                <span className="text-xl animate-bounce">✨</span>
+                <span>Novo!</span>
               </>
             )}
-          </span>
+          </div>
+          {/* Borda brilhante animada ao redor do card */}
+          <div className={`absolute inset-0 rounded-lg ring-4 ${
+            isTemporary 
+              ? "ring-amber-400/70 animate-pulse" 
+              : "ring-green-400/70 animate-pulse"
+          }`} />
         </div>
       )}
 
@@ -557,10 +568,19 @@ const VideoPage: React.FC = () => {
       setNewVideoIds(prev => new Set(prev).add(tempId)); // ✅ Marca como novo
       console.log("[Video] ✅ Vídeo adicionado ao histórico (otimista) - ID:", tempId);
       
-      // ✅ Scroll automático para a seção do histórico
-      setTimeout(() => {
-        historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      // ✅ Scroll automático para a seção do histórico com retry
+      const scrollToHistory = () => {
+        const historySection = document.getElementById('video-history-section');
+        if (historySection) {
+          historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (historyRef.current) {
+          historyRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // Retry se refs não estiverem prontas
+          setTimeout(scrollToHistory, 100);
+        }
+      };
+      setTimeout(scrollToHistory, 50);
       
       try {
         // ✅ Agora faz o salvamento real em background
@@ -972,14 +992,21 @@ const VideoPage: React.FC = () => {
           setElapsedTime(0);
           toast({ 
             title: "✅ Vídeo pronto!", 
-            description: "Seu vídeo foi gerado e adicionado ao histórico.",
+            description: "Seu vídeo foi gerado e está no histórico abaixo.",
+            duration: 10000,
             action: (
               <Button 
-                variant="outline" 
+                variant="default" 
                 size="sm"
-                onClick={() => historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="font-bold"
+                onClick={() => {
+                  document.getElementById('video-history-section')?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                  });
+                }}
               >
-                Ver
+                Ver histórico
               </Button>
             ),
           });
@@ -1270,7 +1297,7 @@ const VideoPage: React.FC = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Painel de controle */}
-          <Card className="order-2 lg:col-span-1 lg:row-span-2" style={{ contentVisibility: "auto" as any, containIntrinsicSize: "900px" }}>
+          <Card className="order-2 lg:col-span-1 lg:row-span-2">
             <CardContent className="space-y-6 pt-6">
               <div>
                 <Label>Modelo de Vídeo</Label>
@@ -1793,7 +1820,7 @@ const VideoPage: React.FC = () => {
           </Card>
 
           {/* Histórico (com mini-virtualização via content-visibility + lazy thumbs) */}
-          <div ref={historyRef} className="order-3 lg:col-span-2">
+          <div id="video-history-section" ref={historyRef} className="order-3 lg:col-span-2">
             <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
             {loadingVideos ? (
               <div className="flex items-center gap-2">
