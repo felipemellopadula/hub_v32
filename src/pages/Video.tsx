@@ -1800,7 +1800,17 @@ const VideoPage: React.FC = () => {
           {/* Player / Resultado */}
           <Card className="order-1 lg:col-span-2">
             <CardContent className="pt-6">
-              {videoUrl ? (
+              {/* ✅ PRIORIDADE 1: Spinner de processamento (SEMPRE verificar primeiro) */}
+              {(isSubmitting || taskUUID) ? (
+                <div className="aspect-video w-full grid place-items-center text-center text-muted-foreground bg-muted/30 rounded-md">
+                  <div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p>Processando seu vídeo...</p>
+                    <p className="text-sm mt-1">Isso pode levar alguns minutos</p>
+                  </div>
+                </div>
+              ) : videoUrl ? (
+                /* ✅ PRIORIDADE 2: Vídeo recém-gerado */
                 <div className="space-y-4">
                   <video
                     controls
@@ -1854,16 +1864,8 @@ const VideoPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-              ) : (isSubmitting || taskUUID) ? (
-                <div className="aspect-video w-full grid place-items-center text-center text-muted-foreground bg-muted/30 rounded-md">
-                  <div>
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p>Processando seu vídeo...</p>
-                    <p className="text-sm mt-1">Isso pode levar alguns minutos</p>
-                  </div>
-                </div>
               ) : savedVideos.length > 0 && savedVideos[0]?.video_url ? (
-                /* Mostra o último vídeo gerado quando não há processamento ativo */
+                /* ✅ PRIORIDADE 3: Último vídeo do histórico */
                 <div className="space-y-4">
                   <video
                     controls
@@ -1885,6 +1887,7 @@ const VideoPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
+                /* ✅ PRIORIDADE 4: Placeholder vazio */
                 <div className="aspect-video w-full grid place-items-center text-center text-muted-foreground bg-muted/30 rounded-md">
                   <div>
                     <VideoIcon className="h-10 w-10 mx-auto mb-2" />
