@@ -296,12 +296,15 @@ LazyThumbVideo.displayName = "LazyThumbVideo";
 const SavedVideo = memo(function SavedVideo({
   video,
   onDelete,
+  isNew = false,
 }: {
   video: SavedVideoData;
   onDelete: (id: string, optimistic?: boolean) => void;
+  isNew?: boolean;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isTemporary = video.id.startsWith('temp-');
 
   const togglePlay = useCallback((el: HTMLVideoElement) => {
     if (!el) return;
@@ -339,7 +342,7 @@ const SavedVideo = memo(function SavedVideo({
   return (
     <div
       id={`vid-${video.id}`}
-      className={`relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer transition-opacity ${isDeleting ? "opacity-50" : ""}`}
+      className={`relative aspect-video border border-border rounded-md overflow-hidden group cursor-pointer transition-opacity ${isDeleting ? "opacity-50" : ""} ${isNew || isTemporary ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
     >
       <LazyThumbVideo
         src={video.video_url}
@@ -347,6 +350,22 @@ const SavedVideo = memo(function SavedVideo({
         onTogglePlay={togglePlay}
         className="w-full h-full"
       />
+
+      {/* Badge "Novo" para vídeos recém-adicionados */}
+      {(isNew || isTemporary) && (
+        <div className="absolute top-2 left-2 z-10">
+          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${isTemporary ? "bg-amber-500 text-white animate-pulse" : "bg-primary text-primary-foreground"}`}>
+            {isTemporary ? (
+              <>
+                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                Salvando...
+              </>
+            ) : (
+              "Novo"
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Botão deletar */}
       <Button
@@ -432,6 +451,8 @@ const VideoPage: React.FC = () => {
   const [uploadingStart, setUploadingStart] = useState(false);
   const [uploadingEnd, setUploadingEnd] = useState(false);
   const [savedVideos, setSavedVideos] = useState<SavedVideoData[]>([]);
+  const [newVideoIds, setNewVideoIds] = useState<Set<string>>(new Set()); // ✅ IDs de vídeos recém-adicionados
+  const historyRef = useRef<HTMLDivElement>(null); // ✅ Ref para scroll automático
   const [shareOpen, setShareOpen] = useState(false);
   const [shareData, setShareData] = useState<{ url: string; title: string; text: string }>({ url: "", title: "", text: "" });
   const [isDragOverStart, setIsDragOverStart] = useState(false);
@@ -530,7 +551,13 @@ const VideoPage: React.FC = () => {
       
       // Adiciona ao topo do histórico IMEDIATAMENTE
       setSavedVideos(prev => [optimisticVideo, ...prev]);
+      setNewVideoIds(prev => new Set(prev).add(tempId)); // ✅ Marca como novo
       console.log("[Video] ✅ Vídeo adicionado ao histórico (otimista) - ID:", tempId);
+      
+      // ✅ Scroll automático para a seção do histórico
+      setTimeout(() => {
+        historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
       
       try {
         // ✅ Agora faz o salvamento real em background
@@ -566,6 +593,20 @@ const VideoPage: React.FC = () => {
           setSavedVideos(prev => prev.map(v => 
             v.id === tempId ? insertedData : v
           ));
+          // ✅ Atualiza newVideoIds com o ID real e remove badge após 5 segundos
+          setNewVideoIds(prev => {
+            const next = new Set(prev);
+            next.delete(tempId);
+            next.add(insertedData.id);
+            return next;
+          });
+          setTimeout(() => {
+            setNewVideoIds(prev => {
+              const next = new Set(prev);
+              next.delete(insertedData.id);
+              return next;
+            });
+          }, 5000);
           console.log("[Video] ✅ Vídeo salvo permanentemente - ID real:", insertedData.id);
         }
       } catch (error) {
@@ -1737,7 +1778,7 @@ const VideoPage: React.FC = () => {
           </Card>
 
           {/* Histórico (com mini-virtualização via content-visibility + lazy thumbs) */}
-          <div className="order-3 lg:col-span-2" style={{ contentVisibility: "auto" as any, containIntrinsicSize: "500px" }}>
+          <div ref={historyRef} className="order-3 lg:col-span-2" style={{ contentVisibility: "auto" as any, containIntrinsicSize: "500px" }}>
             <h2 className="text-xl font-bold mb-4">Vídeos Salvos</h2>
             {loadingVideos ? (
               <div className="flex items-center gap-2">
@@ -1747,7 +1788,12 @@ const VideoPage: React.FC = () => {
             ) : savedVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {savedVideos.map((video) => (
-                  <SavedVideo key={video.id} video={video} onDelete={deleteVideo} />
+                  <SavedVideo 
+                    key={video.id} 
+                    video={video} 
+                    onDelete={deleteVideo} 
+                    isNew={newVideoIds.has(video.id)}
+                  />
                 ))}
               </div>
             ) : (
