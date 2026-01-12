@@ -67,8 +67,13 @@ export async function validateAndDeductCredits(
       };
     }
 
-    // Deduzir créditos
-    const newBalance = creditsRemaining - cost;
+    // Deduzir créditos (arredondar para evitar problemas com decimais no banco inteiro)
+    // O banco usa INTEGER, então arredondamos para baixo o novo saldo
+    const rawNewBalance = creditsRemaining - cost;
+    const newBalance = Math.floor(rawNewBalance);
+    
+    console.log(`[credit-validation] Calculando: ${creditsRemaining} - ${cost} = ${rawNewBalance}, arredondado para ${newBalance}`);
+    
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ tokens_remaining: newBalance })
