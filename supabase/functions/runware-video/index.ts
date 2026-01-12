@@ -180,10 +180,12 @@ serve(async (req) => {
         };
       }
 
-      // ✅ LTX models: suporte a generateAudio
-      if (generateAudio && resolvedModel.startsWith('lightricks:')) {
-        tasks[1].generateAudio = true;
-        console.log("[runware-video] 🔊 LTX generateAudio enabled");
+      // ⚠️ generateAudio desabilitado - Runware não suporta este parâmetro para LTX
+      // Allowed parameters: includeCost, taskUUID, taskType, model, height, width, outputType, 
+      // outputFormat, numberResults, positivePrompt, deliveryMethod, duration, frameImages, 
+      // providerSettings, advancedFeatures, fps, uploadEndpoint, outputQuality, webhookURL, ttl, resolution
+      if (generateAudio) {
+        console.log("[runware-video] ⚠️ generateAudio requested but not supported by Runware API - ignoring");
       }
 
       console.log("[runware-video] start -> resolvedModel", resolvedModel, "motionTransfer:", isMotionTransfer);
