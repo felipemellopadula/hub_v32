@@ -492,7 +492,7 @@ const VideoPage: React.FC = () => {
     }
   }, [user]);
 
-  // Salvar vídeo (upload->url pública->metadados) - SEM verificação de duplicatas aqui
+  // Salvar vídeo (upload->url pública->metadados) - COM atualização otimista
   const saveVideoToDatabase = useCallback(
     async (url: string) => {
       if (!user) return;
@@ -512,7 +512,28 @@ const VideoPage: React.FC = () => {
       setIsSaving(true);
       savedVideoUrls.current.add(url);
       
+      // ✅ ATUALIZAÇÃO OTIMISTA: Adiciona ao histórico IMEDIATAMENTE com a URL da Runware
+      const tempId = `temp-${Date.now()}`;
+      const optimisticVideo: SavedVideoData = {
+        id: tempId,
+        video_url: url, // URL da Runware (funciona para reprodução imediata)
+        prompt,
+        model: modelId,
+        resolution,
+        duration,
+        aspect_ratio: res.id,
+        initial_frame_url: frameStartUrl || undefined,
+        final_frame_url: frameEndUrl || undefined,
+        format: outputFormat,
+        created_at: new Date().toISOString(),
+      };
+      
+      // Adiciona ao topo do histórico IMEDIATAMENTE
+      setSavedVideos(prev => [optimisticVideo, ...prev]);
+      console.log("[Video] ✅ Vídeo adicionado ao histórico (otimista) - ID:", tempId);
+      
       try {
+        // ✅ Agora faz o salvamento real em background
         const videoResponse = await fetch(url);
         const videoBlob = await videoResponse.blob();
         const fileName = `${user.id}/${Date.now()}.mp4`;
@@ -525,7 +546,7 @@ const VideoPage: React.FC = () => {
 
         const { data: publicData } = supabase.storage.from("user-videos").getPublicUrl(storageData.path);
 
-        const { error: dbError } = await supabase.from("user_videos").insert({
+        const { data: insertedData, error: dbError } = await supabase.from("user_videos").insert({
           user_id: user.id,
           video_url: publicData.publicUrl,
           prompt,
@@ -536,19 +557,32 @@ const VideoPage: React.FC = () => {
           initial_frame_url: frameStartUrl || null,
           final_frame_url: frameEndUrl || null,
           format: outputFormat,
-        });
+        }).select().single();
 
         if (dbError) throw dbError;
 
-        loadSavedVideos();
+        // ✅ Substituir o item temporário pelo item real (com ID e URL do Supabase)
+        if (insertedData) {
+          setSavedVideos(prev => prev.map(v => 
+            v.id === tempId ? insertedData : v
+          ));
+          console.log("[Video] ✅ Vídeo salvo permanentemente - ID real:", insertedData.id);
+        }
       } catch (error) {
         console.error("Erro ao salvar vídeo:", error);
-        savedVideoUrls.current.delete(url); // Remove da lista se falhou
+        // ✅ Se falhou o salvamento, remove o item otimista do histórico
+        setSavedVideos(prev => prev.filter(v => v.id !== tempId));
+        savedVideoUrls.current.delete(url);
+        toast({
+          title: "Erro ao salvar",
+          description: "O vídeo foi gerado mas não pôde ser salvo. A URL temporária ainda funciona.",
+          variant: "destructive",
+        });
       } finally {
         setIsSaving(false);
       }
     },
-    [user, isSaving, prompt, modelId, resolution, duration, res.id, frameStartUrl, frameEndUrl, outputFormat, loadSavedVideos]
+    [user, isSaving, prompt, modelId, resolution, duration, res.id, frameStartUrl, frameEndUrl, outputFormat, toast]
   );
 
   // Deletar vídeo (optimistic + remoção real)
