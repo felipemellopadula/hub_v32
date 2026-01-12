@@ -490,32 +490,15 @@ const VideoPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  // ✅ Ref para rastrear se há processamento em andamento (persiste entre re-renders)
+  // ✅ Refs para rastrear estado crítico (evita stale closures no visibilitychange)
   const processingRef = useRef<boolean>(false);
+  const taskUUIDRef = useRef<string | null>(null);
   
-  // ✅ Listener para visibilitychange: quando usuário volta para a aba, reinicia polling se necessário
+  // ✅ Sincronizar taskUUIDRef com o state
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log("[Video] Tab voltou visível. taskUUID:", taskUUID, "processingRef:", processingRef.current);
-        
-        // Se ainda tem taskUUID (processamento em andamento), garantir que UI reflete isso
-        if (taskUUID && processingRef.current) {
-          console.log("[Video] Processamento ainda em andamento, reiniciando polling...");
-          // Garantir que isSubmitting está true para mostrar o spinner
-          if (!isSubmitting) {
-            setIsSubmitting(true);
-          }
-          // Reiniciar o polling para verificar status atual
-          beginPolling(taskUUID);
-        }
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [taskUUID, isSubmitting]);
-
+    taskUUIDRef.current = taskUUID;
+  }, [taskUUID]);
+  
   // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
   const allowedDurations = useMemo<number[]>(() => DURATIONS_BY_MODEL[modelId] || [5], [modelId]);
@@ -1089,6 +1072,33 @@ const VideoPage: React.FC = () => {
     // Vídeos levam tempo para processar, polling mais espaçado economiza requests
     pollRef.current = window.setTimeout(() => poll(0), 3000) as unknown as number;
   }, [toast, saveVideoToDatabase, refreshProfile]);
+
+  // ✅ Listener para visibilitychange: quando usuário volta para a aba, reinicia polling se necessário
+  // Usa REFS em vez de state para evitar stale closures
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // ✅ Usar REFS que sempre têm valor atualizado (não sofrem de stale closure)
+        const currentTaskUUID = taskUUIDRef.current;
+        const isCurrentlyProcessing = processingRef.current;
+        
+        console.log("[Video] Tab voltou visível. taskUUID:", currentTaskUUID, "processingRef:", isCurrentlyProcessing);
+        
+        // Se ainda tem taskUUID (processamento em andamento), garantir que UI reflete isso
+        if (currentTaskUUID && isCurrentlyProcessing) {
+          console.log("[Video] Processamento ainda em andamento, forçando UI e reiniciando polling...");
+          // ✅ Forçar estados para garantir que UI mostra spinner
+          setIsSubmitting(true);
+          setTaskUUID(currentTaskUUID); // Re-setar para forçar re-render
+          // Reiniciar o polling para verificar status atual
+          beginPolling(currentTaskUUID);
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [beginPolling]); // ✅ Sem taskUUID/isSubmitting nas deps - usamos refs
 
   useEffect(
     () => () => {
