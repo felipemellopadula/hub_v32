@@ -493,11 +493,16 @@ const VideoPage: React.FC = () => {
   // ✅ Refs para rastrear estado crítico (evita stale closures no visibilitychange)
   const processingRef = useRef<boolean>(false);
   const taskUUIDRef = useRef<string | null>(null);
+  const videoUrlRef = useRef<string | null>(null);
   
-  // ✅ Sincronizar taskUUIDRef com o state
+  // ✅ Sincronizar refs com os states
   useEffect(() => {
     taskUUIDRef.current = taskUUID;
   }, [taskUUID]);
+  
+  useEffect(() => {
+    videoUrlRef.current = videoUrl;
+  }, [videoUrl]);
   
   // Restrições por modelo (com memo para evitar recalcular)
   const allowedResolutions = useMemo<Resolution[]>(() => RESOLUTIONS_BY_MODEL[modelId] || [], [modelId]);
@@ -1087,10 +1092,13 @@ const VideoPage: React.FC = () => {
         // Se ainda tem taskUUID (processamento em andamento), garantir que UI reflete isso
         if (currentTaskUUID && isCurrentlyProcessing) {
           console.log("[Video] Processamento ainda em andamento, forçando UI e reiniciando polling...");
-          // ✅ Forçar estados para garantir que UI mostra spinner
-          setVideoUrl(null); // Limpar vídeo anterior para que spinner apareça
+          // ✅ ORDEM CRÍTICA: isSubmitting PRIMEIRO para garantir render imediato do spinner
           setIsSubmitting(true);
-          setTaskUUID(currentTaskUUID); // Re-setar para forçar re-render
+          // ✅ Limpar refs imediatamente (sincrono)
+          videoUrlRef.current = null;
+          // ✅ Limpar estados
+          setVideoUrl(null);
+          setTaskUUID(currentTaskUUID);
           // Reiniciar o polling para verificar status atual
           beginPolling(currentTaskUUID);
         }
@@ -1846,7 +1854,7 @@ const VideoPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-              ) : taskUUID ? (
+              ) : (isSubmitting || taskUUID) ? (
                 <div className="aspect-video w-full grid place-items-center text-center text-muted-foreground bg-muted/30 rounded-md">
                   <div>
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
