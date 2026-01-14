@@ -24,4 +24,5 @@ export interface DatabaseImage {
   format: string | null;
   created_at: string;
   is_public: boolean;
+  _tempBase64?: string; // Preview temporário antes de salvar no storage
 }

@@ -387,10 +387,32 @@ const Image2Page = () => {
         // Usar dados retornados diretamente para atualização imediata
         const firstImage = apiData.images?.[0];
         if (firstImage?.insertedImage) {
-          console.log('Usando dados inseridos diretamente:', firstImage.insertedImage.id);
+          console.log('✅ Usando dados inseridos diretamente:', firstImage.insertedImage.id);
           setImages((prev) => [firstImage.insertedImage, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
+        } else if (firstImage?.image) {
+          // Fallback otimista: criar preview temporário com base64 enquanto recarrega
+          console.log('⏳ insertedImage não disponível, criando preview temporário...');
+          
+          const tempImage: DatabaseImage = {
+            id: `temp-${Date.now()}`,
+            user_id: user?.id || '',
+            prompt: finalPrompt,
+            image_path: '',
+            width: selectedQualityInfo.width,
+            height: selectedQualityInfo.height,
+            format: 'png',
+            is_public: false,
+            created_at: new Date().toISOString(),
+            _tempBase64: firstImage.image
+          };
+          
+          // Mostrar preview imediato
+          setImages((prev) => [tempImage, ...prev].slice(0, MAX_IMAGES_TO_FETCH));
+          
+          // Recarregar em background para obter dados reais do storage
+          setTimeout(() => loadSavedImages(), 1500);
         } else {
-          // Fallback: recarregar do banco se não retornou os dados
+          // Fallback final: recarregar do banco
           await loadSavedImages();
         }
         
@@ -520,6 +542,10 @@ const Image2Page = () => {
   };
 
   const getImageUrl = (image: DatabaseImage) => {
+    // Se tem preview temporário (base64), usar ele primeiro
+    if (image._tempBase64) {
+      return `data:image/png;base64,${image._tempBase64}`;
+    }
     const { data: publicData } = supabase.storage.from("images").getPublicUrl(image.image_path);
     return publicData.publicUrl;
   };
