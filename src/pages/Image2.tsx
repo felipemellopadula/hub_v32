@@ -23,6 +23,7 @@ import {
   Sparkles,
   Maximize2,
   Image as ImageIcon,
+  Copy,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 const UserProfile = lazy(() => import("@/components/UserProfile"));
@@ -523,6 +524,26 @@ const Image2Page = () => {
     return publicData.publicUrl;
   };
 
+  const copyAndUsePrompt = useCallback((img: DatabaseImage, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    if (!img.prompt) {
+      toast.error("Esta imagem não possui prompt");
+      return;
+    }
+    
+    // Copiar para clipboard
+    navigator.clipboard.writeText(img.prompt);
+    
+    // Preencher no input
+    setPrompt(img.prompt);
+    
+    // Fechar modal se estiver aberto
+    setSelectedImageForModal(null);
+    
+    toast.success("Prompt copiado e pronto para usar!");
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header Minimalista */}
@@ -591,6 +612,15 @@ const Image2Page = () => {
                         title={img.is_public ? "Público - clique para tornar privado" : "Privado - clique para tornar público"}
                       >
                         {img.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => copyAndUsePrompt(img, e)}
+                        title="Copiar prompt e usar"
+                        disabled={!img.prompt}
+                      >
+                        <Copy className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -815,6 +845,15 @@ const Image2Page = () => {
               <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-4 text-white">
                 <p className="text-sm">{selectedImageForModal.prompt}</p>
                 <div className="flex gap-2 mt-2">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    onClick={() => copyAndUsePrompt(selectedImageForModal)}
+                    disabled={!selectedImageForModal.prompt}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Usar Prompt
+                  </Button>
                   <Button size="sm" variant="secondary" onClick={() => downloadImage(selectedImageForModal)}>
                     <Download className="h-4 w-4 mr-2" />
                     Download
