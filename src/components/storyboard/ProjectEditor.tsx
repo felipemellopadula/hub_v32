@@ -408,7 +408,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
           modelId: project.video_model,
           positivePrompt: videoPrompt,
           frameStartUrl: imageUrl,
-          durationSeconds: scene.duration,
+          duration: scene.duration,
           width: finalWidth,
           height: finalHeight,
         },
