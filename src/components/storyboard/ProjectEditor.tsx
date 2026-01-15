@@ -82,6 +82,22 @@ const MODEL_RESOLUTIONS: Record<string, { width: number; height: number }> = {
   'lightricks:2@0': { width: 1920, height: 1080 }, // LTX-2 Pro
 };
 
+// FPS por modelo (copiado de Video.tsx)
+const FPS_BY_MODEL: Record<string, number> = {
+  'lightricks:2@1': 25,  // LTX-2 Fast default
+  'lightricks:2@0': 25,  // LTX-2 Pro default
+};
+
+// Durações válidas por modelo (copiado de Video.tsx)
+const DURATIONS_BY_MODEL: Record<string, number[]> = {
+  'bytedance:seedance@1.5-pro': [4, 5, 6, 7, 8, 9, 10, 11, 12],
+  'google:3@3': [4, 6, 8],
+  'klingai:kling-video@2.6-pro': [5, 10],
+  'minimax:4@1': [6, 10],
+  'lightricks:2@1': [6, 8, 10],  // LTX-2 Fast
+  'lightricks:2@0': [6, 8, 10],  // LTX-2 Pro
+};
+
 // Helper: Get valid Runware API dimensions for aspect ratio
 const getDimensionsForAspectRatio = (aspectRatio: string): { width: number; height: number } => {
   switch (aspectRatio) {
@@ -402,15 +418,47 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
         finalHeight = dims.height;
       }
 
+      // Verificar se é modelo LTX
+      const isLtxModel = project.video_model.startsWith('lightricks:');
+      const isByteDanceModel = project.video_model.includes('bytedance');
+
+      // Validar duração para o modelo
+      const validDurations = DURATIONS_BY_MODEL[project.video_model] || [5];
+      const sceneDuration = validDurations.includes(scene.duration || 5) 
+        ? scene.duration 
+        : validDurations[0];
+
+      if (sceneDuration !== scene.duration) {
+        toast({
+          title: 'Duração ajustada',
+          description: `${project.video_model.split(':')[0]} não suporta ${scene.duration}s. Usando ${sceneDuration}s.`,
+        });
+      }
+
       const { data, error } = await supabase.functions.invoke('runware-video', {
         body: {
           action: 'start',
           modelId: project.video_model,
           positivePrompt: videoPrompt,
           frameStartUrl: imageUrl,
-          duration: scene.duration,
+          duration: sceneDuration,
           width: finalWidth,
           height: finalHeight,
+          outputFormat: 'mp4',
+          numberResults: 1,
+          // Configurações específicas para LTX
+          ...(isLtxModel ? {
+            customFps: FPS_BY_MODEL[project.video_model] || 25,
+            generateAudio: false,
+          } : {}),
+          // Configurações para ByteDance
+          ...(isByteDanceModel ? {
+            providerSettings: {
+              bytedance: {
+                cameraFixed: false
+              }
+            }
+          } : {}),
         },
       });
 
