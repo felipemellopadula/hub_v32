@@ -725,15 +725,30 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                       value={project.video_model}
                       onValueChange={(v) => {
                         const selectedModel = VIDEO_MODELS.find(m => m.id === v);
+                        const newValidDurations = DURATIONS_BY_MODEL[v] || [5];
+                        
+                        // Update scenes with invalid durations
+                        scenes.forEach(scene => {
+                          if (!newValidDurations.includes(scene.duration || 5)) {
+                            onUpdateScene(scene.id, { duration: newValidDurations[0] });
+                          }
+                        });
+                        
                         // LTX models only support 16:9
                         if (selectedModel?.aspectRatio === '16:9' && project.aspect_ratio !== '16:9') {
                           onUpdateProject(project.id, { video_model: v, aspect_ratio: '16:9' });
                           toast({
-                            title: 'Proporção ajustada',
-                            description: 'Modelos LTX suportam apenas 16:9. A proporção foi ajustada automaticamente.',
+                            title: 'Configurações ajustadas',
+                            description: 'Proporção 16:9 aplicada e durações das cenas foram atualizadas.',
                           });
                         } else {
                           onUpdateProject(project.id, { video_model: v });
+                          if (scenes.some(s => !newValidDurations.includes(s.duration || 5))) {
+                            toast({
+                              title: 'Durações ajustadas',
+                              description: `Durações das cenas foram ajustadas para ${newValidDurations[0]}s (válido para este modelo).`,
+                            });
+                          }
                         }
                       }}
                     >
@@ -879,6 +894,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                     isGeneratingImage={generatingImageSceneId === scene.id}
                     isGeneratingVideo={generatingVideoSceneId === scene.id}
                     hasReferences={references.length > 0}
+                    validDurations={DURATIONS_BY_MODEL[project.video_model] || [5]}
                   />
                 </Reorder.Item>
               ))}

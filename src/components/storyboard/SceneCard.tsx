@@ -53,9 +53,10 @@ interface SceneCardProps {
   isGeneratingVideo: boolean;
   hasReferences: boolean;
   isDragging?: boolean;
+  validDurations?: number[];
 }
 
-const DURATIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+const DEFAULT_DURATIONS = [5];
 
 const imageStatusConfig = {
   pending: {
@@ -118,7 +119,9 @@ export const SceneCard: React.FC<SceneCardProps> = memo(({
   isGeneratingVideo,
   hasReferences,
   isDragging,
+  validDurations,
 }) => {
+  const durations = validDurations || DEFAULT_DURATIONS;
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [promptValue, setPromptValue] = useState(scene.prompt || '');
@@ -355,7 +358,7 @@ Ex: The man (IMG1) is holding a bottle (IMG2), extreme close up with cinematic l
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DURATIONS.map((d) => (
+              {durations.map((d) => (
                 <SelectItem key={d} value={String(d)}>
                   {d}s
                 </SelectItem>
