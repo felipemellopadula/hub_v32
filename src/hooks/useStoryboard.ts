@@ -10,6 +10,7 @@ export interface StoryboardProject {
   description: string | null;
   aspect_ratio: string;
   video_model: string;
+  visual_consistency: boolean;
   created_at: string;
   updated_at: string;
 }

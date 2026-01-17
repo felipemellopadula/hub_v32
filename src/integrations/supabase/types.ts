@@ -719,6 +719,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           video_model: string | null
+          visual_consistency: boolean | null
         }
         Insert: {
           aspect_ratio?: string | null
@@ -729,6 +730,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           video_model?: string | null
+          visual_consistency?: boolean | null
         }
         Update: {
           aspect_ratio?: string | null
@@ -739,6 +741,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           video_model?: string | null
+          visual_consistency?: boolean | null
         }
         Relationships: []
       }

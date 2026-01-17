@@ -10,7 +10,8 @@ import {
   Coins,
   Wand2,
   FileVideo,
-  Play
+  Play,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCredits } from '@/hooks/useCredits';
@@ -96,6 +98,24 @@ const DURATIONS_BY_MODEL: Record<string, number[]> = {
   'minimax:4@1': [6, 10],
   'lightricks:2@1': [6, 8, 10],  // LTX-2 Fast
   'lightricks:2@0': [6, 8, 10],  // LTX-2 Pro
+};
+
+// Modelos de imagem que suportam consistência visual (múltiplas referências)
+const CONSISTENCY_SUPPORTED_MODELS = [
+  'google:4@2',              // Nano Banana 2 Pro (14 refs)
+  'google:4@1',              // Nano Banana (2 refs)
+  'openai:4@1',              // GPT Image 1.5 (6 refs)
+  'bytedance:seedream@4.5',  // Seedream 4.5 (2 refs)
+  'bfl:3@1',                 // FLUX.1 Kontext [max] (1 ref)
+];
+
+// Máximo de referências de consistência por modelo
+const MAX_CONSISTENCY_REFS: Record<string, number> = {
+  'google:4@2': 14,
+  'google:4@1': 2,
+  'openai:4@1': 6,
+  'bytedance:seedream@4.5': 2,
+  'bfl:3@1': 1,
 };
 
 // Helper: Get valid Runware API dimensions for aspect ratio
@@ -224,7 +244,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
     });
   };
 
-  // Generate image for a scene using references + prompt
+  // Generate image for a scene using references + prompt + consistency refs
   const generateImageForScene = useCallback(async (scene: StoryboardScene): Promise<'completed' | 'failed'> => {
     if (!scene.prompt) {
       toast({
@@ -256,14 +276,46 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       const dimensions = getDimensionsForAspectRatio(project.aspect_ratio || '16:9');
       console.log('[Storyboard] Using dimensions:', dimensions);
 
+      // Prepare manual references
+      const referenceImagesBase64 = await Promise.all(
+        references.map(ref => imageUrlToBase64(ref.image_url))
+      );
+
+      // Prepare consistency references (previous scenes with generated images)
+      let consistencyRefs: string[] = [];
+      const supportsConsistency = CONSISTENCY_SUPPORTED_MODELS.includes(selectedImageModel);
+      const consistencyEnabled = project.visual_consistency !== false;
+
+      if (supportsConsistency && consistencyEnabled) {
+        // Get previous scenes that already have generated images
+        const previousScenes = scenes
+          .filter(s => s.order_index < scene.order_index && s.generated_image_url)
+          .sort((a, b) => b.order_index - a.order_index); // Most recent first
+
+        // Limit to available slots (max refs - manual refs)
+        const maxRefs = MAX_CONSISTENCY_REFS[selectedImageModel] || 2;
+        const availableSlots = Math.max(0, maxRefs - referenceImagesBase64.length);
+        const scenesToUse = previousScenes.slice(0, availableSlots);
+
+        if (scenesToUse.length > 0) {
+          console.log(`[Storyboard] Visual consistency: using ${scenesToUse.length} previous scenes as reference`);
+          
+          consistencyRefs = await Promise.all(
+            scenesToUse.map(s => imageUrlToBase64(s.generated_image_url!))
+          );
+        }
+      }
+
+      // Combine all references: manual + consistency
+      const allReferenceImages = [
+        ...referenceImagesBase64,  // Manual references first
+        ...consistencyRefs,        // Previous scenes after
+      ];
+
       let data, error;
 
-      if (references.length > 0) {
+      if (allReferenceImages.length > 0) {
         // With references: use edit-image endpoint
-        const referenceImagesBase64 = await Promise.all(
-          references.map(ref => imageUrlToBase64(ref.image_url))
-        );
-
         // Build enhanced prompt with reference names
         let enhancedPrompt = scene.prompt!;
         references.forEach((ref, index) => {
@@ -271,15 +323,15 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
           enhancedPrompt = enhancedPrompt.replace(refPattern, `[reference image ${index + 1}]`);
         });
 
-        console.log('[Storyboard] Generating image with references:', references.length);
+        console.log('[Storyboard] Generating image with references:', allReferenceImages.length);
         console.log('[Storyboard] Enhanced prompt:', enhancedPrompt);
 
         const result = await supabase.functions.invoke('edit-image', {
           body: {
             model: selectedImageModel,
             positivePrompt: enhancedPrompt,
-            inputImage: referenceImagesBase64[0],
-            inputImages: referenceImagesBase64,
+            inputImage: allReferenceImages[0],
+            inputImages: allReferenceImages,
             width: dimensions.width,
             height: dimensions.height,
           },
@@ -340,7 +392,9 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
 
       toast({
         title: 'Imagem gerada!',
-        description: 'Agora você pode gerar o vídeo da cena.',
+        description: consistencyRefs.length > 0 
+          ? `Usando ${consistencyRefs.length} cena(s) anterior(es) para consistência.`
+          : 'Agora você pode gerar o vídeo da cena.',
       });
 
       setGeneratingImageSceneId(null);
@@ -357,7 +411,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       setGeneratingImageSceneId(null);
       return 'failed';
     }
-  }, [project, references, isLegacyUser, creditsRemaining, onUpdateScene, toast, setShowPurchaseModal, selectedImageModel]);
+  }, [project, scenes, references, isLegacyUser, creditsRemaining, onUpdateScene, toast, setShowPurchaseModal, selectedImageModel]);
 
   // Generate video for a scene
   const generateVideoForScene = useCallback(async (scene: StoryboardScene): Promise<'completed' | 'failed'> => {
@@ -782,6 +836,32 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
                       Modelo usado para gerar imagens das cenas
                     </p>
                   </div>
+
+                  {/* Visual Consistency Toggle */}
+                  {CONSISTENCY_SUPPORTED_MODELS.includes(selectedImageModel) && (
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-2">
+                          <Layers className="w-4 h-4" />
+                          Consistência Visual
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Usar cenas anteriores como referência automática
+                          {MAX_CONSISTENCY_REFS[selectedImageModel] && (
+                            <span className="block">
+                              (até {MAX_CONSISTENCY_REFS[selectedImageModel]} referência{MAX_CONSISTENCY_REFS[selectedImageModel] > 1 ? 's' : ''})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={project.visual_consistency !== false}
+                        onCheckedChange={(checked) => 
+                          onUpdateProject(project.id, { visual_consistency: checked })
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
