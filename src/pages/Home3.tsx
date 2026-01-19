@@ -636,25 +636,23 @@ const Home3: React.FC = () => {
             <div className="relative flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8">
               {/* Texto Principal */}
               <div className="text-center lg:text-left flex-1">
-                <p className="text-sm sm:text-base font-bold text-black/70 uppercase tracking-widest mb-2">
-                  🚀 Oferta Especial
-                </p>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-black leading-tight">
-                  Impulsione sua criatividade com IA
+                <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-black leading-tight">
+                  Cansado da IA que "desaprende" no segundo prompt?
                 </h2>
-                <p className="text-base sm:text-lg lg:text-xl text-black/70 mt-2 sm:mt-3">
-                  Crie imagens e vídeos incríveis em segundos
+                <p className="text-sm sm:text-base lg:text-lg text-black/80 mt-3 sm:mt-4 max-w-2xl">
+                  É sempre igual: o primeiro resultado é incrível, o segundo é médio e o terceiro é horrível. 
+                  Pare de lutar contra a ferramenta. Na Synergy IA, a qualidade é constante do primeiro ao último comando.
                 </p>
               </div>
               
               {/* Botão CTA */}
               <button className="bg-black text-yellow-400 font-bold 
-                                 px-8 py-4 sm:px-10 sm:py-5 
-                                 rounded-xl text-lg sm:text-xl lg:text-2xl
+                                 px-6 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-5 
+                                 rounded-xl text-base sm:text-lg lg:text-xl
                                  hover:bg-black/90 hover:scale-105
                                  transition-all duration-300 shadow-xl
                                  whitespace-nowrap group-hover:shadow-2xl">
-                Ver Planos →
+                Quero consistência de verdade
               </button>
             </div>
           </div>
