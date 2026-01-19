@@ -245,14 +245,14 @@ const pricingPlans: PricingPlan[] = [
   {
     name: "Pro",
     icon: Crown,
-    mainPrice: 150,
-    mainQuantity: 50,
+    mainPrice: 120,
+    mainQuantity: 40,
     description: "Para criadores sérios",
     options: [
-      { quantity: 40, price: 120, planId: "pro_40" },
+      { quantity: 50, price: 150, planId: "pro_50" },
       { quantity: 100, price: 300, planId: "pro_100" },
     ],
-    mainPlanId: "pro_50",
+    mainPlanId: "pro_40",
     features: ["Melhor custo-benefício"],
     popular: true,
   },
